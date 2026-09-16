@@ -1,3 +1,4 @@
-// Feature modules barrel export (e.g. auth, tickets, teams)
+// Feature modules barrel export (e.g. auth, tickets, dashboard, teams)
 
-export {};
+export * from "./auth";
+export * from "./dashboard";

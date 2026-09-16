@@ -4,9 +4,8 @@ import React from 'react';
 import App from '../src/App';
 
 describe('App Component', () => {
-  it('renders application header and title correctly', () => {
+  it('renders RTS Help Desk root without crashing', () => {
     render(<App />);
-    expect(screen.getByText(/Application Template/i)).toBeInTheDocument();
-    expect(screen.getByText(/Reusable Full-Stack Template/i)).toBeInTheDocument();
+    expect(screen.getByText(/Loading session|RTS HELP DESK/i)).toBeInTheDocument();
   });
 });
