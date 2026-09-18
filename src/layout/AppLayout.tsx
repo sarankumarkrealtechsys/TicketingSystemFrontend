@@ -1,0 +1,133 @@
+import React from "react";
+import { Outlet } from "react-router-dom";
+import { Sidebar, SidebarProps } from "@/widgets/Sidebar";
+import { Navbar, NavbarProps } from "@/widgets/Navbar";
+import { Footer, FooterProps } from "@/widgets/Footer";
+
+export interface AppLayoutProps {
+  /** Role override — auto-detected from Redux if omitted */
+  role?: "ADMIN" | "USER";
+
+  /* ── Sidebar Props ── */
+  workspaceName?: string;
+  workspaceIcon?: string;
+  brandTitle?: string;
+  brandSubtitle?: string;
+
+  /* ── Navbar Props ── */
+  userName?: string;
+  userRoleSubtitle?: string;
+  userEmail?: string;
+  userInitials?: string;
+  userAvatarBg?: string;
+  searchPlaceholder?: string;
+  searchValue?: string;
+  onSearch?: (query: string) => void;
+  showSearch?: boolean;
+  notificationCount?: number;
+  onNotificationClick?: () => void;
+
+  /* ── Footer Props ── */
+  showFooter?: boolean;
+  companyName?: string;
+  systemStatus?: string;
+  version?: string;
+
+  /* ── Content ── */
+  children?: React.ReactNode;
+  className?: string;
+}
+
+export const AppLayout: React.FC<AppLayoutProps> = ({
+  // Role
+  role,
+
+  // Sidebar
+  workspaceName,
+  workspaceIcon,
+  brandTitle,
+  brandSubtitle,
+
+  // Navbar
+  userName,
+  userRoleSubtitle,
+  userEmail,
+  userInitials,
+  userAvatarBg,
+  searchPlaceholder,
+  searchValue,
+  onSearch,
+  showSearch,
+  notificationCount,
+  onNotificationClick,
+
+  // Footer
+  showFooter = true,
+  companyName,
+  systemStatus,
+  version,
+
+  // Content
+  children,
+  className = "",
+}) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  // ── Build sub-component props ──
+  const sidebarProps: SidebarProps = {
+    role,
+    workspaceName,
+    workspaceIcon,
+    brandTitle,
+    brandSubtitle,
+    mobileOpen: isMobileMenuOpen,
+    onCloseMobile: () => setIsMobileMenuOpen(false),
+  };
+
+  const navbarProps: NavbarProps = {
+    role,
+    userName,
+    userRoleSubtitle,
+    userEmail,
+    userInitials,
+    userAvatarBg,
+    searchPlaceholder,
+    searchValue,
+    onSearch,
+    showSearch,
+    notificationCount,
+    onNotificationClick,
+    onToggleMobileMenu: () => setIsMobileMenuOpen((prev) => !prev),
+  };
+
+  const footerProps: FooterProps = {
+    companyName,
+    systemStatus,
+    version,
+  };
+
+  return (
+    <div
+      className={`bg-[#F7F8FA] font-sans text-[#1A1A1A] antialiased text-[14px] min-h-screen ${className}`}
+    >
+      {/* Sidebar (drawer on mobile, fixed 260px on desktop) */}
+      <Sidebar {...sidebarProps} />
+
+      {/* Content wrapper offset by sidebar width on desktop */}
+      <div className="pl-0 lg:pl-[260px] flex flex-col min-h-screen transition-all duration-200">
+        {/* Top Navbar */}
+        <Navbar {...navbarProps} />
+
+        {/* Main Content Area */}
+        <main className="pt-20 px-3 sm:px-6 pb-8 flex-1">
+          <div className="max-w-[1440px] mx-auto">{children || <Outlet />}</div>
+        </main>
+
+        {/* Footer */}
+        {showFooter && <Footer {...footerProps} />}
+      </div>
+    </div>
+  );
+};
+
+export default AppLayout;

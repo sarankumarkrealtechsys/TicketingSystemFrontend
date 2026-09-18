@@ -1,7 +1,5 @@
 import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ProtectedRoute } from "./ProtectedRoute";
-import { LoginPage, AdminDashboardPage, UserDashboardPage } from "@/pages";
 import { useMeQuery } from "@/features/auth/api";
 import {
   setSession,
@@ -10,6 +8,10 @@ import {
   useAppSelector,
 } from "@/features/auth/authSlice";
 import { LoadingSpinner } from "@/shared/components";
+import { ROUTES } from "./routePaths";
+import { AuthRoutes } from "./AuthRoutes";
+import { AdminRoutes } from "./AdminRoutes";
+import { UserRoutes } from "./UserRoutes";
 
 /**
  * Root index redirector based on authentication status and user role.
@@ -23,13 +25,13 @@ const RootRedirect: React.FC = () => {
 
   if (status === "authenticated" && user) {
     return user.role?.name === "ADMIN" ? (
-      <Navigate to="/admin/dashboard" replace />
+      <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />
     ) : (
-      <Navigate to="/dashboard" replace />
+      <Navigate to={ROUTES.USER_DASHBOARD} replace />
     );
   }
 
-  return <Navigate to="/login" replace />;
+  return <Navigate to={ROUTES.LOGIN} replace />;
 };
 
 /**
@@ -58,37 +60,29 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
   return <>{children}</>;
 };
 
+/**
+ * Master AppRoutes
+ * Composes modular AuthRoutes, AdminRoutes, and UserRoutes.
+ */
 export const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <SessionBootstrap>
         <Routes>
-          {/* Public Auth Route */}
-          <Route path="/login" element={<LoginPage />} />
+          {/* Public Auth Routes */}
+          {AuthRoutes}
 
           {/* Root Redirect */}
-          <Route path="/" element={<RootRedirect />} />
+          <Route path={ROUTES.ROOT} element={<RootRedirect />} />
 
-          {/* Protected Dashboard Routes */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              <ProtectedRoute>
-                <AdminDashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <UserDashboardPage />
-              </ProtectedRoute>
-            }
-          />
+          {/* Admin Routes (guarded by role + BRD permissions) */}
+          {AdminRoutes}
+
+          {/* Standard User Workspace Routes (guarded by session) */}
+          {UserRoutes}
 
           {/* Catch-all fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Navigate to={ROUTES.ROOT} replace />} />
         </Routes>
       </SessionBootstrap>
     </BrowserRouter>

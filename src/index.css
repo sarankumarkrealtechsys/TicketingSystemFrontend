@@ -115,3 +115,29 @@
 .animate-modal-in {
   animation: modalIn 200ms cubic-bezier(0, 0, 0.2, 1) forwards;
 }
+
+/* Subtle radial gradient to enrich the enterprise navy column */
+.brand-glow {
+  background: radial-gradient(circle at center, #26457a 0%, #1F3864 70%, #162a4d 100%);
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  animation: fadeInUp 250ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.table-row-animate {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+

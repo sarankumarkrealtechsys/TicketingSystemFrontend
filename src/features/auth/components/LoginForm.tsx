@@ -95,160 +95,215 @@ export const LoginForm: React.FC = () => {
     serverError || errors.username?.message || errors.password?.message || null;
 
   return (
-    <main className="min-h-screen w-full bg-surface">
-      <div className="flex flex-col w-full">
-        <div className="flex flex-col lg:flex-row w-full min-h-screen">
-          {/* LEFT PANEL: Enterprise Operations & Telemetry Graphic (52% on Desktop) */}
-          <div
-            className="w-full lg:w-[52%] bg-gradient-to-br from-primary via-primary-container to-[#0b1c30] text-on-primary flex flex-col p-8 sm:p-12 lg:p-16 relative overflow-hidden shadow-xl justify-center"
-            style={{ fontFamily: '"Times New Roman", Times, serif' }}
-          >
-            {/* Subtle Decorative Ambient Geometry */}
-            <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-secondary-container/10 blur-3xl pointer-events-none" />
-            <div className="absolute bottom-10 right-0 w-80 h-80 rounded-full bg-primary-fixed/5 blur-2xl pointer-events-none" />
-
-            {/* Top Header & Brand Identifier */}
-            <div className="relative z-10 flex flex-col items-center justify-center text-center gap-5 pt-2">
-              <div className="inline-flex items-center justify-center">
-                <div className="flex items-center justify-center p-2">
-                  <img
-                    alt="Happiness Connected Logo"
-                    className="h-11 w-auto object-contain"
-                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXbFXF3HBfDtzYVBN2cknzNdVneTav4B16FMqCa2Xi_LHiBs3rT-xda8MISgQIXhri8q_FJfQCeDX-9zHOwOB7Wi-nUGAea4cpkSfZZaXh9wlctu-GTPfXPvH6QdzWy6lZ59sQ3CMgaEUe8tQeU78bXWIN-gDe_b4ntmbY4gHJGUjFtReFy_qf-olktvWd2K85kLB6JYkTzhVbcfrSJYFmiT0mNHX0Ojwu5PRznJ_8-N3EaMnpV5K7swaMQqMcLC1wJQ"
-                    style={{ mixBlendMode: "screen" }}
-                  />
-                </div>
-              </div>
-              <div className="space-y-2 mt-1 text-center flex flex-col items-center">
-                <h1 className="text-3xl sm:text-4xl lg:text-[2.6rem] leading-none font-black tracking-tight text-white uppercase drop-shadow-sm">
-                  RTS HELP DESK
-                </h1>
-                <p className="font-body-md text-base sm:text-lg text-surface-variant font-normal max-w-md">
-                  Ticket Management
-                </p>
-              </div>
-            </div>
+    <main
+      className="min-h-screen w-full flex flex-col md:flex-row overflow-hidden font-sans antialiased text-[#1A1A1A] bg-[#FFFFFF] select-none"
+      data-purpose="login-split-layout"
+    >
+      {/* BEGIN: LeftBrandingColumn */}
+      <section
+        className="w-full md:w-[45%] min-h-[260px] md:min-h-screen brand-glow flex flex-col items-center justify-center relative p-8 select-none flex-shrink-0"
+        data-purpose="brand-identity-panel"
+      >
+        {/* Decorative subtle backdrop overlay */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none opacity-40 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px]"
+        />
+        {/* Center Logo & Name Group */}
+        <div className="relative z-10 flex flex-col items-center text-center">
+          {/* Logo Display Badge */}
+          <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-5 shadow-2xl ring-1 ring-white/20 flex items-center justify-center mb-6">
+            <img
+              alt="RTS Help Desk Logo"
+              className="h-20 w-auto object-contain"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDXwZ_VrvCp1ZIZ2h1QCbeAv3OmJoDruqMQnyJn7fkGpZwOXobWH0ZWAlOKnhecRqBX2ay5u8p4JZwZGoIkXDmK6NMprIOHVlut7OQJIz_Y-53oyaGQdcFlBLNaGVhcma5W1RLLHbXCGSQH7dkVzGINwTvpkEejRi5Vc8qTqdBe-bcp4S8kbXx2F-5SxbJcET1WVWQ0FOwwHtm9UeGK1olir6AfRgVXEZO2hASeNa0gvRpkP7EaXXSHYkqkkmI3jsnqeQ"
+            />
           </div>
-
-          {/* RIGHT PANEL: Authentication Form Pane (48% on Desktop) */}
-          <div className="w-full lg:w-[48%] bg-surface-container-lowest flex flex-col items-center justify-center p-6 sm:p-12 lg:p-16">
-            <div className="w-full max-w-sm flex flex-col">
-              {/* Header */}
-              <div className="mb-6 text-left">
-                <h2 className="font-headline-md text-headline-md text-on-surface font-semibold tracking-tight">
-                  Sign in
-                </h2>
-                <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-                  Enter your credentials to access your ticket queue
-                </p>
-              </div>
-
-              {/* Inline Error Alert Notification */}
-              {displayError && (
-                <div
-                  className="mb-5 flex items-center gap-2.5 p-3 rounded-md bg-red-50 text-red-700 shadow-sm transition-opacity duration-200"
-                  id="error-alert"
-                  role="alert"
-                >
-                  <span className="material-symbols-outlined text-[18px] text-red-600 flex-shrink-0">
-                    error
-                  </span>
-                  <span className="font-body-sm text-body-sm font-medium">
-                    {displayError}
-                  </span>
-                </div>
-              )}
-
-              {/* Form Elements */}
-              <form
-                className="space-y-4"
-                id="login-form"
-                onSubmit={handleSubmit(onSubmit)}
-                noValidate
-              >
-                {/* Username Field */}
-                <div className="space-y-1.5 text-left">
-                  <label
-                    className="block font-body-sm text-body-sm font-medium text-on-surface-variant"
-                    htmlFor="username"
-                  >
-                    Username
-                  </label>
-                  <div className="relative">
-                    <input
-                      {...register("username", {
-                        onChange: handleInputChange,
-                      })}
-                      autoComplete="username"
-                      className="w-full h-10 px-3 py-2 bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-md shadow-sm outline-none transition-all placeholder:text-outline/70 focus:bg-surface-container-low"
-                      id="username"
-                      placeholder="e.g. jdoe or emp_id"
-                      type="text"
-                    />
-                  </div>
-                </div>
-
-                {/* Password Field */}
-                <div className="space-y-1.5 text-left">
-                  <label
-                    className="block font-body-sm text-body-sm font-medium text-on-surface-variant"
-                    htmlFor="password"
-                  >
-                    Password
-                  </label>
-                  <div className="relative flex items-center">
-                    <input
-                      {...register("password", {
-                        onChange: handleInputChange,
-                      })}
-                      autoComplete="current-password"
-                      className="w-full h-10 pl-3 pr-10 py-2 bg-surface-container-lowest text-on-surface font-body-md text-body-md rounded-md shadow-sm outline-none transition-all placeholder:text-outline/70 focus:bg-surface-container-low"
-                      id="password"
-                      placeholder="••••••••••••"
-                      type={showPassword ? "text" : "password"}
-                    />
-                    <button
-                      aria-label="Toggle password visibility"
-                      className="absolute right-2.5 text-outline hover:text-on-surface transition-colors flex items-center justify-center p-1 rounded focus:outline-none"
-                      id="toggle-password-btn"
-                      onClick={() => setShowPassword(!showPassword)}
-                      type="button"
-                    >
-                      <span
-                        className="material-symbols-outlined text-[19px]"
-                        id="eye-icon"
-                      >
-                        {showPassword ? "visibility_off" : "visibility"}
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Primary Submit Button */}
-                <div className="pt-2">
-                  <button
-                    className={`w-full h-11 bg-primary-container hover:bg-primary text-on-primary font-headline-sm text-headline-sm font-semibold rounded-md shadow-sm transition-all duration-150 flex items-center justify-center gap-2 group active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-secondary-container focus:ring-offset-2 ${
-                      loginMutation.isPending
-                        ? "opacity-70 cursor-not-allowed"
-                        : ""
-                    }`}
-                    disabled={loginMutation.isPending}
-                    id="submit-btn"
-                    type="submit"
-                  >
-                    <span>
-                      {loginMutation.isPending ? "Logging In..." : "Log In"}
-                    </span>
-                    <span className="material-symbols-outlined text-[18px] transition-transform duration-200 group-hover:translate-x-1">
-                      arrow_forward
-                    </span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
+          {/* Product Branding Headline */}
+          <h1 className="text-white text-2xl font-bold tracking-wider uppercase drop-shadow-sm">
+            RTS HELP DESK
+          </h1>
         </div>
-      </div>
+      </section>
+      {/* END: LeftBrandingColumn */}
+
+      {/* BEGIN: RightAuthColumn */}
+      <section
+        className="flex-1 min-h-[calc(100vh-260px)] md:min-h-screen bg-[#F7F8FA] flex items-center justify-center p-6 sm:p-10 md:p-12 overflow-y-auto"
+        data-purpose="authentication-panel"
+      >
+        {/* Authentication Card Container */}
+        <div
+          className="w-full max-w-[440px] bg-white rounded-[12px] p-8 sm:p-10 shadow-sm border border-[#EEEEEE] animate-enter"
+          data-purpose="login-card"
+        >
+          {/* Header Text */}
+          <header className="mb-8">
+            <h2 className="text-2xl font-semibold text-[#1A1A1A] tracking-tight">
+              Welcome back
+            </h2>
+            <p className="text-sm text-[#555555] mt-1">
+              Sign in to continue to your dashboard
+            </p>
+          </header>
+
+          {/* Inline Error Alert Notification */}
+          {displayError && (
+            <div
+              className="mb-5 flex items-center gap-2.5 p-3 rounded-[8px] bg-red-50 text-red-700 border border-red-200 text-sm font-medium shadow-sm transition-opacity duration-200"
+              id="error-alert"
+              role="alert"
+            >
+              <svg
+                className="w-4 h-4 text-red-600 flex-shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <span className="font-medium">{displayError}</span>
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form
+            className="space-y-5"
+            id="loginForm"
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+          >
+            {/* Username Input Field */}
+            <div data-purpose="field-group-username">
+              <label
+                className="block text-sm font-medium text-[#1A1A1A] mb-1.5"
+                htmlFor="username"
+              >
+                Username
+              </label>
+              <input
+                {...register("username", {
+                  onChange: handleInputChange,
+                })}
+                autoComplete="username"
+                className="w-full h-11 px-3.5 rounded-[8px] border border-[#DDDDDD] bg-white text-[#1A1A1A] text-sm placeholder-[#9E9E9E] transition-all duration-150 focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/20"
+                id="username"
+                name="username"
+                placeholder="Enter your enterprise username"
+                type="text"
+              />
+            </div>
+
+            {/* Password Input Field with Interactive Eye Toggle */}
+            <div data-purpose="field-group-password">
+              <label
+                className="block text-sm font-medium text-[#1A1A1A] mb-1.5"
+                htmlFor="password"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  {...register("password", {
+                    onChange: handleInputChange,
+                  })}
+                  autoComplete="current-password"
+                  className="w-full h-11 pl-3.5 pr-11 rounded-[8px] border border-[#DDDDDD] bg-white text-[#1A1A1A] text-sm placeholder-[#9E9E9E] transition-all duration-150 focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/20"
+                  id="password"
+                  name="password"
+                  placeholder="Enter your password"
+                  type={showPassword ? "text" : "password"}
+                />
+                {/* Toggle Show/Hide Password Button */}
+                <button
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[#777777] hover:text-[#1A1A1A] transition-colors focus:outline-none"
+                  id="togglePassword"
+                  onClick={() => setShowPassword(!showPassword)}
+                  type="button"
+                >
+                  {showPassword ? (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      id="eyeSlashIcon"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.75"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      id="eyeIcon"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.75"
+                      />
+                      <path
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.75"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Primary Submit Action Button */}
+            <div className="pt-2">
+              <button
+                className={`w-full h-11 bg-[#1F3864] hover:bg-[#2E74B5] active:scale-[0.98] transition-all duration-150 text-white font-medium text-sm rounded-[8px] flex items-center justify-center gap-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#1F3864] focus:ring-offset-2 ${
+                  loginMutation.isPending ? "opacity-75 cursor-not-allowed" : ""
+                }`}
+                disabled={loginMutation.isPending}
+                id="submit-btn"
+                type="submit"
+              >
+                <span>
+                  {loginMutation.isPending ? "Logging In..." : "Login"}
+                </span>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+      {/* END: RightAuthColumn */}
     </main>
   );
 };

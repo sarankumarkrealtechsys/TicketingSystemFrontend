@@ -1,5 +1,1 @@
-// Generic reusable utility functions
-
-export const formatDate = (date: string | Date): string => {
-  return new Date(date).toLocaleDateString();
-};
+export * from "./date.utils";
