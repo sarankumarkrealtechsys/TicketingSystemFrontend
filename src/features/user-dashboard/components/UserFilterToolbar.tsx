@@ -1,35 +1,29 @@
 import React from "react";
-import { MasterDataItem, TicketQueryParams } from "../types";
+import { MasterDataItem, UserTicketQueryParams, UserTicketScope } from "../types";
 import { SelectDropdown } from "@/shared/components";
 
-export interface FilterToolbarProps {
-  filters: TicketQueryParams;
-  onFilterChange: (filters: Partial<TicketQueryParams>) => void;
+export interface UserFilterToolbarProps {
+  filters: UserTicketQueryParams;
+  onFilterChange: (filters: Partial<UserTicketQueryParams>) => void;
   onClear: () => void;
   projects?: MasterDataItem[];
-  teams?: MasterDataItem[];
-  users?: MasterDataItem[];
   priorities?: MasterDataItem[];
   statuses?: MasterDataItem[];
   isDateActive?: boolean;
   onToggleDateFilter?: () => void;
 }
 
-export const FilterToolbar: React.FC<FilterToolbarProps> = ({
+export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
   filters,
   onFilterChange,
   onClear,
   projects = [],
-  teams = [],
-  users = [],
   priorities = [],
   statuses = [],
   isDateActive = false,
   onToggleDateFilter,
 }) => {
   const safeProjects = Array.isArray(projects) ? projects : [];
-  const safeTeams = Array.isArray(teams) ? teams : [];
-  const safeUsers = Array.isArray(users) ? users : [];
   const safePriorities = Array.isArray(priorities) ? priorities : [];
   const safeStatuses = Array.isArray(statuses) ? statuses : [];
 
@@ -37,28 +31,28 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
     <div className="bg-white rounded-[10px] p-3 sm:p-4 shadow-sm border border-[#EEEEEE] space-y-3">
       <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
         {/* Search input on the left - full width on mobile */}
-        <div className="relative w-full xl:w-auto xl:flex-1">
+        <div className="relative w-full xl:w-auto xl:flex-1 min-w-0 xl:min-w-[280px]">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5F6368] text-[18px]">
             search
           </span>
           <input
             className="w-full h-9 pl-9 pr-3 bg-[#F6F3F2]/70 border border-[#E0E0E0] rounded-lg text-[13px] text-[#1A1A1A] placeholder:text-[#5F6368] focus:outline-none focus:bg-white focus:border-[#1E88E5] focus:ring-1 focus:ring-[#1E88E5] transition-all"
-            placeholder="Search by ticket ID, summary, or keyword..."
+            placeholder="Search your tickets by ID, summary, or keyword..."
             type="text"
             value={filters.search || ""}
             onChange={(e) => onFilterChange({ search: e.target.value, page: 1 })}
           />
         </div>
 
-        {/* Dropdown filters on the right - 2-column grid on mobile, inline wrap on desktop */}
+        {/* Scoped dropdown filters on the right */}
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto">
           {/* 1. Project Filter Dropdown */}
           <div className="w-full sm:w-36">
-            <SelectDropdown<string | number>
-              value={filters.projectId !== undefined ? filters.projectId : ""}
+            <SelectDropdown<number | "">
+              value={filters.projectId || ""}
               onChange={(val) =>
                 onFilterChange({
-                  projectId: val !== "" ? Number(val) : undefined,
+                  projectId: val ? Number(val) : undefined,
                   page: 1,
                 })
               }
@@ -73,57 +67,32 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
             />
           </div>
 
-          {/* 2. Team Filter Dropdown */}
-          <div className="w-full sm:w-36">
-            <SelectDropdown<string | number>
-              value={filters.teamId !== undefined ? filters.teamId : ""}
-              onChange={(val) =>
-                onFilterChange({
-                  teamId: val !== "" ? Number(val) : undefined,
-                  page: 1,
-                })
-              }
-              options={[
-                { value: "", label: "All Teams" },
-                ...safeTeams.map((team) => ({
-                  value: team.id,
-                  label: team.name || `Team #${team.id}`,
-                })),
-              ]}
-              size="sm"
-            />
-          </div>
-
-          {/* 3. Assignee Filter Dropdown */}
+          {/* 2. My Roles Scoped Filter (All My Tickets, Assigned to me, Created by me) */}
           <div className="w-full sm:w-40">
-            <SelectDropdown<string | number>
-              value={filters.assigneeId !== undefined ? filters.assigneeId : ""}
+            <SelectDropdown<UserTicketScope>
+              value={filters.scope || "personal"}
               onChange={(val) =>
                 onFilterChange({
-                  assigneeId: val !== "" ? Number(val) : undefined,
+                  scope: val as UserTicketScope,
                   page: 1,
                 })
               }
               options={[
-                { value: "", label: "All Assignees" },
-                ...safeUsers.map((usr) => ({
-                  value: usr.id,
-                  label: usr.name || usr.email || `User #${usr.id}`,
-                })),
+                { value: "personal", label: "All My Tickets" },
+                { value: "assigned", label: "Assigned to me" },
+                { value: "created", label: "Created by me" },
               ]}
               size="sm"
-              searchable={safeUsers.length > 5}
-              searchPlaceholder="Filter assignee..."
             />
           </div>
 
-          {/* 4. Priority Filter Dropdown */}
+          {/* 3. Priority Filter Dropdown */}
           <div className="w-full sm:w-36">
-            <SelectDropdown<string | number>
-              value={filters.priorityId !== undefined ? filters.priorityId : ""}
+            <SelectDropdown<number | "">
+              value={filters.priorityId || ""}
               onChange={(val) =>
                 onFilterChange({
-                  priorityId: val !== "" ? Number(val) : undefined,
+                  priorityId: val ? Number(val) : undefined,
                   page: 1,
                 })
               }
@@ -138,13 +107,13 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
             />
           </div>
 
-          {/* 5. Status Filter Dropdown */}
+          {/* 4. Status Filter Dropdown */}
           <div className="w-full sm:w-36">
-            <SelectDropdown<string | number>
-              value={filters.statusId !== undefined ? filters.statusId : ""}
+            <SelectDropdown<number | "">
+              value={filters.statusId || ""}
               onChange={(val) =>
                 onFilterChange({
-                  statusId: val !== "" ? Number(val) : undefined,
+                  statusId: val ? Number(val) : undefined,
                   page: 1,
                 })
               }
@@ -159,33 +128,37 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
             />
           </div>
 
-          {/* 6. Date Range Picker Button */}
+          {/* 5. Date Range Picker (Toggle Last 30 Days) */}
           <button
-            className={`w-full sm:w-auto h-9 px-3 border rounded-lg text-[12px] font-medium transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] ${
+            type="button"
+            onClick={onToggleDateFilter}
+            className={`h-9 px-3 border rounded-lg text-[12px] font-medium transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] ${
               isDateActive
-                ? "bg-[#1E88E5]/10 border-[#1E88E5] text-[#1E88E5]"
+                ? "bg-[#1E88E5] border-[#1E88E5] text-white shadow-xs"
                 : "bg-[#F6F3F2]/70 border-[#E0E0E0] text-[#1A1A1A] hover:bg-white hover:border-[#1E88E5]"
             }`}
-            onClick={onToggleDateFilter}
-            type="button"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#5F6368]">
+            <span
+              className={`material-symbols-outlined text-[16px] ${
+                isDateActive ? "text-white" : "text-[#5F6368]"
+              }`}
+            >
               calendar_today
             </span>
-            <span className="truncate">Last 30 Days</span>
+            <span>Last 30 Days</span>
           </button>
 
-          {/* 7. Clear / Reset Filters Button */}
+          {/* 6. Clear Filters */}
           <button
-            className="col-span-2 sm:col-auto w-full sm:w-auto h-9 px-2.5 text-[12px] font-semibold text-[#5F6368] hover:text-[#E53935] bg-[#F6F3F2]/40 sm:bg-transparent rounded-lg border border-[#E0E0E0]/60 sm:border-transparent transition-colors flex items-center justify-center gap-1 active:scale-[0.98]"
-            onClick={onClear}
-            title="Reset all filters"
             type="button"
+            onClick={onClear}
+            className="h-9 px-2.5 text-[12px] font-semibold text-[#5F6368] hover:text-[#E53935] transition-colors flex items-center justify-center gap-1 active:scale-[0.98]"
+            title="Reset all filters"
           >
             <span className="material-symbols-outlined text-[16px]">
               restart_alt
             </span>
-            <span>Clear Filters</span>
+            <span>Clear</span>
           </button>
         </div>
       </div>
@@ -193,4 +166,4 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
   );
 };
 
-export default FilterToolbar;
+export default UserFilterToolbar;

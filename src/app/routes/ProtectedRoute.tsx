@@ -16,7 +16,18 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (status === "unauthenticated") {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const isGenericDashboard =
+      location.pathname === "/login" ||
+      location.pathname === "/dashboard" ||
+      location.pathname === "/admin/dashboard";
+
+    return (
+      <Navigate
+        to="/login"
+        state={isGenericDashboard ? undefined : { from: location }}
+        replace
+      />
+    );
   }
 
   return children ? <>{children}</> : <Outlet />;

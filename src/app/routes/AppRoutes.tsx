@@ -24,7 +24,8 @@ const RootRedirect: React.FC = () => {
   }
 
   if (status === "authenticated" && user) {
-    return user.role?.name === "ADMIN" ? (
+    const isAdmin = (user.role?.name || "").toUpperCase() === "ADMIN";
+    return isAdmin ? (
       <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />
     ) : (
       <Navigate to={ROUTES.USER_DASHBOARD} replace />
@@ -47,8 +48,12 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (data) {
+      if (data.data.token && !sessionStorage.getItem("rts_auth_token")) {
+        sessionStorage.setItem("rts_auth_token", data.data.token);
+      }
       dispatch(setSession(data.data));
     } else if (error) {
+      sessionStorage.removeItem("rts_auth_token");
       dispatch(clearSession());
     }
   }, [data, error, dispatch]);

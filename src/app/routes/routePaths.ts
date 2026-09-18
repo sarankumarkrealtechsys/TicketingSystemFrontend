@@ -8,6 +8,8 @@ export const ROUTES = {
   LOGIN: "/login",
   ADMIN_DASHBOARD: "/admin/dashboard",
   USER_DASHBOARD: "/dashboard",
+  TEAMS: "/teams",
+  MY_TEAM: "/my-team",
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];

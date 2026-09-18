@@ -55,20 +55,11 @@
   }
   html {
     scroll-behavior: smooth;
+    font-family: "Comfortaa", "Montserrat", sans-serif;
   }
   body {
     @apply bg-background text-foreground;
-    font-family:
-      "Inter",
-      system-ui,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      Oxygen,
-      Ubuntu,
-      Cantarell,
-      sans-serif;
+    font-family: "Comfortaa", "Montserrat", sans-serif;
   }
 
   /* Enterprise Thin Scrollbar */
@@ -118,7 +109,12 @@
 
 /* Subtle radial gradient to enrich the enterprise navy column */
 .brand-glow {
-  background: radial-gradient(circle at center, #26457a 0%, #1F3864 70%, #162a4d 100%);
+  background: radial-gradient(
+    circle at center,
+    #26457a 0%,
+    #1f3864 70%,
+    #162a4d 100%
+  );
 }
 
 @keyframes fadeInUp {
@@ -139,5 +135,3 @@
 .table-row-animate {
   animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
-

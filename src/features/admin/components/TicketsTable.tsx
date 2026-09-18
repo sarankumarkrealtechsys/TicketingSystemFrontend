@@ -18,6 +18,7 @@ export interface TicketsTableProps {
   onPageChange: (newPage: number) => void;
   onViewTicket: (ticketId: number) => void;
   isLoading?: boolean;
+  isFetching?: boolean;
 }
 
 const columnHelper = createColumnHelper<TicketListItem>();
@@ -31,6 +32,7 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
   onPageChange,
   onViewTicket,
   isLoading = false,
+  isFetching = false,
 }) => {
   const startItem = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, total);
@@ -169,16 +171,26 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
     [onViewTicket],
   );
 
+  const isInitialLoading = isLoading && tickets.length === 0;
+
   const table = useReactTable({
     data: tickets,
     columns,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => String(row.id),
     manualPagination: true,
     pageCount: totalPages,
   });
 
   return (
-    <div className="bg-white rounded-[10px] shadow-sm border border-[#EEEEEE] overflow-hidden">
+    <div className="bg-white rounded-[10px] shadow-sm border border-[#EEEEEE] overflow-hidden relative">
+      {/* Background Fetching Indicator Bar */}
+      {isFetching && (
+        <div className="h-0.5 w-full bg-[#E3F2FD] overflow-hidden">
+          <div className="h-full bg-[#1E88E5] animate-pulse w-full" />
+        </div>
+      )}
+
       {/* ── Desktop View: Enterprise Data Table (>= md) ── */}
       <div className="hidden md:block overflow-x-auto w-full">
         <table className="w-full text-left border-collapse min-w-[1050px]">
@@ -221,8 +233,12 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
           </thead>
 
           {/* Zebra-free rows with 1px #EEEEEE dividers & #F0F4F8 subtle hover */}
-          <tbody className="divide-y divide-[#EEEEEE] text-[13px] text-[#1A1A1A]">
-            {isLoading ? (
+          <tbody
+            className={`divide-y divide-[#EEEEEE] text-[13px] text-[#1A1A1A] transition-opacity duration-150 ${
+              isFetching ? "opacity-75" : "opacity-100"
+            }`}
+          >
+            {isInitialLoading ? (
               <tr>
                 <td colSpan={columns.length} className="py-12 text-center text-[#5F6368]">
                   <div className="flex flex-col items-center justify-center gap-2">
@@ -246,11 +262,10 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row, idx) => (
+              table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  className="hover:bg-[#F0F4F8] transition-colors group table-row-animate"
-                  style={{ animationDelay: `${idx * 40}ms` }}
+                  className="hover:bg-[#F0F4F8] transition-colors group"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="py-3.5 px-4">
@@ -268,8 +283,12 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
       </div>
 
       {/* ── Mobile View: Neat Ticket Cards (< md) ── */}
-      <div className="block md:hidden divide-y divide-[#EEEEEE]">
-        {isLoading ? (
+      <div
+        className={`block md:hidden divide-y divide-[#EEEEEE] transition-opacity duration-150 ${
+          isFetching ? "opacity-75" : "opacity-100"
+        }`}
+      >
+        {isInitialLoading ? (
           <div className="py-12 text-center text-[#5F6368]">
             <div className="flex flex-col items-center justify-center gap-2">
               <span className="material-symbols-outlined animate-spin text-[24px] text-[#1E88E5]">

@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { apiClient } from "@/shared/api";
 import {
   TicketStatsData,
@@ -8,20 +8,21 @@ import {
 } from "./types";
 
 export const adminKeys = {
-  all: ["admin"] as const,
-  stats: () => [...adminKeys.all, "ticket-stats"] as const,
-  tickets: (params: TicketQueryParams) => [...adminKeys.all, "tickets", params] as const,
-  projects: () => [...adminKeys.all, "projects"] as const,
-  teams: () => [...adminKeys.all, "teams"] as const,
-  users: () => [...adminKeys.all, "users"] as const,
-  priorities: () => [...adminKeys.all, "priorities"] as const,
-  statuses: () => [...adminKeys.all, "statuses"] as const,
+  all: (userId?: number | string) => ["admin", userId ?? "anon"] as const,
+  stats: (userId?: number | string) => [...adminKeys.all(userId), "ticket-stats"] as const,
+  tickets: (userId: number | string | undefined, params: TicketQueryParams) =>
+    [...adminKeys.all(userId), "tickets", params] as const,
+  projects: () => ["admin", "projects"] as const,
+  teams: () => ["admin", "teams"] as const,
+  users: () => ["admin", "users"] as const,
+  priorities: () => ["admin", "priorities"] as const,
+  statuses: () => ["admin", "statuses"] as const,
 };
 
 // GET /api/tickets/stats
-export const useTicketStatsQuery = () => {
+export const useTicketStatsQuery = (userId?: number | string) => {
   return useQuery<TicketStatsData>({
-    queryKey: adminKeys.stats(),
+    queryKey: adminKeys.stats(userId),
     queryFn: async () => {
       const { data } = await apiClient.get<{ status: string; data: TicketStatsData }>(
         "/tickets/stats",
@@ -33,9 +34,12 @@ export const useTicketStatsQuery = () => {
 };
 
 // GET /api/tickets
-export const useTicketsTableQuery = (params: TicketQueryParams) => {
+export const useTicketsTableQuery = (
+  userId: number | string | undefined,
+  params: TicketQueryParams,
+) => {
   return useQuery<TicketsTableResponse>({
-    queryKey: adminKeys.tickets(params),
+    queryKey: adminKeys.tickets(userId, params),
     queryFn: async () => {
       const cleanParams = Object.fromEntries(
         Object.entries(params).filter(
@@ -48,6 +52,7 @@ export const useTicketsTableQuery = (params: TicketQueryParams) => {
       );
       return data.data;
     },
+    placeholderData: keepPreviousData,
   });
 };
 

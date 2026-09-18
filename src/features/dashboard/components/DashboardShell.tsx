@@ -7,6 +7,7 @@ import {
   useCan,
 } from "@/features/auth/authSlice";
 import { useLogoutMutation } from "@/features/auth/api";
+import { queryClient } from "@/app/providers";
 
 export interface DashboardShellProps {
   title: string;
@@ -30,11 +31,9 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
-      onSuccess: () => {
-        dispatch(clearSession());
-        navigate("/login", { replace: true });
-      },
-      onError: () => {
+      onSettled: () => {
+        sessionStorage.removeItem("rts_auth_token");
+        queryClient.clear();
         dispatch(clearSession());
         navigate("/login", { replace: true });
       },

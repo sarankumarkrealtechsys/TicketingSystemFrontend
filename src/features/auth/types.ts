@@ -27,6 +27,7 @@ export interface AuthUser {
 export type PermissionsMap = Record<string, string[]>;
 
 export interface AuthData {
+  token?: string;
   user: AuthUser;
   permissions: PermissionsMap;
 }

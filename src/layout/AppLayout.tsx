@@ -72,6 +72,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   className = "",
 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("rts_sidebar_collapsed") === "true";
+    }
+    return false;
+  });
+
+  const handleToggleCollapse = React.useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("rts_sidebar_collapsed", String(next));
+      return next;
+    });
+  }, []);
 
   // ── Build sub-component props ──
   const sidebarProps: SidebarProps = {
@@ -80,6 +94,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     workspaceIcon,
     brandTitle,
     brandSubtitle,
+    collapsed,
+    onToggleCollapse: handleToggleCollapse,
     mobileOpen: isMobileMenuOpen,
     onCloseMobile: () => setIsMobileMenuOpen(false),
   };
@@ -98,6 +114,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     notificationCount,
     onNotificationClick,
     onToggleMobileMenu: () => setIsMobileMenuOpen((prev) => !prev),
+    collapsed,
   };
 
   const footerProps: FooterProps = {
@@ -110,11 +127,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     <div
       className={`bg-[#F7F8FA] font-sans text-[#1A1A1A] antialiased text-[14px] min-h-screen ${className}`}
     >
-      {/* Sidebar (drawer on mobile, fixed 260px on desktop) */}
+      {/* Sidebar (drawer on mobile, fixed on desktop with collapse support) */}
       <Sidebar {...sidebarProps} />
 
       {/* Content wrapper offset by sidebar width on desktop */}
-      <div className="pl-0 lg:pl-[260px] flex flex-col min-h-screen transition-all duration-200">
+      <div
+        className={`flex flex-col min-h-screen transition-all duration-300 ease-in-out pl-0 ${
+          collapsed ? "lg:pl-[68px]" : "lg:pl-[260px]"
+        }`}
+      >
         {/* Top Navbar */}
         <Navbar {...navbarProps} />
 

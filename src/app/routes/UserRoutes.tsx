@@ -1,21 +1,36 @@
 import React from "react";
 import { Route } from "react-router-dom";
-import { UserDashboardPage } from "@/pages";
-import { ProtectedRoute } from "./ProtectedRoute";
+import { UserDashboardPage, MyTeamPage } from "@/pages";
+import { PermissionRoute } from "./PermissionRoute";
 import { ROUTES } from "./routePaths";
 
 /**
  * Standard User Workspace Routes definition.
- * Guarded by authentication and session scope.
+ * Guarded by authentication and role="USER".
+ * Admins trying to access user workspace routes are redirected to Admin Console.
  */
 export const UserRoutes = (
   <>
     <Route
       path={ROUTES.USER_DASHBOARD}
       element={
-        <ProtectedRoute>
+        <PermissionRoute
+          requiredRole="USER"
+          fallbackPath={ROUTES.ADMIN_DASHBOARD}
+        >
           <UserDashboardPage />
-        </ProtectedRoute>
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path={ROUTES.MY_TEAM}
+      element={
+        <PermissionRoute
+          requiredRole="USER"
+          fallbackPath={ROUTES.TEAMS}
+        >
+          <MyTeamPage />
+        </PermissionRoute>
       }
     />
   </>

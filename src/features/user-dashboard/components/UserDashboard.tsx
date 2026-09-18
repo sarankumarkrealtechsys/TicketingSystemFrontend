@@ -2,36 +2,33 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
 import { AppLayout } from "@/layout/AppLayout";
-import { FilterToolbar } from "./FilterToolbar";
-import { TicketsTable } from "./TicketsTable";
+import { UserFilterToolbar } from "./UserFilterToolbar";
+import { TicketsTable } from "@/features/admin/components/TicketsTable";
 import {
   StatCard,
   PriorityBarChart,
   StatusDonutChart,
 } from "@/shared/components";
 import {
-  useTicketStatsQuery,
-  useTicketsTableQuery,
+  useUserTicketStatsQuery,
+  useUserTicketsTableQuery,
   useProjectsQuery,
-  useTeamsQuery,
-  useUsersQuery,
   usePrioritiesQuery,
   useStatusesQuery,
 } from "../api";
-import { TicketQueryParams } from "../types";
+import { UserTicketQueryParams } from "../types";
 
-export const AdminDashboard: React.FC = () => {
+export const UserDashboard: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = useAppSelector((state) => state.auth.user);
 
-  // Query parameters state
-  const [filters, setFilters] = useState<TicketQueryParams>({
+  // Query parameters state with strict personal scope
+  const [filters, setFilters] = useState<UserTicketQueryParams>({
     page: 1,
     pageSize: 10,
     search: "",
+    scope: "personal",
     projectId: undefined,
-    teamId: undefined,
-    assigneeId: undefined,
     priorityId: undefined,
     statusId: undefined,
     startDate: undefined,
@@ -40,20 +37,18 @@ export const AdminDashboard: React.FC = () => {
 
   const [isDateActive, setIsDateActive] = useState(false);
 
-  // Queries scoped to authenticated user ID
-  const { data: statsData } = useTicketStatsQuery(currentUser?.id);
+  // Queries strictly scoped to active user
+  const { data: statsData } = useUserTicketStatsQuery(currentUser?.id, "personal");
   const {
     data: ticketsData,
     isLoading: isTicketsLoading,
     isFetching: isTicketsFetching,
-  } = useTicketsTableQuery(currentUser?.id, filters);
+  } = useUserTicketsTableQuery(currentUser?.id, filters);
   const { data: projects = [] } = useProjectsQuery();
-  const { data: teams = [] } = useTeamsQuery();
-  const { data: users = [] } = useUsersQuery();
   const { data: priorities = [] } = usePrioritiesQuery();
   const { data: statuses = [] } = useStatusesQuery();
 
-  const handleFilterChange = (newFilters: Partial<TicketQueryParams>) => {
+  const handleFilterChange = (newFilters: Partial<UserTicketQueryParams>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
   };
 
@@ -62,9 +57,8 @@ export const AdminDashboard: React.FC = () => {
       page: 1,
       pageSize: 10,
       search: "",
+      scope: "personal",
       projectId: undefined,
-      teamId: undefined,
-      assigneeId: undefined,
       priorityId: undefined,
       statusId: undefined,
       startDate: undefined,
@@ -110,20 +104,20 @@ export const AdminDashboard: React.FC = () => {
 
   return (
     <AppLayout
-      role="ADMIN"
+      role="USER"
       onSearch={(query) => handleFilterChange({ search: query, page: 1 })}
     >
       <div className="space-y-6">
-        {/* Page Title & Org-Wide Admin Scope Badge */}
+        {/* Page Title & Personal Scope Badge */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="font-semibold text-[24px] text-[#1A1A1A] tracking-tight">
-                Operations Workspace
+                My Workspace
               </h1>
             </div>
             <p className="text-[13px] text-[#5F6368] mt-0.5">
-              At-a-glance view of all system tickets with triage and drill-down.
+              Showing tickets you created or are assigned to
             </p>
           </div>
 
@@ -146,7 +140,7 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="Total Tickets"
             count={total}
-            subtitle="All active & archived"
+            subtitle="All personal & assigned"
             icon="layers"
             accentColor="#1F3864"
           />
@@ -161,7 +155,7 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="In Progress"
             count={statusBehaviors.IN_PROGRESS}
-            subtitle="Under investigation"
+            subtitle="Active tasks"
             icon="engineering"
             accentColor="#FB8C00"
             subtitleColor="#FB8C00"
@@ -169,7 +163,7 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="On Hold"
             count={statusBehaviors.ON_HOLD}
-            subtitle="Vendor / Client wait"
+            subtitle="Pending dependency"
             icon="pause_circle"
             accentColor="#8E24AA"
             subtitleColor="#8E24AA"
@@ -185,7 +179,7 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="Closed"
             count={statusBehaviors.CLOSED}
-            subtitle="Archived SLA met"
+            subtitle="Completed"
             icon="archive"
             accentColor="#757575"
           />
@@ -196,21 +190,27 @@ export const AdminDashboard: React.FC = () => {
           <PriorityBarChart
             total={total}
             byPriority={statsData?.byPriority || []}
+            title="Tickets by Priority"
+            subtitle="Priority distribution of your assigned and authored tickets."
+            averageSlaText="1.1 hrs"
+            onSchedulePct="100% On Schedule"
           />
           <StatusDonutChart
             total={total}
             byStatusBehavior={statusBehaviors}
+            title="Tickets by Status"
+            subtitle="Status breakdown across all your active and resolved tickets."
+            badgeText="Personal Tickets"
+            breakdownLink="/tickets?filter=my"
           />
         </div>
 
         {/* FILTER TOOLBAR */}
-        <FilterToolbar
+        <UserFilterToolbar
           filters={filters}
           onFilterChange={handleFilterChange}
           onClear={handleClearFilters}
           projects={projects}
-          teams={teams}
-          users={users}
           priorities={priorities}
           statuses={statuses}
           isDateActive={isDateActive}
@@ -234,4 +234,4 @@ export const AdminDashboard: React.FC = () => {
   );
 };
 
-export default AdminDashboard;
+export default UserDashboard;

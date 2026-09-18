@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useLoginMutation } from "../api";
+import { useLoginMutation, authKeys } from "../api";
 import { setSession, useAppDispatch, useAppSelector } from "../authSlice";
+import { queryClient } from "@/app/providers";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Please enter your username"),
@@ -41,9 +42,17 @@ export const LoginForm: React.FC = () => {
     if (status === "authenticated" && user) {
       const from = (location.state as { from?: { pathname: string } })?.from
         ?.pathname;
-      if (from && from !== "/login") {
+      const roleName = (user.role?.name || "").toUpperCase();
+      const isAdmin = roleName === "ADMIN";
+      const isGenericRoute =
+        !from ||
+        from === "/login" ||
+        from === "/dashboard" ||
+        from === "/admin/dashboard";
+
+      if (!isGenericRoute) {
         navigate(from, { replace: true });
-      } else if (user.role?.name === "ADMIN") {
+      } else if (isAdmin) {
         navigate("/admin/dashboard", { replace: true });
       } else {
         navigate("/dashboard", { replace: true });
@@ -55,13 +64,30 @@ export const LoginForm: React.FC = () => {
     setServerError(null);
     loginMutation.mutate(values, {
       onSuccess: (response) => {
+        // Isolate authentication session in this browser tab
+        if (response.data?.token) {
+          sessionStorage.setItem("rts_auth_token", response.data.token);
+        }
+
+        // Prime cache with current active session and clear any obsolete stale data
+        queryClient.setQueryData(authKeys.me(), response);
         dispatch(setSession(response.data));
+
         const authUser = response.data.user;
+        const roleName = (authUser.role?.name || "").toUpperCase();
+        const isAdmin = roleName === "ADMIN";
+
         const from = (location.state as { from?: { pathname: string } })?.from
           ?.pathname;
-        if (from && from !== "/login") {
+        const isGenericRoute =
+          !from ||
+          from === "/login" ||
+          from === "/dashboard" ||
+          from === "/admin/dashboard";
+
+        if (!isGenericRoute) {
           navigate(from, { replace: true });
-        } else if (authUser.role?.name === "ADMIN") {
+        } else if (isAdmin) {
           navigate("/admin/dashboard", { replace: true });
         } else {
           navigate("/dashboard", { replace: true });
@@ -101,7 +127,7 @@ export const LoginForm: React.FC = () => {
     >
       {/* BEGIN: LeftBrandingColumn */}
       <section
-        className="w-full md:w-[45%] min-h-[260px] md:min-h-screen brand-glow flex flex-col items-center justify-center relative p-8 select-none flex-shrink-0"
+        className="w-full md:w-1/2 min-h-[320px] md:min-h-screen brand-glow flex flex-col items-center justify-center relative pt-12 pb-8 px-6 md:p-8 select-none flex-shrink-0"
         data-purpose="brand-identity-panel"
       >
         {/* Decorative subtle backdrop overlay */}
@@ -129,7 +155,7 @@ export const LoginForm: React.FC = () => {
 
       {/* BEGIN: RightAuthColumn */}
       <section
-        className="flex-1 min-h-[calc(100vh-260px)] md:min-h-screen bg-[#F7F8FA] flex items-center justify-center p-6 sm:p-10 md:p-12 overflow-y-auto"
+        className="w-full md:w-1/2 min-h-[calc(100vh-320px)] md:min-h-screen bg-[#F7F8FA] flex items-center justify-center p-6 sm:p-10 md:p-12 overflow-y-auto"
         data-purpose="authentication-panel"
       >
         {/* Authentication Card Container */}

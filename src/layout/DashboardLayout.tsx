@@ -10,7 +10,22 @@ interface DashboardLayoutProps {
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
   children,
 }) => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("rts_sidebar_collapsed") === "true";
+    }
+    return false;
+  });
+
+  const handleToggleCollapse = React.useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem("rts_sidebar_collapsed", String(next));
+      return next;
+    });
+  }, []);
+
+  const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const { user } = useAppSelector((state) => state.auth);
 
@@ -33,17 +48,27 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
       {/* ─── Global Left Sidebar ─── */}
       <Sidebar
         collapsed={collapsed}
-        onToggleCollapse={() => setCollapsed((prev) => !prev)}
+        onToggleCollapse={handleToggleCollapse}
+        mobileOpen={mobileOpen}
+        onCloseMobile={() => setMobileOpen(false)}
       />
 
       {/* ─── Main Content Container ─── */}
       <div
-        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
-          collapsed ? "pl-[68px]" : "pl-60"
+        className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out pl-0 ${
+          collapsed ? "lg:pl-[68px]" : "lg:pl-[260px]"
         }`}
       >
         {/* ─── Topbar ─── */}
-        <header className="h-16 px-8 border-b border-slate-200 bg-surface-container-lowest flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+        <header className="h-16 px-4 sm:px-8 border-b border-slate-200 bg-surface-container-lowest flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            className="lg:hidden p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 mr-2 transition-colors"
+            onClick={() => setMobileOpen((prev) => !prev)}
+          >
+            <span className="material-symbols-outlined text-[22px]">menu</span>
+          </button>
           <div className="flex items-center gap-3">
             <h1 className="text-base font-bold tracking-tight text-slate-900 font-headline-sm">
               {getPageTitle()}

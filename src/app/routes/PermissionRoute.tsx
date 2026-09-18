@@ -36,20 +36,33 @@ export const PermissionRoute: React.FC<PermissionRouteProps> = ({
   }
 
   if (status === "unauthenticated" || !user) {
-    return <Navigate to={ROUTES.LOGIN} state={{ from: location }} replace />;
+    const isGenericDashboard =
+      location.pathname === "/login" ||
+      location.pathname === "/dashboard" ||
+      location.pathname === "/admin/dashboard";
+
+    return (
+      <Navigate
+        to={ROUTES.LOGIN}
+        state={isGenericDashboard ? undefined : { from: location }}
+        replace
+      />
+    );
   }
 
+  const userRole = (user.role?.name || "").toUpperCase();
+
   // 1. Role enforcement
-  if (requiredRole && user.role?.name !== requiredRole) {
+  if (requiredRole && userRole !== requiredRole.toUpperCase()) {
     const defaultRedirect =
-      user.role?.name === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.USER_DASHBOARD;
+      userRole === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.USER_DASHBOARD;
     return <Navigate to={fallbackPath || defaultRedirect} replace />;
   }
 
   // 2. Granular permission enforcement
   if (requiredPermission && !hasPermission) {
     const defaultRedirect =
-      user.role?.name === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.USER_DASHBOARD;
+      userRole === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.USER_DASHBOARD;
     return <Navigate to={fallbackPath || defaultRedirect} replace />;
   }
 
