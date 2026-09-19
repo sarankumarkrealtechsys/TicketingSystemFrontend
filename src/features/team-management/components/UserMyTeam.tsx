@@ -235,7 +235,7 @@ export const UserMyTeam: React.FC = () => {
         </div>
       </div>
 
-      {/* TEAMMATES ROSTER SECTION - LIST VIEW (Web & Mobile Responsive) */}
+      {/* TEAM MEMBER DETAILS SECTION */}
       <div className="bg-white rounded-xl shadow-xs border border-[#E5E7EB] overflow-hidden">
         {/* Section Header */}
         <div className="p-4 sm:p-5 bg-white border-b border-[#F0F2F5] flex items-center justify-between">
@@ -243,92 +243,124 @@ export const UserMyTeam: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-[#1F3864]/10 text-[#1F3864] flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">badge</span>
             </div>
-            <h2 className="font-bold text-base text-[#1A1A1A]">Team Roster</h2>
+            <h2 className="font-bold text-base text-[#1A1A1A]">Team Member Details</h2>
           </div>
           <span className="text-xs px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-700 font-semibold border border-gray-200">
             {activeMembers.length} Members
           </span>
         </div>
 
-        {/* Teammates List */}
-        <div>
-          {isTeamDetailLoading ? (
-            <div className="py-12 flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
-              <span className="w-5 h-5 border-2 border-[#1F3864] border-t-transparent rounded-full animate-spin" />
-              Loading roster...
-            </div>
-          ) : activeMembers.length === 0 ? (
-            <div className="py-10 text-center text-xs text-gray-500">
-              No teammates currently assigned to this team roster.
-            </div>
-          ) : (
-            <div className="divide-y divide-[#F0F2F5]">
-              {activeMembers.map((m) => {
-                const initials = (m.user?.name || m.user?.username || "U")
-                  .split(" ")
-                  .map((w) => w[0])
-                  .slice(0, 2)
-                  .join("")
-                  .toUpperCase();
-                const isLead =
-                  m.user?.email?.toLowerCase() ===
-                  currentTeam?.teamAdminEmail?.toLowerCase();
+        {/* Team Members List */}
+        {isTeamDetailLoading ? (
+          <div className="py-12 flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
+            <span className="w-5 h-5 border-2 border-[#1F3864] border-t-transparent rounded-full animate-spin" />
+            Loading team member details...
+          </div>
+        ) : activeMembers.length === 0 ? (
+          <div className="py-10 text-center text-xs text-gray-500">
+            No team members currently assigned to this team.
+          </div>
+        ) : (
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#FAFBFD] border-b border-[#F0F2F5] text-gray-500 font-semibold text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4 sm:px-6 w-[35%] min-w-[200px]">Member</th>
+                  <th className="py-3 px-4 sm:px-6 w-[25%] min-w-[180px]">Email</th>
+                  <th className="py-3 px-4 sm:px-6 w-[15%] min-w-[120px]">Role</th>
+                  <th className="py-3 px-4 sm:px-6 w-[15%] min-w-[120px]">Joined</th>
+                  <th className="py-3 px-4 sm:px-6 w-[10%] min-w-[90px] text-right sm:text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F0F2F5] text-xs">
+                {activeMembers.map((m) => {
+                  const initials = (m.user?.name || m.user?.username || "U")
+                    .split(" ")
+                    .map((w) => w[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase();
+                  const isLead =
+                    m.user?.email?.toLowerCase() ===
+                    currentTeam?.teamAdminEmail?.toLowerCase();
 
-                return (
-                  <div
-                    key={m.id}
-                    className="p-4 sm:px-6 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/60 transition-colors"
-                  >
-                    {/* Left: Avatar + Name + Role + Email */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1F3864] to-[#2B5EA7] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                        {initials}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm text-[#1A1A1A] truncate" title={m.user?.name || m.user?.username}>
-                            {m.user?.name || m.user?.username}
-                          </span>
-                          {isLead ? (
-                            <span className="px-2 py-0.5 rounded-full bg-[#1F3864]/10 text-[#1F3864] text-[11px] font-bold border border-[#1F3864]/20">
-                              Team Lead
+                  return (
+                    <tr
+                      key={m.id}
+                      className="hover:bg-gray-50/60 transition-colors"
+                    >
+                      {/* Member: Avatar + Name */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-[#1F3864] to-[#2B5EA7] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <span
+                              className="font-bold text-sm text-[#1A1A1A] block truncate"
+                              title={m.user?.name || m.user?.username}
+                            >
+                              {m.user?.name || m.user?.username}
                             </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
-                              {m.user?.userRole?.name || "Specialist"}
+                            <span className="text-[11px] text-gray-400 block truncate">
+                              @{m.user?.username || "user"}
                             </span>
-                          )}
+                          </div>
                         </div>
-                        <span className="text-xs text-gray-500 font-mono block truncate mt-0.5" title={m.user?.email}>
-                          {m.user?.email || `@${m.user?.username}`}
-                        </span>
-                      </div>
-                    </div>
+                      </td>
 
-                    {/* Right: Joined Date + Active Pill */}
-                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 text-xs text-gray-500 pl-12 sm:pl-0 shrink-0">
-                      <div className="flex items-center gap-1.5 text-[11px] sm:text-xs">
-                        <span className="material-symbols-outlined text-[15px] text-gray-400">
-                          calendar_today
+                      {/* Email */}
+                      <td
+                        className="py-3.5 px-4 sm:px-6 font-mono text-gray-500 truncate"
+                        title={m.user?.email}
+                      >
+                        {m.user?.email || "—"}
+                      </td>
+
+                      {/* Role */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        {isLead ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#1F3864]/10 text-[#1F3864] text-[11px] font-bold border border-[#1F3864]/20">
+                            Team Lead
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
+                            {m.user?.userRole?.name || "Specialist"}
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Joined Date */}
+                      <td className="py-3.5 px-4 sm:px-6 text-gray-500">
+                        <div className="flex items-center gap-1.5 text-[11px]">
+                          <span className="material-symbols-outlined text-[14px] text-gray-400">
+                            calendar_today
+                          </span>
+                          <span>
+                            {m.joinedAt
+                              ? new Date(m.joinedAt).toLocaleDateString()
+                              : "—"}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3.5 px-4 sm:px-6 text-right sm:text-left">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          Active
                         </span>
-                        <span>
-                          Joined {m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : "—"}
-                        </span>
-                      </div>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        Active
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* TEAM WORKFLOW STATUSES SECTION - LIST VIEW (Web & Mobile Responsive) */}
+      {/* TEAM WORKFLOW STATUSES SECTION */}
       <div className="bg-white rounded-xl shadow-xs border border-[#E5E7EB] overflow-hidden">
         {/* Section Header */}
         <div className="p-4 sm:p-5 bg-white border-b border-[#F0F2F5] flex items-center justify-between">
@@ -353,66 +385,86 @@ export const UserMyTeam: React.FC = () => {
         </div>
 
         {/* Statuses List */}
-        <div>
-          {isStatusesLoading ? (
-            <div className="py-12 flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
-              <span className="w-5 h-5 border-2 border-[#1F3864] border-t-transparent rounded-full animate-spin" />
-              Loading workflow statuses...
-            </div>
-          ) : teamStatuses.length === 0 ? (
-            <div className="py-10 text-center text-xs text-gray-500">
-              No custom workflow statuses configured for this team.
-            </div>
-          ) : (
-            <div className="divide-y divide-[#F0F2F5]">
-              {teamStatuses.map((s) => {
-                const dotColor = getLifecycleDot(s.behavior);
-                const badgeClass = getLifecycleBadge(s.behavior);
-                const isTeamSpecific = Boolean(s.teamId);
+        {isStatusesLoading ? (
+          <div className="py-12 flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
+            <span className="w-5 h-5 border-2 border-[#1F3864] border-t-transparent rounded-full animate-spin" />
+            Loading workflow statuses...
+          </div>
+        ) : teamStatuses.length === 0 ? (
+          <div className="py-10 text-center text-xs text-gray-500">
+            No custom workflow statuses configured for this team.
+          </div>
+        ) : (
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-[#FAFBFD] border-b border-[#F0F2F5] text-gray-500 font-semibold text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-4 sm:px-6 w-[50%] min-w-[220px]">Custom Label</th>
+                  <th className="py-3 px-4 sm:px-6 w-[25%] min-w-[160px]">Mapped Lifecycle</th>
+                  <th className="py-3 px-4 sm:px-6 w-[25%] min-w-[140px]">Scope</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F0F2F5] text-xs">
+                {teamStatuses.map((s) => {
+                  const dotColor = getLifecycleDot(s.behavior);
+                  const badgeClass = getLifecycleBadge(s.behavior);
+                  const isTeamSpecific = Boolean(s.teamId);
 
-                return (
-                  <div
-                    key={s.id}
-                    className="p-4 sm:px-6 sm:py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-gray-50/60 transition-colors"
-                  >
-                    {/* Left: Dot + Custom Label + Optional Description */}
-                    <div className="flex items-start sm:items-center gap-3 min-w-0">
-                      <span className={`w-3 h-3 rounded-full mt-1 sm:mt-0 shrink-0 ${dotColor}`} />
-                      <div className="min-w-0">
-                        <span className="font-bold text-sm text-[#1A1A1A] block truncate" title={s.label}>
-                          {s.label}
+                  return (
+                    <tr
+                      key={s.id}
+                      className="hover:bg-gray-50/60 transition-colors"
+                    >
+                      {/* Column 1: Custom Label */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotColor}`}
+                          />
+                          <div className="min-w-0">
+                            <span
+                              className="font-bold text-sm text-[#1A1A1A] block truncate"
+                              title={s.label}
+                            >
+                              {s.label}
+                            </span>
+                            {s.description && (
+                              <span className="text-xs text-gray-500 line-clamp-1 block mt-0.5">
+                                {s.description}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Column 2: Mapped Lifecycle */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${badgeClass}`}
+                        >
+                          {s.behavior.replace("_", " ")}
                         </span>
-                        {s.description && (
-                          <span className="text-xs text-gray-500 line-clamp-1 block mt-0.5">
-                            {s.description}
+                      </td>
+
+                      {/* Column 3: Scope */}
+                      <td className="py-3.5 px-4 sm:px-6">
+                        {isTeamSpecific ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#0e61a1] border border-blue-100">
+                            {currentTeam?.name}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                            Global Default
                           </span>
                         )}
-                      </div>
-                    </div>
-
-                    {/* Right: Mapped Lifecycle Badge + Scope Pill */}
-                    <div className="flex items-center gap-2.5 sm:gap-4 pl-6 sm:pl-0 shrink-0">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${badgeClass}`}
-                      >
-                        {s.behavior.replace("_", " ")}
-                      </span>
-                      {isTeamSpecific ? (
-                        <span className="px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#0e61a1] border border-blue-100">
-                          {currentTeam?.name}
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                          Global Default
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* New Status Modal */}

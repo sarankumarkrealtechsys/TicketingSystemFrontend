@@ -5,6 +5,7 @@ import {
   useUpdateTeamMutation,
   useRetireTeamMutation,
 } from "../api";
+import { useDepartmentsQuery } from "@/features/department-management";
 import { TeamItem } from "../types";
 import { CreateTeamModal } from "./CreateTeamModal";
 import { EditTeamModal } from "./EditTeamModal";
@@ -12,13 +13,14 @@ import { TeamRosterDrawer } from "./TeamRosterDrawer";
 import { SelectDropdown, SelectOption } from "@/shared/components";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
-  { value: "all", label: "All Teams" },
+  { value: "all", label: "All Statuses" },
   { value: "active", label: "Active Only", dotColor: "bg-emerald-500" },
   { value: "inactive", label: "Archived / Inactive", dotColor: "bg-gray-400" },
 ];
 
 export const AdminTeamManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
   >("active");
@@ -36,6 +38,10 @@ export const AdminTeamManagement: React.FC = () => {
   const { data: teams = [], isLoading } = useTeamsQuery({
     includeInactive: true,
   });
+  const { data: departments = [] } = useDepartmentsQuery({
+    includeInactive: true,
+  });
+
   const updateTeamMutation = useUpdateTeamMutation();
   const retireTeamMutation = useRetireTeamMutation();
 
@@ -58,9 +64,34 @@ export const AdminTeamManagement: React.FC = () => {
     setTimeout(() => setActionSuccessMessage(null), 4000);
   };
 
+  // Department Dropdown Filter Options
+  const departmentOptions = useMemo<SelectOption<string>[]>(() => {
+    const options: SelectOption<string>[] = [
+      { value: "all", label: "All Departments" },
+    ];
+    departments.forEach((d) => {
+      options.push({
+        value: d.id.toString(),
+        label: d.name,
+        sublabel: d.status === "INACTIVE" ? "Archived" : undefined,
+        dotColor: d.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-400",
+      });
+    });
+    return options;
+  }, [departments]);
+
   // Filtered teams
   const filteredTeams = useMemo(() => {
     return teams.filter((t) => {
+      // Department filter
+      if (
+        departmentFilter !== "all" &&
+        t.departmentId !== Number(departmentFilter) &&
+        t.department?.id !== Number(departmentFilter)
+      ) {
+        return false;
+      }
+
       // Status filter
       if (statusFilter === "active" && t.status !== "ACTIVE") return false;
       if (statusFilter === "inactive" && t.status !== "INACTIVE") return false;
@@ -73,7 +104,7 @@ export const AdminTeamManagement: React.FC = () => {
       const emailMatch = t.teamAdminEmail.toLowerCase().includes(q);
       return nameMatch || deptMatch || emailMatch;
     });
-  }, [teams, statusFilter, searchQuery]);
+  }, [teams, departmentFilter, statusFilter, searchQuery]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -299,13 +330,27 @@ export const AdminTeamManagement: React.FC = () => {
             />
           </div>
 
-          <div className="w-full sm:w-48">
-            <SelectDropdown<"all" | "active" | "inactive">
-              value={statusFilter}
-              onChange={(val) => setStatusFilter(val)}
-              options={STATUS_FILTER_OPTIONS}
-              size="sm"
-            />
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            {/* Department Filter */}
+            <div className="w-full sm:w-56">
+              <SelectDropdown<string>
+                value={departmentFilter}
+                onChange={(val) => setDepartmentFilter(val)}
+                options={departmentOptions}
+                placeholder="Filter by Department..."
+                size="sm"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="w-full sm:w-44">
+              <SelectDropdown<"all" | "active" | "inactive">
+                value={statusFilter}
+                onChange={(val) => setStatusFilter(val)}
+                options={STATUS_FILTER_OPTIONS}
+                size="sm"
+              />
+            </div>
           </div>
         </div>
 

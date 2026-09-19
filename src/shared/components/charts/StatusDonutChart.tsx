@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 export interface StatusDonutChartProps {
@@ -30,6 +30,7 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
   badgeText = "Live Lifecycle",
   breakdownLink = "/tickets",
 }) => {
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const circumference = 2 * Math.PI * 38; // ~238.761
 
   const statuses = [
@@ -55,6 +56,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
     };
   });
 
+  const activeSlice = slices.find((s) => s.key === hoveredKey);
+
   return (
     <div className="bg-white rounded-[10px] p-5 shadow-sm border border-[#EEEEEE] flex flex-col justify-between">
       <div>
@@ -77,7 +80,7 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-1">
           {/* SVG Donut Chart */}
-          <div className="relative w-36 h-36 flex items-center justify-center flex-shrink-0">
+          <div className="relative w-40 h-40 flex items-center justify-center flex-shrink-0">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
               {/* Background Track */}
               <circle
@@ -99,45 +102,95 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                   stroke={slice.color}
                   strokeDasharray={`${slice.length} ${circumference}`}
                   strokeDashoffset={slice.offset}
-                  strokeWidth="12"
-                  className="transition-all duration-700 ease-out"
-                />
+                  strokeWidth={hoveredKey === slice.key ? 15 : 12}
+                  onMouseEnter={() => setHoveredKey(slice.key)}
+                  onMouseLeave={() => setHoveredKey(null)}
+                  className="transition-all duration-300 ease-in-out cursor-pointer opacity-90 hover:opacity-100"
+                >
+                  <title>{`${slice.label}: ${slice.count} tickets (${slice.pct}%)`}</title>
+                </circle>
               ))}
             </svg>
 
-            {/* Centered Total Indicator */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none">
-              <span className="font-bold text-[22px] text-[#1A1A1A] leading-none font-mono">
-                {total}
-              </span>
-              <span className="text-[9px] font-bold text-[#5F6368] tracking-wider uppercase mt-0.5">
-                TICKETS
-              </span>
+            {/* Centered Dynamic Status Display on Hover with Smooth Opacity/Scale Transition */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none p-2">
+              {/* Default Total Display */}
+              <div
+                className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+                  activeSlice
+                    ? "opacity-0 scale-90 pointer-events-none absolute"
+                    : "opacity-100 scale-100"
+                }`}
+              >
+                <span className="font-bold text-[22px] text-[#1A1A1A] leading-none font-mono">
+                  {total}
+                </span>
+                <span className="text-[9px] font-bold text-[#5F6368] tracking-wider uppercase mt-0.5">
+                  TICKETS
+                </span>
+              </div>
+
+              {/* Active Hover Status Display */}
+              <div
+                className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+                  activeSlice
+                    ? "opacity-100 scale-100"
+                    : "opacity-0 scale-90 pointer-events-none absolute"
+                }`}
+              >
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider line-clamp-1"
+                  style={{ color: activeSlice?.color }}
+                >
+                  {activeSlice?.label}
+                </span>
+                <span className="font-bold text-[20px] text-[#1A1A1A] leading-tight font-mono mt-0.5">
+                  {activeSlice?.count}
+                </span>
+                <span className="text-[10px] font-mono text-gray-500">
+                  {activeSlice?.pct}%
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Legend Items */}
           <div className="flex-1 w-full space-y-2">
-            {slices.map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center justify-between text-[12px]"
-              >
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: item.color }}
-                  />
-                  <span className="font-medium text-[#1A1A1A]">{item.label}</span>
+            {slices.map((item) => {
+              const isHovered = hoveredKey === item.key;
+              return (
+                <div
+                  key={item.key}
+                  onMouseEnter={() => setHoveredKey(item.key)}
+                  onMouseLeave={() => setHoveredKey(null)}
+                  className={`flex items-center justify-between text-[12px] p-1.5 rounded-md transition-all cursor-pointer ${
+                    isHovered
+                      ? "bg-gray-100/80 font-bold ring-1 ring-black/5"
+                      : "hover:bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span
+                      className={`font-medium ${
+                        isHovered ? "text-[#1A1A1A] font-bold" : "text-[#1A1A1A]"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono">
+                    <span className="font-bold text-[#1A1A1A]">{item.count}</span>
+                    <span className="text-[#5F6368] text-[11px]">
+                      ({item.pct}%)
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 font-mono">
-                  <span className="font-bold text-[#1A1A1A]">{item.count}</span>
-                  <span className="text-[#5F6368] text-[11px]">
-                    ({item.pct}%)
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

@@ -44,6 +44,7 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const dispatch = useAppDispatch();
+  const { status } = useAppSelector((state) => state.auth);
   const { data, error, isLoading } = useMeQuery();
 
   useEffect(() => {
@@ -53,10 +54,14 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
       }
       dispatch(setSession(data.data));
     } else if (error) {
-      sessionStorage.removeItem("rts_auth_token");
-      dispatch(clearSession());
+      const hasToken = Boolean(sessionStorage.getItem("rts_auth_token"));
+      // Only wipe session if there is no valid token in storage AND status is not authenticated
+      if (!hasToken && status !== "authenticated") {
+        sessionStorage.removeItem("rts_auth_token");
+        dispatch(clearSession());
+      }
     }
-  }, [data, error, dispatch]);
+  }, [data, error, dispatch, status]);
 
   if (isLoading) {
     return <LoadingSpinner message="Loading session..." />;

@@ -1,6 +1,6 @@
 import React from "react";
 import { Route } from "react-router-dom";
-import { UserDashboardPage, MyTeamPage } from "@/pages";
+import { UserDashboardPage, MyTeamPage, MyDepartmentPage } from "@/pages";
 import { PermissionRoute } from "./PermissionRoute";
 import { ROUTES } from "./routePaths";
 
@@ -19,6 +19,17 @@ export const UserRoutes = (
           fallbackPath={ROUTES.ADMIN_DASHBOARD}
         >
           <UserDashboardPage />
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path={ROUTES.MY_DEPARTMENT}
+      element={
+        <PermissionRoute
+          requiredRole="USER"
+          fallbackPath={ROUTES.DEPARTMENTS}
+        >
+          <MyDepartmentPage />
         </PermissionRoute>
       }
     />

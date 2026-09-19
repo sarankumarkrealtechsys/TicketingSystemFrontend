@@ -133,9 +133,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     logoutMutation.mutate(undefined, {
       onSettled: () => {
         sessionStorage.removeItem("rts_auth_token");
-        queryClient.removeQueries({ queryKey: authKeys.all });
-        queryClient.clear();
         dispatch(clearSession());
+        queryClient.cancelQueries();
+        queryClient.clear();
         navigate("/login", { replace: true, state: null });
       },
     });

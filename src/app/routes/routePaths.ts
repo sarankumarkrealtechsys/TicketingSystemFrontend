@@ -10,6 +10,8 @@ export const ROUTES = {
   USER_DASHBOARD: "/dashboard",
   TEAMS: "/teams",
   MY_TEAM: "/my-team",
+  DEPARTMENTS: "/admin/departments",
+  MY_DEPARTMENT: "/my-department",
 } as const;
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];

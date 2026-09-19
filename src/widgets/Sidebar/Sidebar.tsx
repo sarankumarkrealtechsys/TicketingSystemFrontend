@@ -65,9 +65,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Effective collapsed mode: only collapsed on desktop if mobile drawer is not open
   const isCollapsedMode = collapsed && !mobileOpen;
 
-  // Tickets accordion toggle state (open by default if currently on a ticket route)
+  // Tickets accordion toggle state (open only when currently on a ticket route)
   const isTicketActive = location.pathname.startsWith("/tickets");
-  const [ticketsOpen, setTicketsOpen] = useState(true);
+  const [ticketsOpen, setTicketsOpen] = useState(() => isTicketActive);
+
+  // Sync accordion collapse state on route navigation
+  React.useEffect(() => {
+    if (isTicketActive) {
+      setTicketsOpen(true);
+    } else {
+      setTicketsOpen(false);
+    }
+  }, [location.pathname, isTicketActive]);
 
   const handleNavClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -452,6 +461,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
 
                 <SidebarLink
+                  to="/admin/departments"
+                  icon="corporate_fare"
+                  label="Department Management"
+                />
+
+                <SidebarLink
                   to="/teams"
                   icon="groups"
                   label="Team Management"
@@ -583,6 +598,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 {/* Standard User Management Links */}
+                <SidebarLink
+                  to="/my-department"
+                  icon="domain"
+                  label="My Department"
+                />
+
                 <SidebarLink
                   to="/my-team"
                   icon="groups"

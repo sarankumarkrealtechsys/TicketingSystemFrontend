@@ -69,7 +69,8 @@ export const LoginForm: React.FC = () => {
           sessionStorage.setItem("rts_auth_token", response.data.token);
         }
 
-        // Prime cache with current active session and clear any obsolete stale data
+        // Reset all stale query error states and set fresh active session
+        queryClient.resetQueries({ queryKey: authKeys.all });
         queryClient.setQueryData(authKeys.me(), response);
         dispatch(setSession(response.data));
 
