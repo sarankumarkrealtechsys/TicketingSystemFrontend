@@ -108,7 +108,7 @@ export const AdminProjectManagement: React.FC = () => {
   };
 
   return (
-    <AppLayout role="ADMIN" onSearch={(q) => setSearchQuery(q)}>
+    <AppLayout role="ADMIN">
       <div className="space-y-6">
         {/* Bottom Toast Notification */}
         {toastMessage && (

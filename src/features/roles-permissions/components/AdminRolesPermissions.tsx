@@ -7,12 +7,16 @@ import {
   useCreateRoleMutation,
   useUpdateRoleMutation,
   useUpdateRolePermissionsMutation,
+  useArchiveRoleMutation,
+  useRestoreRoleMutation,
   useDeleteRoleMutation,
 } from '../api';
 import { RoleItem, PermissionItem, PermissionScope } from '../types';
 import CreateRoleModal from './CreateRoleModal';
 import EditRoleModal from './EditRoleModal';
 import DeleteRoleModal from './DeleteRoleModal';
+import ArchiveRoleModal from './ArchiveRoleModal';
+import RolesGuideModal from './RolesGuideModal';
 import MyPermissionsView from './MyPermissionsView';
 
 const SCOPES: PermissionScope[] = ['GLOBAL', 'DEPARTMENT', 'TEAM', 'ASSIGNED', 'OWN'];
@@ -39,6 +43,8 @@ export const AdminRolesPermissions: React.FC = () => {
   const createRoleMutation = useCreateRoleMutation();
   const updateRoleMutation = useUpdateRoleMutation();
   const updatePermissionsMutation = useUpdateRolePermissionsMutation();
+  const archiveRoleMutation = useArchiveRoleMutation();
+  const restoreRoleMutation = useRestoreRoleMutation();
   const deleteRoleMutation = useDeleteRoleMutation();
 
   // Selected Role State (default to first role, e.g. ADMIN)
@@ -57,8 +63,9 @@ export const AdminRolesPermissions: React.FC = () => {
     refetch: refetchRoleDetail,
   } = useRoleDetailsQuery(selectedRoleId);
 
-  // Search filter for left role selector
+  // Search filter and status filter for left role selector
   const [roleSearchQuery, setRoleSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
   // Local state for Permission Matrix checkboxes: Set of `${permissionId}_${scope}`
   const [activeGrants, setActiveGrants] = useState<Set<string>>(new Set());
@@ -83,7 +90,9 @@ export const AdminRolesPermissions: React.FC = () => {
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
 
   // Bottom Toast Notification state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -91,6 +100,10 @@ export const AdminRolesPermissions: React.FC = () => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
+
+  // Status counts
+  const activeRolesCount = useMemo(() => roles.filter((r) => r.status === 'ACTIVE').length, [roles]);
+  const archivedRolesCount = useMemo(() => roles.filter((r) => r.status === 'INACTIVE').length, [roles]);
 
   // Group permissions by category
   const categorizedPermissions = useMemo(() => {
@@ -105,11 +118,14 @@ export const AdminRolesPermissions: React.FC = () => {
 
   // Filtered roles in left panel
   const filteredRoles = useMemo(() => {
-    return roles.filter((r) =>
-      r.name.toLowerCase().includes(roleSearchQuery.toLowerCase()) ||
-      (r.description && r.description.toLowerCase().includes(roleSearchQuery.toLowerCase()))
-    );
-  }, [roles, roleSearchQuery]);
+    return roles.filter((r) => {
+      if (statusFilter !== 'ALL' && r.status !== statusFilter) return false;
+      const matchesSearch =
+        r.name.toLowerCase().includes(roleSearchQuery.toLowerCase()) ||
+        (r.description && r.description.toLowerCase().includes(roleSearchQuery.toLowerCase()));
+      return matchesSearch;
+    });
+  }, [roles, roleSearchQuery, statusFilter]);
 
   // Current selected role object
   const currentRole = useMemo(() => {
@@ -230,10 +246,22 @@ export const AdminRolesPermissions: React.FC = () => {
     showToast(`Role "${updated.name}" updated successfully.`);
   };
 
+  // Role archive handler
+  const handleArchiveRole = async (id: number) => {
+    await archiveRoleMutation.mutateAsync(id);
+    showToast('Role archived successfully.');
+  };
+
+  // Role restore handler
+  const handleRestoreRole = async (id: number) => {
+    await restoreRoleMutation.mutateAsync(id);
+    showToast('Role restored to active status successfully.');
+  };
+
   // Role delete handler
   const handleDeleteRole = async (id: number) => {
     await deleteRoleMutation.mutateAsync(id);
-    showToast('Role deleted successfully.');
+    showToast('Role and associated permissions deleted successfully.');
     // Pick another role
     const remaining = roles.filter((r) => r.id !== id);
     if (remaining.length > 0) {
@@ -268,12 +296,6 @@ export const AdminRolesPermissions: React.FC = () => {
         {/* Top Header & View Mode Switcher */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold text-[#1E88E5] uppercase tracking-wider mb-1">
-              <span className="material-symbols-outlined text-[18px]">
-                security
-              </span>
-              <span>Access Control & Security</span>
-            </div>
             <h1 className="text-2xl font-bold text-[#0F172A] tracking-tight">
               Roles & Permissions
             </h1>
@@ -312,16 +334,29 @@ export const AdminRolesPermissions: React.FC = () => {
               </button>
             </div>
 
+            {/* How to Use Guide Button */}
+            <button
+              type="button"
+              onClick={() => setIsGuideModalOpen(true)}
+              className="h-8 px-3.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-[0.98]"
+              title="View instructions on how to use roles and permissions"
+            >
+              <span className="material-symbols-outlined text-[17px] text-white">
+                help_outline
+              </span>
+              <span>How to Use</span>
+            </button>
+
             {/* Refresh Button */}
             <button
               type="button"
               onClick={handleRefresh}
               disabled={rolesFetching}
-              className="h-9 px-3 rounded-lg border border-[#2B4C7E]/30 bg-[#2B4C7E]/10 hover:bg-[#2B4C7E]/20 text-[#1F3864] text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+              className="h-8 px-3.5 bg-white hover:bg-gray-50 border border-[#E2E8F0] text-[#1F3864] text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-[0.98] disabled:opacity-50"
               title="Refresh roles and permissions"
             >
               <span
-                className={`material-symbols-outlined text-[18px] text-[#2B4C7E] ${
+                className={`material-symbols-outlined text-[17px] text-[#1F3864] ${
                   rolesFetching ? 'animate-spin' : ''
                 }`}
               >
@@ -334,7 +369,7 @@ export const AdminRolesPermissions: React.FC = () => {
 
         {/* View Mode Conditional Rendering */}
         {viewMode === 'user' ? (
-          <MyPermissionsView />
+          <MyPermissionsView onOpenGuide={() => setIsGuideModalOpen(true)} />
         ) : (
           /* ========================================================================= */
           /* ADMIN VIEW: TWO-COLUMN ROLE MATRIX */
@@ -365,22 +400,61 @@ export const AdminRolesPermissions: React.FC = () => {
                   </button>
                 </div>
 
-                {/* Search Role Filter */}
-                <div className="relative">
-                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                    search
-                  </span>
-                  <input
-                    type="text"
-                    value={roleSearchQuery}
-                    onChange={(e) => setRoleSearchQuery(e.target.value)}
-                    placeholder="Search roles..."
-                    className="w-full h-8 pl-8 pr-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#1E88E5] focus:bg-white transition-all"
-                  />
+                {/* Search & Status Filter Tabs */}
+                <div className="flex flex-col gap-2">
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={roleSearchQuery}
+                      onChange={(e) => setRoleSearchQuery(e.target.value)}
+                      placeholder="Search roles..."
+                      className="w-full h-8 pl-8 pr-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#1E88E5] focus:bg-white transition-all"
+                    />
+                  </div>
+
+                  {/* Status Tabs */}
+                  <div className="flex items-center gap-1 p-1 bg-[#F1F5F9] rounded-lg text-[11px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setStatusFilter('ALL')}
+                      className={`flex-1 py-1 rounded-md transition-all ${
+                        statusFilter === 'ALL'
+                          ? 'bg-white text-[#1F3864] shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      All ({roles.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatusFilter('ACTIVE')}
+                      className={`flex-1 py-1 rounded-md transition-all ${
+                        statusFilter === 'ACTIVE'
+                          ? 'bg-white text-[#1F3864] shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Active ({activeRolesCount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatusFilter('INACTIVE')}
+                      className={`flex-1 py-1 rounded-md transition-all ${
+                        statusFilter === 'INACTIVE'
+                          ? 'bg-white text-amber-800 shadow-xs'
+                          : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    >
+                      Archived ({archivedRolesCount})
+                    </button>
+                  </div>
                 </div>
 
                 {/* Role Cards List */}
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-[calc(100vh-340px)] overflow-y-auto pr-1">
                   {rolesLoading ? (
                     <div className="p-6 flex flex-col items-center justify-center gap-2 text-gray-400">
                       <div className="w-6 h-6 border-2 border-[#1F3864]/20 border-t-[#1F3864] rounded-full animate-spin" />
@@ -394,6 +468,7 @@ export const AdminRolesPermissions: React.FC = () => {
                     filteredRoles.map((role) => {
                       const isSelected = role.id === selectedRoleId;
                       const isSystem = isRoleSystem(role);
+                      const isArchived = role.status === 'INACTIVE';
 
                       return (
                         <div
@@ -402,6 +477,8 @@ export const AdminRolesPermissions: React.FC = () => {
                           className={`cursor-pointer p-3 rounded-xl transition-all border flex flex-col gap-1.5 ${
                             isSelected
                               ? 'bg-[#F0F4FA] border-[#1E88E5]/40 shadow-xs ring-1 ring-[#1E88E5]/20'
+                              : isArchived
+                              ? 'bg-amber-50/30 border-amber-200/50 hover:bg-amber-50/60'
                               : 'bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] hover:border-gray-300'
                           }`}
                         >
@@ -409,14 +486,22 @@ export const AdminRolesPermissions: React.FC = () => {
                             <div className="flex items-center gap-2">
                               <span
                                 className={`material-symbols-outlined text-[20px] ${
-                                  isSelected ? 'text-[#1E88E5]' : 'text-gray-500'
+                                  isSelected
+                                    ? 'text-[#1E88E5]'
+                                    : isArchived
+                                    ? 'text-amber-600'
+                                    : 'text-gray-500'
                                 }`}
                               >
                                 {getRoleIcon(role.name)}
                               </span>
                               <span
                                 className={`font-semibold text-xs ${
-                                  isSelected ? 'text-[#1F3864]' : 'text-[#0F172A]'
+                                  isSelected
+                                    ? 'text-[#1F3864]'
+                                    : isArchived
+                                    ? 'text-amber-900'
+                                    : 'text-[#0F172A]'
                                 }`}
                               >
                                 {role.name}
@@ -426,10 +511,12 @@ export const AdminRolesPermissions: React.FC = () => {
                               className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                                 isSystem
                                   ? 'bg-blue-100 text-blue-800'
-                                  : 'bg-amber-100 text-amber-800'
+                                  : isArchived
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-emerald-100 text-emerald-800'
                               }`}
                             >
-                              {isSystem ? 'System' : 'Custom'}
+                              {isSystem ? 'System' : isArchived ? 'Archived' : 'Active'}
                             </span>
                           </div>
 
@@ -500,51 +587,96 @@ export const AdminRolesPermissions: React.FC = () => {
                           {getRoleIcon(currentRole.name)}
                         </span>
                       </div>
-                      <div>
+                      <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2.5 flex-wrap">
                           <h2 className="text-lg font-bold text-[#0F172A]">
                             {currentRole.name}
                           </h2>
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                            className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
                               isRoleSystem(currentRole)
                                 ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : currentRole.status === 'INACTIVE'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             }`}
                           >
-                            {isRoleSystem(currentRole) ? 'System Default Role' : 'Custom Defined Role'}
+                            {isRoleSystem(currentRole)
+                              ? 'System Default Role'
+                              : currentRole.status === 'INACTIVE'
+                              ? 'Archived Role (Inactive)'
+                              : 'Active Custom Role'}
                           </span>
+                        </div>
+
+                        {/* Action Buttons Toolbar with Purpose-Driven Formats */}
+                        <div className="flex items-center gap-2 flex-wrap pt-0.5">
                           <button
                             type="button"
                             onClick={() => setIsEditModalOpen(true)}
-                            className="text-[#1E88E5] hover:text-[#1565C0] text-xs font-medium flex items-center gap-0.5 transition-colors"
+                            className="h-8 px-3 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-[0.98]"
                           >
-                            <span className="material-symbols-outlined text-[15px]">
+                            <span className="material-symbols-outlined text-[16px]">
                               edit
                             </span>
                             <span>Edit Metadata</span>
                           </button>
+
                           {!isRoleSystem(currentRole) && (
-                            <button
-                              type="button"
-                              onClick={() => setIsDeleteModalOpen(true)}
-                              className="text-red-500 hover:text-red-700 text-xs font-medium flex items-center gap-0.5 transition-colors ml-1"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">
-                                delete
-                              </span>
-                              <span>Delete</span>
-                            </button>
+                            <>
+                              {currentRole.status === 'ACTIVE' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setIsArchiveModalOpen(true)}
+                                  className="h-8 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-[0.98]"
+                                  title="Archive this custom role"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">
+                                    archive
+                                  </span>
+                                  <span>Archive</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRestoreRole(currentRole.id)}
+                                  disabled={restoreRoleMutation.isPending}
+                                  className="h-8 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-[0.98] disabled:opacity-50"
+                                  title="Restore this role to active status"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">
+                                    unarchive
+                                  </span>
+                                  <span>
+                                    {restoreRoleMutation.isPending ? 'Restoring...' : 'Restore'}
+                                  </span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                className="h-8 px-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs active:scale-[0.98]"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">
+                                  delete
+                                </span>
+                                <span>Delete</span>
+                              </button>
+                            </>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500 mt-1 max-w-2xl leading-relaxed">
-                          {currentRole.description || 'Full system access and operational capabilities.'}
-                        </p>
+
+                        {currentRole.description && (
+                          <p className="text-xs text-gray-500 mt-1 max-w-2xl leading-relaxed">
+                            {currentRole.description}
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Action Controls */}
-                    <div className="flex items-center gap-2.5 self-end md:self-center shrink-0">
+                    {/* Action Controls (Discard & Save Changes) */}
+                    <div className="flex items-center gap-2 self-end md:self-center shrink-0">
                       {isDirty && (
                         <span className="text-[11px] font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-200 animate-pulse">
                           Unsaved Changes
@@ -554,15 +686,18 @@ export const AdminRolesPermissions: React.FC = () => {
                         type="button"
                         onClick={handleDiscard}
                         disabled={!isDirty}
-                        className="h-8 px-3.5 rounded-lg text-xs font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                        className="h-8 px-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-40 active:scale-[0.98]"
                       >
-                        Discard
+                        <span className="material-symbols-outlined text-[16px]">
+                          undo
+                        </span>
+                        <span>Discard</span>
                       </button>
                       <button
                         type="button"
                         onClick={handleSaveChanges}
                         disabled={!isDirty || updatePermissionsMutation.isPending}
-                        className="h-8 px-4 rounded-lg text-xs font-semibold bg-[#1F3864] hover:bg-[#284980] text-white shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-40 active:scale-95"
+                        className="h-8 px-4 bg-[#1F3864] hover:bg-[#152747] text-white rounded-lg text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all disabled:opacity-40 active:scale-[0.98]"
                       >
                         {updatePermissionsMutation.isPending ? (
                           <>
@@ -581,44 +716,74 @@ export const AdminRolesPermissions: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Scope Legend Bar */}
-                  <div className="bg-white rounded-xl shadow-xs border border-[#E2E8F0] overflow-hidden">
-                    <div className="bg-[#F8FAFC] px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-b border-[#E2E8F0]">
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <span className="material-symbols-outlined text-[16px] text-[#1E88E5]">
-                          info
+                  {/* Archived Warning Banner if Role is Inactive */}
+                  {currentRole.status === 'INACTIVE' && (
+                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-xs animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2.5">
+                        <span className="material-symbols-outlined text-amber-600 text-[22px] shrink-0">
+                          inventory_2
                         </span>
-                        <span className="font-medium text-[11px]">
-                          Scope Hierarchy: Global &gt; Department &gt; Team &gt; Assigned &gt; Own
+                        <span>
+                          <strong>This role is currently archived (INACTIVE).</strong> New users cannot be assigned to this role until it is restored.
                         </span>
                       </div>
-                      <div className="flex items-center gap-4 text-[11px] text-gray-500 font-medium">
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-[#1F3864]" /> Global
+                      <button
+                        type="button"
+                        onClick={() => handleRestoreRole(currentRole.id)}
+                        disabled={restoreRoleMutation.isPending}
+                        className="h-8 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-all shrink-0 active:scale-[0.98] shadow-xs disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          unarchive
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-[#1E88E5]" /> Dept
+                        <span>
+                          {restoreRoleMutation.isPending ? 'Restoring...' : 'Restore Role'}
                         </span>
-                        <span className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-slate-500" /> Team / Own
-                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Scope Legend & Fixed Column Header Container */}
+                  <div className="bg-white rounded-xl shadow-xs border border-[#E2E8F0] overflow-hidden flex flex-col">
+                    <div className="shrink-0 bg-white">
+                      {/* Scope Legend Bar */}
+                      <div className="bg-[#F8FAFC] px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-b border-[#E2E8F0]">
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <span className="material-symbols-outlined text-[16px] text-[#1E88E5]">
+                            info
+                          </span>
+                          <span className="font-medium text-[11px]">
+                            Scope Hierarchy: Global &gt; Department &gt; Team &gt; Assigned &gt; Own
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-[11px] text-gray-500 font-medium">
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#1F3864]" /> Global
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-[#1E88E5]" /> Dept
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-slate-500" /> Team / Own
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Fixed Table Column Header Row */}
+                      <div className="grid grid-cols-12 px-5 py-2.5 bg-[#F1F5F9] text-[#334155] text-[11px] font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0]">
+                        <div className="col-span-6 sm:col-span-7">Capability & Description</div>
+                        <div className="col-span-6 sm:col-span-5 grid grid-cols-5 text-center">
+                          <span title="Global unbounded access">Global</span>
+                          <span title="Department scope">Dept</span>
+                          <span title="Team scope">Team</span>
+                          <span title="Assigned tickets scope">Assigned</span>
+                          <span title="Own created scope">Own</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Table Column Header Row */}
-                    <div className="grid grid-cols-12 px-5 py-2.5 bg-[#F1F5F9] text-[#334155] text-[11px] font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0]">
-                      <div className="col-span-6 sm:col-span-7">Capability & Description</div>
-                      <div className="col-span-6 sm:col-span-5 grid grid-cols-5 text-center">
-                        <span title="Global unbounded access">Global</span>
-                        <span title="Department scope">Dept</span>
-                        <span title="Team scope">Team</span>
-                        <span title="Assigned tickets scope">Assigned</span>
-                        <span title="Own created scope">Own</span>
-                      </div>
-                    </div>
-
-                    {/* Category Sections & Capability Rows */}
-                    <div className="divide-y divide-[#E2E8F0]">
+                    {/* Scrollable Category Sections & Capability Rows */}
+                    <div className="divide-y divide-[#E2E8F0] max-h-[calc(100vh-320px)] min-h-[420px] overflow-y-auto">
                       {permissionsLoading || roleDetailLoading ? (
                         <div className="p-12 flex flex-col items-center justify-center gap-2 text-gray-400">
                           <div className="w-6 h-6 border-2 border-[#1F3864]/20 border-t-[#1F3864] rounded-full animate-spin" />
@@ -633,8 +798,8 @@ export const AdminRolesPermissions: React.FC = () => {
 
                           return (
                             <div key={category} className="flex flex-col">
-                              {/* Category Header Row */}
-                              <div className="bg-[#F8FAFC] px-5 py-2 flex items-center justify-between border-b border-[#E2E8F0]">
+                              {/* Sticky Category Header Row */}
+                              <div className="bg-[#F8FAFC] px-5 py-2 flex items-center justify-between border-b border-[#E2E8F0] sticky top-0 z-10 shadow-xs">
                                 <div className="flex items-center gap-2">
                                   <span className="font-bold text-xs text-[#1F3864] uppercase tracking-wide">
                                     {category} Management
@@ -724,12 +889,25 @@ export const AdminRolesPermissions: React.FC = () => {
         isLoading={updateRoleMutation.isPending}
       />
 
+      <ArchiveRoleModal
+        isOpen={isArchiveModalOpen}
+        onClose={() => setIsArchiveModalOpen(false)}
+        role={currentRole}
+        onConfirm={handleArchiveRole}
+        isLoading={archiveRoleMutation.isPending}
+      />
+
       <DeleteRoleModal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         role={currentRole}
         onConfirm={handleDeleteRole}
         isLoading={deleteRoleMutation.isPending}
+      />
+
+      <RolesGuideModal
+        isOpen={isGuideModalOpen}
+        onClose={() => setIsGuideModalOpen(false)}
       />
 
       {/* Interactive Bottom Toast Notification */}

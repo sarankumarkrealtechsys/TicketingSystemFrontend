@@ -20,10 +20,6 @@ export interface AppLayoutProps {
   userEmail?: string;
   userInitials?: string;
   userAvatarBg?: string;
-  searchPlaceholder?: string;
-  searchValue?: string;
-  onSearch?: (query: string) => void;
-  showSearch?: boolean;
   notificationCount?: number;
   onNotificationClick?: () => void;
 
@@ -54,10 +50,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   userEmail,
   userInitials,
   userAvatarBg,
-  searchPlaceholder,
-  searchValue,
-  onSearch,
-  showSearch,
   notificationCount,
   onNotificationClick,
 
@@ -107,10 +99,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
     userEmail,
     userInitials,
     userAvatarBg,
-    searchPlaceholder,
-    searchValue,
-    onSearch,
-    showSearch,
     notificationCount,
     onNotificationClick,
     onToggleMobileMenu: () => setIsMobileMenuOpen((prev) => !prev),

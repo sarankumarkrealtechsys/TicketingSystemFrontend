@@ -104,10 +104,7 @@ export const UserDashboard: React.FC = () => {
   };
 
   return (
-    <AppLayout
-      role="USER"
-      onSearch={(query) => handleFilterChange({ search: query, page: 1 })}
-    >
+    <AppLayout role="USER">
       <div className="space-y-6">
         {/* Page Title & Personal Scope Badge */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -3,7 +3,11 @@ import { useAppSelector } from '@/features/auth/authSlice';
 import { usePermissionsQuery, useRolesQuery, useRoleDetailsQuery } from '../api';
 import { PermissionItem } from '../types';
 
-export const MyPermissionsView: React.FC = () => {
+interface MyPermissionsViewProps {
+  onOpenGuide?: () => void;
+}
+
+export const MyPermissionsView: React.FC<MyPermissionsViewProps> = ({ onOpenGuide }) => {
   const { user, permissions: authPermissions } = useAppSelector((state) => state.auth);
   const { data: permissions = [], isLoading: permissionsLoading } = usePermissionsQuery();
   const { data: roles = [], isLoading: rolesLoading } = useRolesQuery();
@@ -100,7 +104,7 @@ export const MyPermissionsView: React.FC = () => {
     if (!scopes.length) {
       if (user?.role?.name === 'ADMIN') {
         return (
-          <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5">
+          <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5 shadow-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             Global Access
           </span>
@@ -116,33 +120,40 @@ export const MyPermissionsView: React.FC = () => {
 
     if (scopes.includes('GLOBAL')) {
       return (
-        <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5">
+        <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-1.5 shadow-xs">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           Global Access
         </span>
       );
     }
 
-    const scopeLabels = scopes.map((s) => {
+    const scopeBadges = scopes.map((s) => {
       switch (s) {
         case 'DEPARTMENT':
-          return 'Dept';
+          return { label: 'Dept', color: 'bg-blue-50 text-[#1E88E5] border-blue-200' };
         case 'TEAM':
-          return 'Team';
+          return { label: 'Team', color: 'bg-slate-50 text-slate-700 border-slate-200' };
         case 'ASSIGNED':
-          return 'Assigned';
+          return { label: 'Assigned', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
         case 'OWN':
-          return 'Own';
+          return { label: 'Own', color: 'bg-purple-50 text-purple-700 border-purple-200' };
         default:
-          return s;
+          return { label: s, color: 'bg-gray-50 text-gray-700 border-gray-200' };
       }
     });
 
     return (
-      <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-[#1E88E5] border border-blue-200 inline-flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#1E88E5]" />
-        {scopeLabels.join(' & ')} Scope
-      </span>
+      <div className="flex items-center justify-center gap-1 flex-wrap">
+        {scopeBadges.map((badge, idx) => (
+          <span
+            key={idx}
+            className={`px-2 py-0.5 rounded-md text-[10px] font-semibold border inline-flex items-center gap-1 shadow-xs ${badge.color}`}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
+            {badge.label}
+          </span>
+        ))}
+      </div>
     );
   };
 
@@ -177,51 +188,51 @@ export const MyPermissionsView: React.FC = () => {
 
   if (permissionsLoading || rolesLoading || roleDetailLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
+      <div className="flex items-center justify-center p-12 bg-white rounded-xl border border-[#E2E8F0]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-3 border-[#1F3864]/20 border-t-[#1F3864] rounded-full animate-spin" />
-          <span className="text-xs text-gray-500">Loading user permissions...</span>
+          <span className="text-xs text-gray-500 font-medium">Loading user capabilities & permissions...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto">
-      {/* Header Profile Card */}
-      <div className="bg-white rounded-xl p-6 shadow-xs border border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-[#1F3864] text-white flex items-center justify-center shrink-0 shadow-xs">
-            <span className="material-symbols-outlined text-[28px]">
+    <div className="flex flex-col gap-5 w-full">
+      {/* Header Profile Summary Card */}
+      <div className="bg-white rounded-xl p-5 shadow-xs border border-[#E2E8F0] flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-start gap-3.5">
+          <div className="w-11 h-11 rounded-xl bg-[#1F3864] text-white flex items-center justify-center shrink-0 shadow-xs">
+            <span className="material-symbols-outlined text-[24px]">
               verified_user
             </span>
           </div>
-          <div>
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-lg font-bold text-[#0F172A]">
+              <h2 className="text-base font-bold text-[#0F172A]">
                 My Assigned Permissions
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200">
-                {totalGrantedCount} Capabilities Active
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
+                {totalGrantedCount} of {permissions.length} Capabilities Active
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 leading-relaxed">
               Your capabilities and data scopes are determined by your active role membership.
             </p>
           </div>
         </div>
 
         {/* User Context Metadata Badges */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] px-3.5 py-2 rounded-lg flex flex-col min-w-[120px]">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] px-3.5 py-1.5 rounded-lg flex flex-col min-w-[110px]">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-              Current Role
+              Assigned Role
             </span>
             <span className="text-xs font-bold text-[#1F3864] truncate">
               {user?.role?.name || userRole?.name || 'Standard User'}
             </span>
           </div>
-          <div className="bg-[#F8FAFC] border border-[#E2E8F0] px-3.5 py-2 rounded-lg flex flex-col min-w-[120px]">
+          <div className="bg-[#F8FAFC] border border-[#E2E8F0] px-3.5 py-1.5 rounded-lg flex flex-col min-w-[110px]">
             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
               Department
             </span>
@@ -229,12 +240,23 @@ export const MyPermissionsView: React.FC = () => {
               {user?.department?.name || 'General Department'}
             </span>
           </div>
+          {onOpenGuide && (
+            <button
+              type="button"
+              onClick={onOpenGuide}
+              className="h-8 px-3 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all shadow-xs active:scale-[0.98] sm:hidden"
+              title="How to Use Guide"
+            >
+              <span className="material-symbols-outlined text-[16px]">help_outline</span>
+              <span>Guide</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-[#E2E8F0] shadow-xs">
-        {/* Search */}
+        {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
             search
@@ -243,8 +265,8 @@ export const MyPermissionsView: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search my permissions..."
-            className="w-full h-9 pl-9 pr-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#1E88E5] focus:bg-white transition-all"
+            placeholder="Search my capabilities & permissions..."
+            className="w-full h-8 pl-9 pr-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#1E88E5] focus:bg-white transition-all"
           />
         </div>
 
@@ -275,57 +297,96 @@ export const MyPermissionsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Permissions Grouped by Category */}
-      <div className="space-y-4">
-        {Object.keys(categoriesMap).length === 0 ? (
-          <div className="bg-white rounded-xl p-8 border border-[#E2E8F0] text-center text-xs text-gray-500 shadow-xs">
-            No permissions matching your filter criteria.
-          </div>
-        ) : (
-          Object.entries(categoriesMap).map(([category, items]) => (
-            <div
-              key={category}
-              className="bg-white rounded-xl shadow-xs border border-[#E2E8F0] overflow-hidden"
-            >
-              {/* Category Header */}
-              <div className="bg-[#F8FAFC] px-5 py-3 flex items-center justify-between border-b border-[#E2E8F0]">
-                <div className="flex items-center gap-2.5">
-                  <span className="material-symbols-outlined text-[#1F3864] text-[20px]">
-                    {getCategoryIcon(category)}
-                  </span>
-                  <h3 className="font-bold text-xs uppercase tracking-wider text-[#1F3864]">
-                    {category} Management
-                  </h3>
-                </div>
-                <span className="text-[11px] font-medium text-gray-500">
-                  {items.length} {items.length === 1 ? 'rule' : 'rules'}
-                </span>
-              </div>
-
-              {/* Capability Rows */}
-              <div className="divide-y divide-[#F1F5F9]">
-                {items.map((perm) => (
-                  <div
-                    key={perm.id}
-                    className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#F8FAFC]/60 transition-colors"
-                  >
-                    <div className="max-w-2xl">
-                      <span className="text-xs font-semibold text-[#0F172A] block">
-                        {perm.key.replace(/_/g, ' ')}
-                      </span>
-                      <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-                        {perm.description}
-                      </p>
-                    </div>
-                    <div className="self-start sm:self-auto shrink-0">
-                      {getScopeBadge(perm.key)}
-                    </div>
-                  </div>
-                ))}
-              </div>
+      {/* Permissions Matrix Table with Fixed Header & Scrollable Body */}
+      <div className="bg-white rounded-xl shadow-xs border border-[#E2E8F0] overflow-hidden flex flex-col">
+        {/* Fixed Header Container */}
+        <div className="shrink-0 bg-white">
+          {/* Scope Legend Bar */}
+          <div className="bg-[#F8FAFC] px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs border-b border-[#E2E8F0]">
+            <div className="flex items-center gap-2 text-gray-600">
+              <span className="material-symbols-outlined text-[16px] text-[#1E88E5]">
+                info
+              </span>
+              <span className="font-medium text-[11px]">
+                Scope Hierarchy: Global &gt; Department &gt; Team &gt; Assigned &gt; Own
+              </span>
             </div>
-          ))
-        )}
+            <div className="flex items-center gap-3.5 text-[11px] text-gray-500 font-medium">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-600" /> Global
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-[#1E88E5]" /> Dept
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-slate-500" /> Team / Own
+              </span>
+            </div>
+          </div>
+
+          {/* Fixed Column Header Row */}
+          <div className="grid grid-cols-12 px-5 py-2.5 bg-[#F1F5F9] text-[#334155] text-[11px] font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0]">
+            <div className="col-span-7 sm:col-span-8">Capability & Description</div>
+            <div className="col-span-5 sm:col-span-4 text-center">Assigned Scope & Access Level</div>
+          </div>
+        </div>
+
+        {/* Scrollable Category Sections & Capability Rows Viewport */}
+        <div className="divide-y divide-[#E2E8F0] max-h-[calc(100vh-320px)] min-h-[420px] overflow-y-auto">
+          {Object.keys(categoriesMap).length === 0 ? (
+            <div className="p-12 text-center text-xs text-gray-500">
+              No permissions match your filter criteria.
+            </div>
+          ) : (
+            Object.entries(categoriesMap).map(([category, items]) => {
+              const categoryGrantedCount = items.filter((p) => {
+                const scopes = userPermissions[p.key] || [];
+                return scopes.length > 0 || user?.role?.name === 'ADMIN';
+              }).length;
+
+              return (
+                <div key={category} className="flex flex-col">
+                  {/* Sticky Category Header Row */}
+                  <div className="bg-[#F8FAFC] px-5 py-2.5 flex items-center justify-between border-b border-[#E2E8F0] sticky top-0 z-10 shadow-xs">
+                    <div className="flex items-center gap-2.5">
+                      <span className="material-symbols-outlined text-[#1F3864] text-[18px]">
+                        {getCategoryIcon(category)}
+                      </span>
+                      <h3 className="font-bold text-xs uppercase tracking-wider text-[#1F3864]">
+                        {category} Management
+                      </h3>
+                    </div>
+                    <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                      {categoryGrantedCount} / {items.length} Active
+                    </span>
+                  </div>
+
+                  {/* Capability Rows */}
+                  <div className="divide-y divide-[#F1F5F9]">
+                    {items.map((perm) => (
+                      <div
+                        key={perm.id}
+                        className="grid grid-cols-12 px-5 py-3.5 items-center hover:bg-[#F8FAFC] transition-colors"
+                      >
+                        <div className="col-span-7 sm:col-span-8 pr-4">
+                          <span className="text-xs font-semibold text-[#0F172A] block">
+                            {perm.key.replace(/_/g, ' ')}
+                          </span>
+                          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+                            {perm.description}
+                          </p>
+                        </div>
+                        <div className="col-span-5 sm:col-span-4 flex justify-center items-center">
+                          {getScopeBadge(perm.key)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

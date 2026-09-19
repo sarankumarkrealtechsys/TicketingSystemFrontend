@@ -7,22 +7,33 @@ import {
   useAppDispatch,
   useAppSelector,
 } from "@/features/auth/authSlice";
+import { PERMISSIONS } from "@/features/auth/permissions";
 import { LoadingSpinner } from "@/shared/components";
 import { ROUTES } from "./routePaths";
-import { AuthRoutes } from "./AuthRoutes";
-import { AdminRoutes } from "./AdminRoutes";
-import { UserRoutes } from "./UserRoutes";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { CreateTicketPage, NotFoundPage } from "@/pages";
+import {
+  LoginPage,
+  AdminDashboardPage,
+  DepartmentManagementPage,
+  TeamManagementPage,
+  ProjectManagementPage,
+  RolesPermissionsPage,
+  UserDashboardPage,
+  MyDepartmentPage,
+  MyTeamPage,
+  MyPermissionsPage,
+  CreateTicketPage,
+  NotFoundPage,
+} from "@/pages";
 
 /**
- * Root index redirector based on authentication status and user role.
+ * Root index redirector based on active session and user role.
  */
 const RootRedirect: React.FC = () => {
   const { status, user } = useAppSelector((state) => state.auth);
 
   if (status === "loading") {
-    return null;
+    return <LoadingSpinner message="Checking authentication..." />;
   }
 
   if (status === "authenticated" && user) {
@@ -39,31 +50,25 @@ const RootRedirect: React.FC = () => {
 
 /**
  * Session Bootstrap Wrapper
- * Calls GET /api/auth/me once on mount to verify any active cookie session.
- * Displays a clean loading state to prevent flash of unauthenticated content.
+ * Restores user session from /api/auth/me on initial page load.
  */
 const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const dispatch = useAppDispatch();
-  const { status } = useAppSelector((state) => state.auth);
   const { data, error, isLoading } = useMeQuery();
 
   useEffect(() => {
-    if (data) {
+    if (data?.data) {
       if (data.data.token && !sessionStorage.getItem("rts_auth_token")) {
         sessionStorage.setItem("rts_auth_token", data.data.token);
       }
       dispatch(setSession(data.data));
     } else if (error) {
-      const hasToken = Boolean(sessionStorage.getItem("rts_auth_token"));
-      // Only wipe session if there is no valid token in storage AND status is not authenticated
-      if (!hasToken && status !== "authenticated") {
-        sessionStorage.removeItem("rts_auth_token");
-        dispatch(clearSession());
-      }
+      sessionStorage.removeItem("rts_auth_token");
+      dispatch(clearSession());
     }
-  }, [data, error, dispatch, status]);
+  }, [data, error, dispatch]);
 
   if (isLoading) {
     return <LoadingSpinner message="Loading session..." />;
@@ -74,20 +79,24 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
 
 /**
  * Master AppRoutes
- * Composes modular AuthRoutes, AdminRoutes, and UserRoutes.
+ * Declarative route configuration with role and permission guards.
  */
 export const AppRoutes: React.FC = () => {
   return (
     <BrowserRouter>
       <SessionBootstrap>
         <Routes>
-          {/* Public Auth Routes */}
-          {AuthRoutes}
+          {/* ============================================================= */}
+          {/* 1. PUBLIC ROUTES                                              */}
+          {/* ============================================================= */}
+          <Route path={ROUTES.LOGIN} element={<LoginPage />} />
 
-          {/* Root Redirect */}
+          {/* Root Redirect based on role */}
           <Route path={ROUTES.ROOT} element={<RootRedirect />} />
 
-          {/* Create Ticket Route (Accessible to both Admin and User) */}
+          {/* ============================================================= */}
+          {/* 2. SHARED AUTHENTICATED ROUTES                                */}
+          {/* ============================================================= */}
           <Route
             path={ROUTES.CREATE_TICKET}
             element={
@@ -97,13 +106,116 @@ export const AppRoutes: React.FC = () => {
             }
           />
 
-          {/* Admin Routes (guarded by role + BRD permissions) */}
-          {AdminRoutes}
+          {/* ============================================================= */}
+          {/* 3. USER WORKSPACE ROUTES                                      */}
+          {/* ============================================================= */}
+          <Route
+            path={ROUTES.USER_DASHBOARD}
+            element={
+              <ProtectedRoute
+                requiredRole="USER"
+                fallbackPath={ROUTES.ADMIN_DASHBOARD}
+              >
+                <UserDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.MY_DEPARTMENT}
+            element={
+              <ProtectedRoute
+                requiredRole="USER"
+                fallbackPath={ROUTES.DEPARTMENTS}
+              >
+                <MyDepartmentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.MY_TEAM}
+            element={
+              <ProtectedRoute
+                requiredRole="USER"
+                fallbackPath={ROUTES.TEAMS}
+              >
+                <MyTeamPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.MY_PERMISSIONS}
+            element={
+              <ProtectedRoute
+                requiredRole="USER"
+                fallbackPath={ROUTES.ROLES}
+              >
+                <MyPermissionsPage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Standard User Workspace Routes (guarded by session) */}
-          {UserRoutes}
+          {/* ============================================================= */}
+          {/* 4. ADMIN CONSOLE ROUTES                                       */}
+          {/* ============================================================= */}
+          <Route
+            path={ROUTES.ADMIN_DASHBOARD}
+            element={
+              <ProtectedRoute
+                requiredRole="ADMIN"
+                requiredPermission={PERMISSIONS.DASHBOARD_VIEW}
+              >
+                <AdminDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.DEPARTMENTS}
+            element={
+              <ProtectedRoute
+                requiredRole="ADMIN"
+                requiredPermission={PERMISSIONS.DEPARTMENT_VIEW}
+              >
+                <DepartmentManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.TEAMS}
+            element={
+              <ProtectedRoute
+                requiredRole="ADMIN"
+                requiredPermission={PERMISSIONS.TEAM_VIEW}
+              >
+                <TeamManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.PROJECTS}
+            element={
+              <ProtectedRoute
+                requiredRole="ADMIN"
+                requiredPermission={PERMISSIONS.PROJECT_VIEW}
+              >
+                <ProjectManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.ROLES}
+            element={
+              <ProtectedRoute
+                requiredRole="ADMIN"
+                requiredPermission={PERMISSIONS.ROLE_MANAGE}
+              >
+                <RolesPermissionsPage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Catch-all 404 fallback */}
+          {/* ============================================================= */}
+          {/* 5. CATCH-ALL 404 FALLBACK                                     */}
+          {/* ============================================================= */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </SessionBootstrap>

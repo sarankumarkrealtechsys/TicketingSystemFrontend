@@ -74,8 +74,14 @@
     background: #cbd5e1;
     border-radius: 3px;
   }
-  ::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+  /* Global Text Selection Highlight */
+  ::selection {
+    background-color: #bbf7d0;
+    color: #052e16;
+  }
+  ::-moz-selection {
+    background-color: #bbf7d0;
+    color: #052e16;
   }
 }
 

@@ -15,10 +15,6 @@ export interface NavbarProps {
   userEmail?: string;
   userInitials?: string;
   userAvatarBg?: string;
-  searchPlaceholder?: string;
-  searchValue?: string;
-  onSearch?: (query: string) => void;
-  showSearch?: boolean;
   notificationCount?: number;
   onNotificationClick?: () => void;
   className?: string;
@@ -33,10 +29,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   userEmail: explicitUserEmail,
   userInitials: explicitUserInitials,
   userAvatarBg: explicitUserAvatarBg,
-  searchPlaceholder = "Search tickets, assets, or knowledge base...",
-  searchValue: controlledSearchValue,
-  onSearch,
-  showSearch = true,
   notificationCount = 0,
   onNotificationClick,
   className = "",
@@ -48,22 +40,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { user } = useAppSelector((state) => state.auth);
   const logoutMutation = useLogoutMutation();
 
-  const [internalSearch, setInternalSearch] = useState("");
   const [profileOpen, setProfileOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Sync internal search state with controlled value
-  useEffect(() => {
-    if (controlledSearchValue !== undefined) {
-      setInternalSearch(controlledSearchValue);
-    }
-  }, [controlledSearchValue]);
-
-  const searchVal =
-    controlledSearchValue !== undefined
-      ? controlledSearchValue
-      : internalSearch;
 
   // Determine active role (case-insensitive)
   const userRoleName = (user?.role?.name || "").toUpperCase();
@@ -104,20 +82,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   const avatarBg =
     explicitUserAvatarBg || (isAdmin ? "bg-[#1F3864]" : "bg-violet-700");
 
-  // Global Ctrl+K hotkey to focus search bar
-  useEffect(() => {
-    if (!showSearch) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showSearch]);
-
   // Close profile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -141,11 +105,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     });
   };
 
-  const handleSearchChange = (val: string) => {
-    setInternalSearch(val);
-    onSearch?.(val);
-  };
-
   return (
     <header
       className={`fixed top-0 left-0 ${
@@ -153,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       } right-0 h-16 bg-white z-30 border-b border-[#EEEEEE] px-3 sm:px-6 flex items-center transition-all duration-300 ease-in-out ${className}`}
     >
       <div className="max-w-[1440px] mx-auto w-full flex items-center justify-between">
-        <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1 sm:flex-initial">
+        <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {/* Mobile Hamburger Button */}
           {onToggleMobileMenu && (
             <button
@@ -166,28 +125,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 menu
               </span>
             </button>
-          )}
-
-          {/* Global Search with Ctrl+K shortcut */}
-          {showSearch ? (
-            <div className="relative w-full max-w-[260px] sm:w-80">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5F6368] text-[18px]">
-                search
-              </span>
-              <input
-                ref={searchInputRef}
-                className="w-full h-9 pl-9 pr-8 sm:pr-14 bg-[#F6F3F2]/80 border border-transparent rounded-lg text-[13px] text-[#1A1A1A] placeholder:text-[#5F6368] focus:outline-none focus:bg-white focus:border-[#1E88E5] focus:ring-1 focus:ring-[#1E88E5] transition-all"
-                placeholder={searchPlaceholder}
-                type="text"
-                value={searchVal}
-                onChange={(e) => handleSearchChange(e.target.value)}
-              />
-              <kbd className="hidden sm:inline-block absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-[#5F6368] bg-white border border-[#E0E0E0] rounded shadow-[0_1px_1px_rgba(0,0,0,0.05)] select-none pointer-events-none">
-                Ctrl+K
-              </kbd>
-            </div>
-          ) : (
-            <div />
           )}
         </div>
 

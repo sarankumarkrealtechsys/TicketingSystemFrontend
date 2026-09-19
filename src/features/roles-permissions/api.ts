@@ -80,6 +80,24 @@ export const updateRolePermissionsApi = async ({
   return data.data;
 };
 
+export const archiveRoleApi = async (id: number): Promise<RoleItem> => {
+  const { data } = await apiClient.patch<{
+    status: string;
+    message: string;
+    data: RoleItem;
+  }>(`/roles/${id}/archive`);
+  return data.data;
+};
+
+export const restoreRoleApi = async (id: number): Promise<RoleItem> => {
+  const { data } = await apiClient.patch<{
+    status: string;
+    message: string;
+    data: RoleItem;
+  }>(`/roles/${id}/restore`);
+  return data.data;
+};
+
 export const deleteRoleApi = async (id: number): Promise<void> => {
   await apiClient.delete(`/roles/${id}`);
 };
@@ -146,6 +164,26 @@ export const useUpdateRolePermissionsMutation = () => {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: roleKeys.lists() });
       queryClient.invalidateQueries({ queryKey: roleKeys.detail(variables.id) });
+    },
+  });
+};
+
+export const useArchiveRoleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<RoleItem, AxiosError<{ message?: string }>, number>({
+    mutationFn: archiveRoleApi,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: roleKeys.all });
+    },
+  });
+};
+
+export const useRestoreRoleMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<RoleItem, AxiosError<{ message?: string }>, number>({
+    mutationFn: restoreRoleApi,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: roleKeys.all });
     },
   });
 };
