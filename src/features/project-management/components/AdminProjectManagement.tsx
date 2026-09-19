@@ -1,57 +1,38 @@
-import React, { useState, useMemo } from "react";
-import { createPortal } from "react-dom";
-import { AppLayout } from "@/layout/AppLayout";
-import {
-  useDepartmentsQuery,
-  useRetireDepartmentMutation,
-  useUpdateDepartmentMutation,
-  useDeleteDepartmentPermanentMutation,
-} from "../api";
-import { DepartmentItem, DepartmentStatus } from "../types";
-import { CreateDepartmentModal } from "./CreateDepartmentModal";
-import { EditDepartmentModal } from "./EditDepartmentModal";
-import { ViewDepartmentModal } from "./ViewDepartmentModal";
-import { DepartmentDonutChart } from "./DepartmentDonutChart";
-import { SelectDropdown, SelectOption } from "@/shared/components";
+import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { AppLayout } from '@/layout/AppLayout';
+import { useProjectsQuery, useUpdateProjectMutation, useRetireProjectMutation, useDeleteProjectPermanentMutation } from '../api';
+import { ProjectItem } from '../types';
+import CreateProjectModal from './CreateProjectModal';
+import EditProjectModal from './EditProjectModal';
 
-const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
-  { value: "all", label: "All Departments" },
-  { value: "active", label: "Active Only", dotColor: "bg-emerald-500" },
-  { value: "inactive", label: "Archived / Inactive", dotColor: "bg-gray-400" },
-];
+export const AdminProjectManagement: React.FC = () => {
+  const { data: projects = [], isLoading, isError, refetch } = useProjectsQuery({ includeInactive: true });
+  const updateMutation = useUpdateProjectMutation();
+  const retireMutation = useRetireProjectMutation();
+  const deletePermanentMutation = useDeleteProjectPermanentMutation();
 
-export const AdminDepartmentManagement: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
-    "active",
-  );
-
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedDeptForEdit, setSelectedDeptForEdit] =
-    useState<DepartmentItem | null>(null);
-  const [selectedDeptForView, setSelectedDeptForView] =
-    useState<DepartmentItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  
+  // Bottom Toast Notification state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const { data: departments = [], isLoading } = useDepartmentsQuery({
-    includeInactive: true,
-  });
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
 
-  const retireMutation = useRetireDepartmentMutation();
-  const updateMutation = useUpdateDepartmentMutation();
-  const deletePermanentMutation = useDeleteDepartmentPermanentMutation();
-
-  // Archive / Unarchive / Delete Confirmation Modal State
+  // Archive / Unarchive / Permanent Delete Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     type: 'archive' | 'unarchive' | 'delete';
-    department: DepartmentItem | null;
+    project: ProjectItem | null;
     isLoading: boolean;
     error: string | null;
   }>({
     isOpen: false,
     type: 'archive',
-    department: null,
+    project: null,
     isLoading: false,
     error: null,
   });
@@ -61,78 +42,59 @@ export const AdminDepartmentManagement: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Filtered departments list
-  const filteredDepartments = useMemo(() => {
-    return departments.filter((d) => {
-      const matchesSearch =
-        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (d.description &&
-          d.description.toLowerCase().includes(searchQuery.toLowerCase()));
+  // Compute KPI metrics
+  const totalProjects = projects.length;
+  const activeProjects = useMemo(() => projects.filter(p => p.status === 'ACTIVE').length, [projects]);
+  const archivedProjects = useMemo(() => projects.filter(p => p.status === 'INACTIVE').length, [projects]);
 
-      const matchesStatus =
-        statusFilter === "all"
-          ? true
-          : statusFilter === "active"
-          ? d.status === "ACTIVE"
-          : d.status === "INACTIVE";
+  // Filtered projects
+  const filteredProjects = useMemo(() => {
+    return projects.filter(project => {
+      const matchesSearch = 
+        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (project.description && project.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesStatus = 
+        statusFilter === 'ALL' || project.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
-  }, [departments, searchQuery, statusFilter]);
+  }, [projects, searchQuery, statusFilter]);
 
-  // Overall Statistics
-  const stats = useMemo(() => {
-    const activeCount = departments.filter((d) => d.status === "ACTIVE").length;
-    const totalUsers = departments.reduce(
-      (sum, d) => sum + (d._count?.users || d.users?.length || 0),
-      0,
-    );
-    const totalTeams = departments.reduce(
-      (sum, d) => sum + (d._count?.teams || d.teams?.length || 0),
-      0,
-    );
-
-    return {
-      activeCount,
-      totalUsers,
-      totalTeams,
-    };
-  }, [departments]);
-
-  const openConfirmModal = (dept: DepartmentItem, type: 'archive' | 'unarchive' | 'delete') => {
+  const openConfirmModal = (project: ProjectItem, type: 'archive' | 'unarchive' | 'delete') => {
     setConfirmModal({
       isOpen: true,
       type,
-      department: dept,
+      project,
       isLoading: false,
       error: null,
     });
   };
 
   const handleConfirmAction = async () => {
-    if (!confirmModal.department) return;
+    if (!confirmModal.project) return;
     setConfirmModal((prev) => ({ ...prev, isLoading: true, error: null }));
-    const dept = confirmModal.department;
+    const targetProject = confirmModal.project;
 
     try {
       if (confirmModal.type === 'delete') {
-        await deletePermanentMutation.mutateAsync(dept.id);
-        showToast(`Department "${dept.name}" permanently deleted successfully.`);
+        await deletePermanentMutation.mutateAsync(targetProject.id);
+        showToast(`Project "${targetProject.name}" permanently deleted successfully.`);
       } else if (confirmModal.type === 'unarchive') {
         await updateMutation.mutateAsync({
-          id: dept.id,
-          data: { status: "ACTIVE" },
+          id: targetProject.id,
+          data: { status: 'ACTIVE' },
         });
-        showToast(`Department "${dept.name}" unarchived successfully.`);
+        showToast(`Project "${targetProject.name}" restored and activated successfully.`);
       } else {
-        await retireMutation.mutateAsync(dept.id);
-        showToast(`Department "${dept.name}" archived successfully.`);
+        await retireMutation.mutateAsync(targetProject.id);
+        showToast(`Project "${targetProject.name}" archived successfully.`);
       }
 
       setConfirmModal({
         isOpen: false,
         type: 'archive',
-        department: null,
+        project: null,
         isLoading: false,
         error: null,
       });
@@ -140,15 +102,15 @@ export const AdminDepartmentManagement: React.FC = () => {
       setConfirmModal((prev) => ({
         ...prev,
         isLoading: false,
-        error: err?.response?.data?.message || err?.message || `Failed to ${confirmModal.type} department.`,
+        error: err?.response?.data?.message || err?.message || `Failed to ${confirmModal.type} project.`,
       }));
     }
   };
 
   return (
     <AppLayout role="ADMIN" onSearch={(q) => setSearchQuery(q)}>
-      <div className="flex flex-col space-y-6">
-        {/* Toast Notification */}
+      <div className="space-y-6">
+        {/* Bottom Toast Notification */}
         {toastMessage && (
           <div className="fixed bottom-6 right-6 z-[120] flex items-center gap-2 px-4 py-2.5 bg-[#1F3864] text-white rounded-lg shadow-xl text-xs font-semibold animate-in slide-in-from-bottom">
             <span className="material-symbols-outlined text-emerald-400 text-[18px]">
@@ -158,8 +120,8 @@ export const AdminDepartmentManagement: React.FC = () => {
           </div>
         )}
 
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mb-1">
               <span>Home</span>
@@ -171,115 +133,78 @@ export const AdminDepartmentManagement: React.FC = () => {
                 chevron_right
               </span>
               <span className="text-[#1F3864] dark:text-blue-400 font-semibold">
-                Departments
+                Projects
               </span>
             </div>
             <h1 className="text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
-              Department Management
+              Projects Management
             </h1>
           </div>
 
           <button
             type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 active:scale-[0.98]"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">
-              corporate_fare
+              add
             </span>
-            <span>New Department</span>
+            <span>New Project</span>
           </button>
         </div>
 
-        {/* TOP ROW: 4 Overview KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Card 1: Active Departments */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Active Departments
+        {/* TOP ROW: 3 Quick KPI Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {/* Active Projects Card */}
+          <div className="p-4 sm:p-5 bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                Active Projects
               </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1F3864]/10 dark:bg-[#1F3864]/30 text-[#1F3864] dark:text-blue-300 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  corporate_fare
-                </span>
-              </div>
+              <span className="text-2xl font-bold text-[#1F3864] dark:text-white mt-0.5">
+                {activeProjects}
+              </span>
             </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-                {stats.activeCount}
-              </h3>
+            <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+              <span className="material-symbols-outlined text-[24px]">check_circle</span>
             </div>
           </div>
 
-          {/* Card 2: Total Personnel */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Total Personnel
+          {/* Total Projects Card */}
+          <div className="p-4 sm:p-5 bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                Total Projects
               </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E3F2FD] dark:bg-blue-900/30 text-[#1E88E5] dark:text-blue-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  badge
-                </span>
-              </div>
+              <span className="text-2xl font-bold text-[#1F3864] dark:text-white mt-0.5">
+                {totalProjects}
+              </span>
             </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-                {stats.totalUsers}
-              </h3>
+            <div className="w-11 h-11 rounded-xl bg-[#1F3864]/5 dark:bg-blue-900/30 flex items-center justify-center text-[#1F3864] dark:text-blue-300">
+              <span className="material-symbols-outlined text-[24px]">folder_managed</span>
             </div>
           </div>
 
-          {/* Card 3: Total Teams */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Total Teams
+          {/* Archived Projects Card */}
+          <div className="p-4 sm:p-5 bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                Archived Projects
               </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FFF8E1] dark:bg-amber-900/30 text-[#F57F17] dark:text-amber-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  groups
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-                {stats.totalTeams}
-              </h3>
-            </div>
-          </div>
-
-
-          {/* Card 4: Department Capacity */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Capacity
+              <span className="text-2xl font-bold text-gray-600 dark:text-gray-300 mt-0.5">
+                {archivedProjects}
               </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E8F5E9] dark:bg-emerald-900/30 text-[#2E7D32] dark:text-emerald-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  insights
-                </span>
-              </div>
             </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                Optimal
-              </h3>
-              <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
-                <div className="bg-emerald-500 h-1.5 rounded-full w-4/5" />
-              </div>
+            <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
+              <span className="material-symbols-outlined text-[24px]">archive</span>
             </div>
           </div>
         </div>
 
-        {/* DONUT CHART SECTION: Department Personnel Breakdown */}
-        <DepartmentDonutChart departments={departments} />
 
-        {/* DEPARTMENTS TABLE SECTION */}
+        {/* PROJECTS SECTION */}
         <div className="bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] overflow-hidden flex flex-col">
-          {/* Table Toolbar */}
+          {/* Table Controls / Toolbar */}
           <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-[#121E30] border-b border-[#F0F2F5] dark:border-[#1E2D45]">
             <div className="relative w-full sm:w-80">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
@@ -289,33 +214,72 @@ export const AdminDepartmentManagement: React.FC = () => {
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search departments by name or scope..."
+                placeholder="Search projects by name or description..."
                 className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] transition-all"
               />
             </div>
 
-            <div className="w-full sm:w-48">
-              <SelectDropdown<"all" | "active" | "inactive">
-                value={statusFilter}
-                onChange={(val) => setStatusFilter(val)}
-                options={STATUS_FILTER_OPTIONS}
-                size="sm"
-              />
+            {/* Status Filter Tabs */}
+            <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+              <button
+                type="button"
+                onClick={() => setStatusFilter('ALL')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+                  statusFilter === 'ALL'
+                    ? 'bg-[#1F3864] text-white'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                All ({totalProjects})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('ACTIVE')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+                  statusFilter === 'ACTIVE'
+                    ? 'bg-[#1F3864] text-white'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                Active ({activeProjects})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter('INACTIVE')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+                  statusFilter === 'INACTIVE'
+                    ? 'bg-[#1F3864] text-white'
+                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                Archived ({archivedProjects})
+              </button>
             </div>
           </div>
 
-          {/* Departments Table Desktop & Mobile */}
+          {/* Projects Table & Mobile Cards */}
           {isLoading ? (
             <div className="py-16 flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
               <span className="w-6 h-6 border-2 border-[#1F3864] border-t-transparent rounded-full animate-spin" />
-              Loading departments...
+              Loading projects...
             </div>
-          ) : filteredDepartments.length === 0 ? (
+          ) : isError ? (
+            <div className="py-12 text-center text-xs text-red-500 font-medium">
+              Failed to load projects.
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="ml-2 underline text-[#1F3864] dark:text-blue-400 font-semibold"
+              >
+                Retry
+              </button>
+            </div>
+          ) : filteredProjects.length === 0 ? (
             <div className="py-16 text-center text-xs text-gray-500 dark:text-gray-400">
               <span className="material-symbols-outlined text-[36px] text-gray-300 dark:text-gray-600 block mb-1">
-                corporate_fare
+                folder_open
               </span>
-              No departments found matching your filter criteria.
+              No projects found matching your criteria.
             </div>
           ) : (
             <>
@@ -325,72 +289,58 @@ export const AdminDepartmentManagement: React.FC = () => {
                   <thead>
                     <tr className="bg-[#FAFBFD] dark:bg-[#162234] border-b border-[#F0F2F5] dark:border-[#1E2D45] text-gray-500 dark:text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
                       <th className="py-3 px-4 sm:px-6 w-[30%] min-w-[200px]">
-                        Department Name
+                        Project Name
                       </th>
-                      <th className="py-3 px-4 sm:px-6 w-[30%] min-w-[200px]">
+                      <th className="py-3 px-4 sm:px-6 w-[35%] min-w-[220px]">
                         Description
                       </th>
-                      <th className="py-3 px-4 sm:px-6 w-[12%] min-w-[100px]">
-                        Teams
+                      <th className="py-3 px-4 sm:px-6 w-[12%] min-w-[100px] text-center">
+                        Tickets
                       </th>
                       <th className="py-3 px-4 sm:px-6 w-[12%] min-w-[100px]">
-                        Personnel
-                      </th>
-                      <th className="py-3 px-4 sm:px-6 w-[10%] min-w-[90px]">
                         Status
                       </th>
-                      <th className="py-3 px-4 sm:px-6 w-[6%] min-w-[90px] text-right">
+                      <th className="py-3 px-4 sm:px-6 w-[11%] min-w-[100px] text-right">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1E2D45] text-xs">
-                    {filteredDepartments.map((d) => {
-                      const teamsCount = d._count?.teams || d.teams?.length || 0;
-                      const usersCount = d._count?.users || d.users?.length || 0;
-                      const isActive = d.status === "ACTIVE";
+                    {filteredProjects.map((project) => {
+                      const isActive = project.status === 'ACTIVE';
+                      const ticketsCount = project._count?.tickets ?? 0;
 
                       return (
-                        <tr
-                          key={d.id}
+                        <tr 
+                          key={project.id} 
                           className="hover:bg-gray-50/70 dark:hover:bg-slate-800/50 transition-colors"
                         >
-                          {/* Department Name */}
+                          {/* Name */}
                           <td className="py-3.5 px-4 sm:px-6 font-bold text-sm text-[#1A1A1A] dark:text-white">
                             <div className="flex items-center gap-3">
                               <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#1F3864] to-[#2B5EA7] text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
-                                {d.name.substring(0, 2).toUpperCase()}
+                                {project.name.substring(0, 2).toUpperCase()}
                               </div>
-                              <span className="truncate" title={d.name}>
-                                {d.name}
+                              <span className="truncate" title={project.name}>
+                                {project.name}
                               </span>
                             </div>
                           </td>
 
                           {/* Description */}
                           <td className="py-3.5 px-4 sm:px-6 text-gray-500 dark:text-gray-400">
-                            <span className="line-clamp-1" title={d.description || "—"}>
-                              {d.description || "—"}
+                            <span className="line-clamp-1" title={project.description || '—'}>
+                              {project.description || '—'}
                             </span>
                           </td>
 
-                          {/* Teams Count */}
-                          <td className="py-3.5 px-4 sm:px-6">
+                          {/* Tickets */}
+                          <td className="py-3.5 px-4 sm:px-6 text-center">
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-900/30 text-[#0e61a1] dark:text-blue-300 border border-blue-100 dark:border-blue-800">
                               <span className="material-symbols-outlined text-[13px]">
-                                groups
+                                confirmation_number
                               </span>
-                              {teamsCount} {teamsCount === 1 ? "team" : "teams"}
-                            </span>
-                          </td>
-
-                          {/* Personnel Count */}
-                          <td className="py-3.5 px-4 sm:px-6">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-100 dark:border-violet-800">
-                              <span className="material-symbols-outlined text-[13px]">
-                                badge
-                              </span>
-                              {usersCount} {usersCount === 1 ? "person" : "persons"}
+                              {ticketsCount} {ticketsCount === 1 ? 'ticket' : 'tickets'}
                             </span>
                           </td>
 
@@ -414,33 +364,21 @@ export const AdminDepartmentManagement: React.FC = () => {
                             <div className="flex items-center justify-end gap-1">
                               <button
                                 type="button"
-                                onClick={() => setSelectedDeptForView(d)}
-                                className="p-1.5 text-gray-500 hover:text-[#1E88E5] dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                                title="View department details & available teams"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  visibility
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedDeptForEdit(d)}
+                                onClick={() => setEditingProject(project)}
                                 className="p-1.5 text-gray-500 hover:text-[#1F3864] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                                title="Edit department"
+                                title="Edit project"
                               >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  edit
-                                </span>
+                                <span className="material-symbols-outlined text-[18px]">edit</span>
                               </button>
                               <button
                                 type="button"
-                                onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
+                                onClick={() => openConfirmModal(project, isActive ? 'archive' : 'unarchive')}
                                 className={`p-1.5 rounded-lg transition-colors ${
                                   isActive
                                     ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
                                     : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                                 }`}
-                                title={isActive ? "Archive department" : "Unarchive department"}
+                                title={isActive ? "Archive project" : "Restore project"}
                               >
                                 <span className="material-symbols-outlined text-[18px]">
                                   {isActive ? "archive" : "unarchive"}
@@ -449,9 +387,9 @@ export const AdminDepartmentManagement: React.FC = () => {
                               {!isActive && (
                                 <button
                                   type="button"
-                                  onClick={() => openConfirmModal(d, "delete")}
+                                  onClick={() => openConfirmModal(project, 'delete')}
                                   className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
-                                  title="Permanently Delete department"
+                                  title="Permanently Delete project"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">delete</span>
                                 </button>
@@ -467,28 +405,27 @@ export const AdminDepartmentManagement: React.FC = () => {
 
               {/* MOBILE SEPARATE CARDS (Visible on mobile < md) */}
               <div className="block md:hidden p-3 space-y-3 bg-[#F9FAFB]/40 dark:bg-slate-900/40">
-                {filteredDepartments.map((d) => {
-                  const teamsCount = d._count?.teams || d.teams?.length || 0;
-                  const usersCount = d._count?.users || d.users?.length || 0;
-                  const isActive = d.status === "ACTIVE";
+                {filteredProjects.map((project) => {
+                  const isActive = project.status === 'ACTIVE';
+                  const ticketsCount = project._count?.tickets ?? 0;
 
                   return (
                     <div
-                      key={d.id}
-                      onClick={() => setSelectedDeptForView(d)}
-                      className="bg-white dark:bg-[#121E30] rounded-xl p-3.5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs cursor-pointer hover:border-[#0e61a1]/40 transition-all flex flex-col space-y-3"
+                      key={project.id}
+                      className="bg-white dark:bg-[#121E30] rounded-xl p-3.5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col space-y-3"
                     >
+                      {/* Card Header: Icon Badge, Name, Status */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5">
                           <span className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#1F3864] to-[#2B5EA7] text-white flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
-                            {d.name.substring(0, 2).toUpperCase()}
+                            {project.name.substring(0, 2).toUpperCase()}
                           </span>
                           <div>
                             <h3 className="font-semibold text-sm text-[#1A1A1A] dark:text-white leading-tight">
-                              {d.name}
+                              {project.name}
                             </h3>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">
-                              {d.description || "Operational Unit"}
+                              {project.description || 'System Project'}
                             </p>
                           </div>
                         </div>
@@ -508,40 +445,31 @@ export const AdminDepartmentManagement: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Card Metadata Grid */}
                       <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-gray-100 dark:border-slate-800">
                         <div>
                           <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-                            Teams
+                            Associated Tickets
                           </span>
-                          <span className="font-semibold text-gray-700 dark:text-gray-300">
-                            {teamsCount} {teamsCount === 1 ? "team" : "teams"}
+                          <span className="font-semibold text-[#0e61a1] dark:text-blue-300">
+                            {ticketsCount} {ticketsCount === 1 ? 'ticket' : 'tickets'}
                           </span>
                         </div>
                         <div>
                           <span className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-                            Personnel
+                            Created Date
                           </span>
-                          <span className="font-semibold text-gray-700 dark:text-gray-300">
-                            {usersCount} {usersCount === 1 ? "person" : "persons"}
+                          <span className="font-medium text-gray-600 dark:text-gray-300">
+                            {project.createdAt ? new Date(project.createdAt).toLocaleDateString() : '—'}
                           </span>
                         </div>
                       </div>
 
-                      <div
-                        className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-slate-800"
-                        onClick={(e) => e.stopPropagation()}
-                      >
+                      {/* Action Buttons Footer */}
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-slate-800">
                         <button
                           type="button"
-                          onClick={() => setSelectedDeptForView(d)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1E88E5] dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">visibility</span>
-                          <span>View</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedDeptForEdit(d)}
+                          onClick={() => setEditingProject(project)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -549,7 +477,7 @@ export const AdminDepartmentManagement: React.FC = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
+                          onClick={() => openConfirmModal(project, isActive ? 'archive' : 'unarchive')}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
                             isActive
                               ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40"
@@ -564,7 +492,7 @@ export const AdminDepartmentManagement: React.FC = () => {
                         {!isActive && (
                           <button
                             type="button"
-                            onClick={() => openConfirmModal(d, "delete")}
+                            onClick={() => openConfirmModal(project, 'delete')}
                             className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 flex items-center gap-1"
                           >
                             <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -578,32 +506,26 @@ export const AdminDepartmentManagement: React.FC = () => {
               </div>
             </>
           )}
-
         </div>
 
-        {/* Modals */}
-        <CreateDepartmentModal
-          isOpen={isCreateOpen}
-          onClose={() => setIsCreateOpen(false)}
-          onSuccess={() => showToast("Department created successfully!")}
+        {/* Create Project Modal */}
+        <CreateProjectModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
         />
 
-        <EditDepartmentModal
-          department={selectedDeptForEdit}
-          isOpen={Boolean(selectedDeptForEdit)}
-          onClose={() => setSelectedDeptForEdit(null)}
-          onSuccess={() => showToast("Department updated successfully!")}
-        />
-
-        <ViewDepartmentModal
-          department={selectedDeptForView}
-          isOpen={Boolean(selectedDeptForView)}
-          onClose={() => setSelectedDeptForView(null)}
-        />
+        {/* Edit Project Modal */}
+        {editingProject && (
+          <EditProjectModal
+            isOpen={!!editingProject}
+            onClose={() => setEditingProject(null)}
+            project={editingProject}
+          />
+        )}
 
         {/* Confirmation Modal */}
         {confirmModal.isOpen &&
-          confirmModal.department &&
+          confirmModal.project &&
           createPortal(
             <div
               className="fixed inset-0 top-0 left-0 right-0 bottom-0 !m-0 z-[110] flex items-center justify-center p-4 bg-[#0F1B2D]/50 backdrop-blur-[8px] transition-opacity duration-200"
@@ -633,17 +555,17 @@ export const AdminDepartmentManagement: React.FC = () => {
                     <div className="flex-1">
                       <h3 className="text-base font-bold text-[#1A1A1A] dark:text-white tracking-tight">
                         {confirmModal.type === 'delete'
-                          ? `Permanently Delete Department "${confirmModal.department.name}"?`
+                          ? `Permanently Delete Project "${confirmModal.project.name}"?`
                           : confirmModal.type === 'archive'
-                          ? `Archive Department "${confirmModal.department.name}"?`
-                          : `Restore Department "${confirmModal.department.name}"?`}
+                          ? `Archive Project "${confirmModal.project.name}"?`
+                          : `Restore Project "${confirmModal.project.name}"?`}
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
                         {confirmModal.type === 'delete'
-                          ? `Are you sure you want to permanently delete this department? This action cannot be undone.`
+                          ? `Are you sure you want to permanently delete this project? This action cannot be undone.`
                           : confirmModal.type === 'archive'
-                          ? `Are you sure you want to archive this department? It will be marked as inactive and hidden from active team allocations.`
-                          : `Are you sure you want to restore this department? It will be reactivated immediately.`}
+                          ? `Are you sure you want to archive this project? It will be marked as inactive and hidden from active operational workflows.`
+                          : `Are you sure you want to restore this project? It will be reactivated immediately.`}
                       </p>
                     </div>
                   </div>
@@ -693,8 +615,8 @@ export const AdminDepartmentManagement: React.FC = () => {
                           : confirmModal.type === 'delete'
                           ? 'Permanently Delete'
                           : confirmModal.type === 'archive'
-                          ? 'Archive Department'
-                          : 'Restore Department'}
+                          ? 'Archive Project'
+                          : 'Restore Project'}
                       </span>
                     </button>
                   </div>
@@ -707,5 +629,3 @@ export const AdminDepartmentManagement: React.FC = () => {
     </AppLayout>
   );
 };
-
-export default AdminDepartmentManagement;

@@ -122,9 +122,6 @@ export const AdminDashboard: React.FC = () => {
                 Operations Workspace
               </h1>
             </div>
-            <p className="text-[13px] text-[#5F6368] mt-0.5">
-              At-a-glance view of all system tickets with triage and drill-down.
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -146,14 +143,12 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="Total Tickets"
             count={total}
-            subtitle="All active & archived"
             icon="layers"
             accentColor="#1F3864"
           />
           <StatCard
             title="Open"
             count={statusBehaviors.OPEN}
-            subtitle="Awaiting triage"
             icon="inbox"
             accentColor="#1E88E5"
             subtitleColor="#1E88E5"
@@ -161,7 +156,6 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="In Progress"
             count={statusBehaviors.IN_PROGRESS}
-            subtitle="Under investigation"
             icon="engineering"
             accentColor="#FB8C00"
             subtitleColor="#FB8C00"
@@ -169,7 +163,6 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="On Hold"
             count={statusBehaviors.ON_HOLD}
-            subtitle="Vendor / Client wait"
             icon="pause_circle"
             accentColor="#8E24AA"
             subtitleColor="#8E24AA"
@@ -177,7 +170,6 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="Resolved"
             count={statusBehaviors.RESOLVED}
-            subtitle="Solution verified"
             icon="check_circle"
             accentColor="#43A047"
             subtitleColor="#43A047"
@@ -185,11 +177,11 @@ export const AdminDashboard: React.FC = () => {
           <StatCard
             title="Closed"
             count={statusBehaviors.CLOSED}
-            subtitle="Archived SLA met"
             icon="archive"
             accentColor="#757575"
           />
         </div>
+
 
         {/* TWO-COLUMN CHART ROW (Priority Bar Chart & Status Donut Chart) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

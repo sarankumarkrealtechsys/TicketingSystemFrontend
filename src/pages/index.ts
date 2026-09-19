@@ -5,3 +5,5 @@ export * from "./teams/TeamManagementPage";
 export * from "./teams/MyTeamPage";
 export * from "./departments/DepartmentManagementPage";
 export * from "./departments/MyDepartmentPage";
+export * from "./projects/ProjectManagementPage";
+

@@ -4,6 +4,7 @@ import {
   useTeamsQuery,
   useUpdateTeamMutation,
   useRetireTeamMutation,
+  useDeleteTeamPermanentMutation,
 } from "../api";
 import { useDepartmentsQuery } from "@/features/department-management";
 import { TeamItem } from "../types";
@@ -44,10 +45,11 @@ export const AdminTeamManagement: React.FC = () => {
 
   const updateTeamMutation = useUpdateTeamMutation();
   const retireTeamMutation = useRetireTeamMutation();
+  const deleteTeamPermanentMutation = useDeleteTeamPermanentMutation();
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    type: "archive" | "unarchive";
+    type: "archive" | "unarchive" | "delete";
     team: TeamItem | null;
     isLoading: boolean;
     error: string | null;
@@ -125,7 +127,7 @@ export const AdminTeamManagement: React.FC = () => {
     };
   }, [teams]);
 
-  const openConfirmModal = (team: TeamItem, type: "archive" | "unarchive") => {
+  const openConfirmModal = (team: TeamItem, type: "archive" | "unarchive" | "delete") => {
     setConfirmModal({
       isOpen: true,
       type,
@@ -139,7 +141,10 @@ export const AdminTeamManagement: React.FC = () => {
     if (!confirmModal.team) return;
     setConfirmModal((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      if (confirmModal.type === "archive") {
+      if (confirmModal.type === "delete") {
+        await deleteTeamPermanentMutation.mutateAsync(confirmModal.team.id);
+        showToast(`Team "${confirmModal.team.name}" permanently deleted successfully.`);
+      } else if (confirmModal.type === "archive") {
         await retireTeamMutation.mutateAsync(confirmModal.team.id);
         showToast(`Team "${confirmModal.team.name}" archived successfully.`);
       } else {
@@ -211,10 +216,6 @@ export const AdminTeamManagement: React.FC = () => {
           <h1 className="text-2xl font-bold text-[#1A1A1A] tracking-tight">
             Team Management
           </h1>
-          <p className="text-sm text-gray-600">
-            Manage organizational teams, assign department leads, configure
-            member rosters, and monitor operational capacity.
-          </p>
         </div>
 
         {/* Action button */}
@@ -243,9 +244,6 @@ export const AdminTeamManagement: React.FC = () => {
             <span className="text-2xl font-bold text-[#1F3864] mt-0.5">
               {stats.activeTeams}
             </span>
-            <span className="text-xs text-gray-500 mt-0.5">
-              In organization directory
-            </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-[#1F3864]/5 flex items-center justify-center text-[#1F3864]">
             <span className="material-symbols-outlined text-[24px]">
@@ -263,9 +261,6 @@ export const AdminTeamManagement: React.FC = () => {
             <span className="text-2xl font-bold text-[#1F3864] mt-0.5">
               {stats.totalMembers}
             </span>
-            <span className="text-xs text-emerald-600 font-medium mt-0.5">
-              Active memberships
-            </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-[#0e61a1]">
             <span className="material-symbols-outlined text-[24px]">badge</span>
@@ -281,9 +276,6 @@ export const AdminTeamManagement: React.FC = () => {
             <span className="text-2xl font-bold text-[#1F3864] mt-0.5">
               {stats.assignedIncidents}
             </span>
-            <span className="text-xs text-gray-500 mt-0.5">
-              Tickets currently routed
-            </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
             <span className="material-symbols-outlined text-[24px]">
@@ -291,6 +283,7 @@ export const AdminTeamManagement: React.FC = () => {
             </span>
           </div>
         </div>
+
 
         {/* Team Capacity */}
         <div className="p-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] flex items-center justify-between">
@@ -485,7 +478,7 @@ export const AdminTeamManagement: React.FC = () => {
                                   type="button"
                                   onClick={() => openConfirmModal(t, "archive")}
                                   title="Archive / Retire Team"
-                                  className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
+                                  className="p-1 rounded text-amber-600 hover:bg-amber-50 transition-colors"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">
                                     archive
@@ -502,6 +495,20 @@ export const AdminTeamManagement: React.FC = () => {
                                 >
                                   <span className="material-symbols-outlined text-[18px]">
                                     unarchive
+                                  </span>
+                                </button>
+                              )}
+
+                              {/* Permanently Delete Team (Only visible when archived) */}
+                              {!isActive && (
+                                <button
+                                  type="button"
+                                  onClick={() => openConfirmModal(t, "delete")}
+                                  title="Permanently Delete Team"
+                                  className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    delete
                                   </span>
                                 </button>
                               )}
@@ -626,7 +633,7 @@ export const AdminTeamManagement: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openConfirmModal(t, "archive")}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50/80 hover:bg-red-100 transition-colors"
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
                           >
                             <span className="material-symbols-outlined text-[15px]">
                               archive
@@ -643,6 +650,18 @@ export const AdminTeamManagement: React.FC = () => {
                               unarchive
                             </span>
                             <span>Restore</span>
+                          </button>
+                        )}
+                        {!isActive && (
+                          <button
+                            type="button"
+                            onClick={() => openConfirmModal(t, "delete")}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">
+                              delete
+                            </span>
+                            <span>Delete</span>
                           </button>
                         )}
                       </div>
@@ -683,7 +702,7 @@ export const AdminTeamManagement: React.FC = () => {
         onClose={() => setSelectedTeamForRoster(null)}
       />
 
-      {/* Styled Archive / Unarchive Confirmation Modal */}
+      {/* Styled Archive / Unarchive / Permanent Delete Confirmation Modal */}
       {confirmModal.isOpen &&
         confirmModal.team &&
         createPortal(
@@ -692,8 +711,10 @@ export const AdminTeamManagement: React.FC = () => {
               {/* Gradient Header Accent */}
               <div
                 className={`h-1.5 ${
-                  confirmModal.type === "archive"
-                    ? "bg-gradient-to-r from-red-500 via-red-400 to-orange-400"
+                  confirmModal.type === "delete"
+                    ? "bg-gradient-to-r from-red-600 via-red-500 to-rose-600"
+                    : confirmModal.type === "archive"
+                    ? "bg-gradient-to-r from-amber-500 via-amber-400 to-orange-400"
                     : "bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400"
                 }`}
               />
@@ -703,25 +724,33 @@ export const AdminTeamManagement: React.FC = () => {
                 <div className="flex items-start gap-4">
                   <div
                     className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
-                      confirmModal.type === "archive"
-                        ? "bg-gradient-to-br from-red-50 to-red-100 text-red-600 border border-red-200"
+                      confirmModal.type === "delete"
+                        ? "bg-gradient-to-br from-red-100 to-red-200 text-red-600 border border-red-300"
+                        : confirmModal.type === "archive"
+                        ? "bg-gradient-to-br from-amber-50 to-amber-100 text-amber-600 border border-amber-200"
                         : "bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-600 border border-emerald-200"
                     }`}
                   >
                     <span className="material-symbols-outlined text-[28px]">
-                      {confirmModal.type === "archive"
+                      {confirmModal.type === "delete"
+                        ? "delete_forever"
+                        : confirmModal.type === "archive"
                         ? "archive"
                         : "unarchive"}
                     </span>
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-bold text-[#1A1A1A] tracking-tight">
-                      {confirmModal.type === "archive"
+                      {confirmModal.type === "delete"
+                        ? `Permanently Delete Team "${confirmModal.team.name}"?`
+                        : confirmModal.type === "archive"
                         ? `Archive Team "${confirmModal.team.name}"?`
                         : `Restore Team "${confirmModal.team.name}"?`}
                     </h3>
                     <p className="text-sm text-[#64748B] mt-1.5 leading-relaxed">
-                      {confirmModal.type === "archive"
+                      {confirmModal.type === "delete"
+                        ? `Are you sure you want to permanently delete this team? This action cannot be undone.`
+                        : confirmModal.type === "archive"
                         ? `This operational unit will stop receiving newly dispatched tickets and will be hidden from default triage dropdowns. All historical ticket associations remain fully preserved.`
                         : `This team will be reactivated immediately, resuming operational capacity and appearing in active ticket triage queues.`}
                     </p>
@@ -757,8 +786,10 @@ export const AdminTeamManagement: React.FC = () => {
                     disabled={confirmModal.isLoading}
                     onClick={handleConfirmAction}
                     className={`px-6 py-2.5 rounded-xl text-sm font-semibold text-white shadow-md hover:shadow-lg flex items-center gap-2 transition-all duration-150 disabled:opacity-50 active:scale-[0.99] ${
-                      confirmModal.type === "archive"
-                        ? "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600"
+                      confirmModal.type === "delete"
+                        ? "bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700"
+                        : confirmModal.type === "archive"
+                        ? "bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-700 hover:to-amber-600"
                         : "bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600"
                     }`}
                   >
@@ -766,18 +797,24 @@ export const AdminTeamManagement: React.FC = () => {
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     )}
                     <span className="material-symbols-outlined text-[18px]">
-                      {confirmModal.type === "archive"
+                      {confirmModal.type === "delete"
+                        ? "delete"
+                        : confirmModal.type === "archive"
                         ? "archive"
                         : "unarchive"}
                     </span>
                     <span>
                       {confirmModal.isLoading
-                        ? confirmModal.type === "archive"
+                        ? confirmModal.type === "delete"
+                          ? "Deleting..."
+                          : confirmModal.type === "archive"
                           ? "Archiving..."
                           : "Restoring..."
+                        : confirmModal.type === "delete"
+                        ? "Permanently Delete"
                         : confirmModal.type === "archive"
-                          ? "Archive Team"
-                          : "Restore Team"}
+                        ? "Archive Team"
+                        : "Restore Team"}
                     </span>
                   </button>
                 </div>

@@ -132,6 +132,21 @@ export const useRetireTeamMutation = () => {
   });
 };
 
+export const useDeleteTeamPermanentMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiClient.delete<any>(`/teams/${id}?permanent=true`);
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: teamManagementKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+    },
+  });
+};
+
 // POST /api/users/:userId/teams (Add Member to Team)
 export const useAddTeamMemberMutation = () => {
   const queryClient = useQueryClient();

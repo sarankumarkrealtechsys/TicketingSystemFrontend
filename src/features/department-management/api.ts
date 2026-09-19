@@ -76,6 +76,16 @@ export const retireDepartmentApi = async (
   return data.data;
 };
 
+export const deleteDepartmentPermanentApi = async (
+  id: number,
+): Promise<DepartmentItem> => {
+  const { data } = await apiClient.delete<{
+    status: string;
+    data: DepartmentItem;
+  }>(`/departments/${id}?permanent=true`);
+  return data.data;
+};
+
 // Custom React Query Hooks
 export const useDepartmentsQuery = (params?: { includeInactive?: boolean }) => {
   return useQuery({
@@ -131,3 +141,15 @@ export const useRetireDepartmentMutation = () => {
     },
   });
 };
+
+export const useDeleteDepartmentPermanentMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation<DepartmentItem, AxiosError<any>, number>({
+    mutationFn: deleteDepartmentPermanentApi,
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: departmentKeys.all });
+      queryClient.invalidateQueries({ queryKey: departmentKeys.detail(id) });
+    },
+  });
+};
+

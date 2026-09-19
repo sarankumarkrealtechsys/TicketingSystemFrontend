@@ -59,10 +59,8 @@ export const UserMyDepartment: React.FC = () => {
           <h1 className="text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
             {department.name}
           </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {department.description || "Operational Department Unit"}
-          </p>
         </div>
+
 
         {/* TOP ROW: 3 Overview KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
@@ -82,9 +80,6 @@ export const UserMyDepartment: React.FC = () => {
               <h3 className="text-base sm:text-lg font-bold text-[#1A1A1A] dark:text-white truncate" title={department.name}>
                 {department.name}
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                Dept ID #{department.id}
-              </p>
             </div>
           </div>
 
@@ -104,9 +99,6 @@ export const UserMyDepartment: React.FC = () => {
               <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
                 {usersList.length}
               </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Active department members
-              </p>
             </div>
           </div>
 
@@ -126,13 +118,10 @@ export const UserMyDepartment: React.FC = () => {
               <h3 className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                 Active
               </h3>
-              <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Operational Unit
-              </p>
             </div>
           </div>
         </div>
+
 
         {/* DEPARTMENT COLLEAGUES ROSTER TABLE */}
         <div className="bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] overflow-hidden">

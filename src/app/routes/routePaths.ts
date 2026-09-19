@@ -12,6 +12,8 @@ export const ROUTES = {
   MY_TEAM: "/my-team",
   DEPARTMENTS: "/admin/departments",
   MY_DEPARTMENT: "/my-department",
+  PROJECTS: "/projects",
 } as const;
+
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES];

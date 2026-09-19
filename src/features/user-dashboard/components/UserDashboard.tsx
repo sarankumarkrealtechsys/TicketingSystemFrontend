@@ -116,9 +116,6 @@ export const UserDashboard: React.FC = () => {
                 My Workspace
               </h1>
             </div>
-            <p className="text-[13px] text-[#5F6368] mt-0.5">
-              Showing tickets you created or are assigned to
-            </p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -140,14 +137,12 @@ export const UserDashboard: React.FC = () => {
           <StatCard
             title="Total Tickets"
             count={total}
-            subtitle="All personal & assigned"
             icon="layers"
             accentColor="#1F3864"
           />
           <StatCard
             title="Open"
             count={statusBehaviors.OPEN}
-            subtitle="Awaiting triage"
             icon="inbox"
             accentColor="#1E88E5"
             subtitleColor="#1E88E5"
@@ -155,7 +150,6 @@ export const UserDashboard: React.FC = () => {
           <StatCard
             title="In Progress"
             count={statusBehaviors.IN_PROGRESS}
-            subtitle="Active tasks"
             icon="engineering"
             accentColor="#FB8C00"
             subtitleColor="#FB8C00"
@@ -163,7 +157,6 @@ export const UserDashboard: React.FC = () => {
           <StatCard
             title="On Hold"
             count={statusBehaviors.ON_HOLD}
-            subtitle="Pending dependency"
             icon="pause_circle"
             accentColor="#8E24AA"
             subtitleColor="#8E24AA"
@@ -171,7 +164,6 @@ export const UserDashboard: React.FC = () => {
           <StatCard
             title="Resolved"
             count={statusBehaviors.RESOLVED}
-            subtitle="Solution verified"
             icon="check_circle"
             accentColor="#43A047"
             subtitleColor="#43A047"
@@ -179,7 +171,6 @@ export const UserDashboard: React.FC = () => {
           <StatCard
             title="Closed"
             count={statusBehaviors.CLOSED}
-            subtitle="Completed"
             icon="archive"
             accentColor="#757575"
           />
@@ -191,19 +182,14 @@ export const UserDashboard: React.FC = () => {
             total={total}
             byPriority={statsData?.byPriority || []}
             title="Tickets by Priority"
-            subtitle="Priority distribution of your assigned and authored tickets."
-            averageSlaText="1.1 hrs"
-            onSchedulePct="100% On Schedule"
           />
           <StatusDonutChart
             total={total}
             byStatusBehavior={statusBehaviors}
             title="Tickets by Status"
-            subtitle="Status breakdown across all your active and resolved tickets."
-            badgeText="Personal Tickets"
-            breakdownLink="/tickets?filter=my"
           />
         </div>
+
 
         {/* FILTER TOOLBAR */}
         <UserFilterToolbar

@@ -26,8 +26,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
     CLOSED: 0,
   },
   title = "Tickets by Status",
-  subtitle = "Complete breakdown across all stages of ticket fulfillment.",
-  badgeText = "Live Lifecycle",
+  subtitle,
+  badgeText = "Live",
   breakdownLink = "/tickets",
 }) => {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
   return (
     <div className="bg-white rounded-[10px] p-5 shadow-sm border border-[#EEEEEE] flex flex-col justify-between">
       <div>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[#1E88E5] text-[20px]">
               donut_large
@@ -74,13 +74,15 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
             {badgeText}
           </span>
         </div>
-        <p className="text-[12px] text-[#5F6368] mb-4">
-          {subtitle}
-        </p>
+        {subtitle && (
+          <p className="text-[12px] text-[#5F6368] mb-4">
+            {subtitle}
+          </p>
+        )}
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-1">
           {/* SVG Donut Chart */}
-          <div className="relative w-40 h-40 flex items-center justify-center flex-shrink-0">
+          <div className="relative w-40 h-40 flex items-center justify-center shrink-0">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
               {/* Background Track */}
               <circle
@@ -112,9 +114,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
               ))}
             </svg>
 
-            {/* Centered Dynamic Status Display on Hover with Smooth Opacity/Scale Transition */}
+            {/* Centered Dynamic Status Display on Hover */}
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none p-2">
-              {/* Default Total Display */}
               <div
                 className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
                   activeSlice
@@ -130,7 +131,6 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                 </span>
               </div>
 
-              {/* Active Hover Status Display */}
               <div
                 className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
                   activeSlice
@@ -195,13 +195,7 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
         </div>
       </div>
 
-      <div className="mt-5 pt-3 border-t border-[#EEEEEE] flex items-center justify-between text-[11px] text-[#5F6368] font-medium">
-        <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-[15px] text-[#1E88E5]">
-            update
-          </span>
-          Auto-synced with queue dispatcher
-        </span>
+      <div className="mt-5 pt-3 border-t border-[#EEEEEE] flex items-center justify-end text-[11px] text-[#5F6368] font-medium">
         <Link
           to={breakdownLink}
           className="text-[#1E88E5] hover:underline font-semibold flex items-center gap-0.5"

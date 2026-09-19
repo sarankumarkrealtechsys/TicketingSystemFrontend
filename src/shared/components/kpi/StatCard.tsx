@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 export interface StatCardProps {
   title: string;
   count: number;
-  subtitle: string;
+  subtitle?: string;
   icon: string;
   accentColor: string;
   subtitleColor?: string;
@@ -66,15 +66,18 @@ export const StatCard: React.FC<StatCardProps> = ({
         >
           {displayCount}
         </span>
-        <span
-          className="block text-[8.5px] sm:text-[11px] font-medium mt-0.5 sm:mt-1 truncate"
-          style={{ color: subtitleColor || "#5F6368" }}
-        >
-          {subtitle}
-        </span>
+        {subtitle && (
+          <span
+            className="block text-[8.5px] sm:text-[11px] font-medium mt-0.5 sm:mt-1 truncate"
+            style={{ color: subtitleColor || "#5F6368" }}
+          >
+            {subtitle}
+          </span>
+        )}
       </div>
     </div>
   );
 };
+
 
 export default StatCard;

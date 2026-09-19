@@ -17,9 +17,7 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
   total = 0,
   byPriority = [],
   title = "Tickets by Priority",
-  subtitle = "Priority distribution with SLA threshold indicators.",
-  averageSlaText = "1.4 hrs",
-  onSchedulePct = "98.4%",
+  subtitle,
 }) => {
   const highItem = byPriority.find((p) => p.label?.toUpperCase().includes("HIGH"));
   const medItem = byPriority.find((p) => p.label?.toUpperCase().includes("MED"));
@@ -36,7 +34,7 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
   return (
     <div className="bg-white rounded-[10px] p-5 shadow-sm border border-[#EEEEEE] flex flex-col justify-between">
       <div>
-        <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[#1E88E5] text-[20px]">
               bar_chart
@@ -49,9 +47,11 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
             {total} Total
           </span>
         </div>
-        <p className="text-[12px] text-[#5F6368] mb-5">
-          {subtitle}
-        </p>
+        {subtitle && (
+          <p className="text-[12px] text-[#5F6368] mb-4">
+            {subtitle}
+          </p>
+        )}
 
         <div className="space-y-4">
           {/* High Priority */}
@@ -60,9 +60,6 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#E53935]" />
                 <span className="font-semibold text-[#1A1A1A]">High Priority</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-50 text-[#E53935] border border-red-200">
-                  SLA: 1h Max
-                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-[#E53935]">{highCount}</span>
@@ -83,9 +80,6 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#FB8C00]" />
                 <span className="font-semibold text-[#1A1A1A]">Medium Priority</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-[#FB8C00] border border-amber-200">
-                  SLA: 4h Max
-                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-[#FB8C00]">{medCount}</span>
@@ -106,9 +100,6 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#43A047]" />
                 <span className="font-semibold text-[#1A1A1A]">Low Priority</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-50 text-[#43A047] border border-emerald-200">
-                  SLA: 24h
-                </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-[#43A047]">{lowCount}</span>
@@ -123,19 +114,6 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="mt-5 pt-3 border-t border-[#EEEEEE] flex items-center justify-between text-[11px] text-[#5F6368] font-medium">
-        <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-[15px] text-[#1E88E5]">
-            speed
-          </span>
-          Average Priority Triage SLA: <strong className="text-[#1A1A1A]">{averageSlaText}</strong>
-        </span>
-        <span className="text-emerald-700 font-semibold flex items-center gap-1">
-          <span className="material-symbols-outlined text-[15px]">verified</span>
-          {onSchedulePct} On Schedule
-        </span>
       </div>
     </div>
   );
