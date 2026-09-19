@@ -611,6 +611,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 />
 
                 <SidebarLink
+                  to="/my-permissions"
+                  icon="verified_user"
+                  label="My Permissions"
+                />
+
+                <SidebarLink
                   to="/settings"
                   icon="settings"
                   label="Settings"

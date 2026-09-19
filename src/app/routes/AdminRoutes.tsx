@@ -1,6 +1,6 @@
 import React from "react";
 import { Route } from "react-router-dom";
-import { AdminDashboardPage, TeamManagementPage, DepartmentManagementPage, ProjectManagementPage } from "@/pages";
+import { AdminDashboardPage, TeamManagementPage, DepartmentManagementPage, ProjectManagementPage, RolesPermissionsPage } from "@/pages";
 import { PermissionRoute } from "./PermissionRoute";
 import { PERMISSIONS } from "@/features/auth/permissions";
 import { ROUTES } from "./routePaths";
@@ -52,6 +52,17 @@ export const AdminRoutes = (
           requiredPermission={PERMISSIONS.PROJECT_VIEW}
         >
           <ProjectManagementPage />
+        </PermissionRoute>
+      }
+    />
+    <Route
+      path={ROUTES.ROLES}
+      element={
+        <PermissionRoute
+          requiredRole="ADMIN"
+          requiredPermission={PERMISSIONS.ROLE_MANAGE}
+        >
+          <RolesPermissionsPage />
         </PermissionRoute>
       }
     />

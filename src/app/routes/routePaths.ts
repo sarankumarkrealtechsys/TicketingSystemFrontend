@@ -15,6 +15,8 @@ export const ROUTES = {
   PROJECTS: "/projects",
   CREATE_TICKET: "/tickets/create",
   TICKETS: "/tickets",
+  ROLES: "/roles",
+  MY_PERMISSIONS: "/my-permissions",
 } as const;
 
 

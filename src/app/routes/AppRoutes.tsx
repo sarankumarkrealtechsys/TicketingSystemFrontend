@@ -13,7 +13,7 @@ import { AuthRoutes } from "./AuthRoutes";
 import { AdminRoutes } from "./AdminRoutes";
 import { UserRoutes } from "./UserRoutes";
 import { ProtectedRoute } from "./ProtectedRoute";
-import { CreateTicketPage } from "@/pages";
+import { CreateTicketPage, NotFoundPage } from "@/pages";
 
 /**
  * Root index redirector based on authentication status and user role.
@@ -103,8 +103,8 @@ export const AppRoutes: React.FC = () => {
           {/* Standard User Workspace Routes (guarded by session) */}
           {UserRoutes}
 
-          {/* Catch-all fallback */}
-          <Route path="*" element={<Navigate to={ROUTES.ROOT} replace />} />
+          {/* Catch-all 404 fallback */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </SessionBootstrap>
     </BrowserRouter>
