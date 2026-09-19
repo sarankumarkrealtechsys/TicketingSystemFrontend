@@ -43,6 +43,7 @@ export const UserDashboard: React.FC = () => {
     data: ticketsData,
     isLoading: isTicketsLoading,
     isFetching: isTicketsFetching,
+    refetch: refetchTickets,
   } = useUserTicketsTableQuery(currentUser?.id, filters);
   const { data: projects = [] } = useProjectsQuery();
   const { data: priorities = [] } = usePrioritiesQuery();
@@ -196,6 +197,8 @@ export const UserDashboard: React.FC = () => {
           filters={filters}
           onFilterChange={handleFilterChange}
           onClear={handleClearFilters}
+          onRefresh={refetchTickets}
+          isRefreshing={isTicketsFetching}
           projects={projects}
           priorities={priorities}
           statuses={statuses}

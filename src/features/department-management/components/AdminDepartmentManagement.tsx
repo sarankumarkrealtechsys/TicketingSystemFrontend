@@ -33,7 +33,7 @@ export const AdminDepartmentManagement: React.FC = () => {
     useState<DepartmentItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const { data: departments = [], isLoading } = useDepartmentsQuery({
+  const { data: departments = [], isLoading, refetch, isFetching } = useDepartmentsQuery({
     includeInactive: true,
   });
 
@@ -280,27 +280,47 @@ export const AdminDepartmentManagement: React.FC = () => {
         {/* DEPARTMENTS TABLE SECTION */}
         <div className="bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] overflow-hidden flex flex-col">
           {/* Table Toolbar */}
-          <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-[#121E30] border-b border-[#F0F2F5] dark:border-[#1E2D45]">
-            <div className="relative w-full sm:w-80">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                search
-              </span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search departments by name or scope..."
-                className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] transition-all"
-              />
+          <div className="p-4 flex flex-col gap-3 bg-white dark:bg-[#121E30] border-b border-[#F0F2F5] dark:border-[#1E2D45]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+              <div className="relative w-full sm:w-80">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
+                  search
+                </span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search departments by name or scope..."
+                  className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] transition-all"
+                />
+              </div>
+
+              <div className="w-full sm:w-48">
+                <SelectDropdown<"all" | "active" | "inactive">
+                  value={statusFilter}
+                  onChange={(val) => setStatusFilter(val)}
+                  options={STATUS_FILTER_OPTIONS}
+                  size="sm"
+                />
+              </div>
             </div>
 
-            <div className="w-full sm:w-48">
-              <SelectDropdown<"all" | "active" | "inactive">
-                value={statusFilter}
-                onChange={(val) => setStatusFilter(val)}
-                options={STATUS_FILTER_OPTIONS}
-                size="sm"
-              />
+            {/* Next Line: Medium Navy Blue Refresh Button */}
+            <div className="pt-2 flex justify-end border-t border-gray-100 dark:border-[#1E2D45]/60 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  refetch();
+                  showToast("Refreshed departments list!");
+                }}
+                className="h-8 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
+                title="Refresh Departments List"
+              >
+                <span className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}>
+                  refresh
+                </span>
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
 

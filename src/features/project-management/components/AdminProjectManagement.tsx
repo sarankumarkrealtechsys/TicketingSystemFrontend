@@ -7,7 +7,7 @@ import CreateProjectModal from './CreateProjectModal';
 import EditProjectModal from './EditProjectModal';
 
 export const AdminProjectManagement: React.FC = () => {
-  const { data: projects = [], isLoading, isError, refetch } = useProjectsQuery({ includeInactive: true });
+  const { data: projects = [], isLoading, isError, refetch, isFetching } = useProjectsQuery({ includeInactive: true });
   const updateMutation = useUpdateProjectMutation();
   const retireMutation = useRetireProjectMutation();
   const deletePermanentMutation = useDeleteProjectPermanentMutation();
@@ -204,55 +204,75 @@ export const AdminProjectManagement: React.FC = () => {
 
         {/* PROJECTS SECTION */}
         <div className="bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] overflow-hidden flex flex-col">
-          {/* Table Controls / Toolbar */}
-          <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-[#121E30] border-b border-[#F0F2F5] dark:border-[#1E2D45]">
-            <div className="relative w-full sm:w-80">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-                search
-              </span>
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search projects by name or description..."
-                className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] transition-all"
-              />
+          {/* Table Toolbar */}
+          <div className="p-4 flex flex-col gap-3 bg-white dark:bg-[#121E30] border-b border-[#F0F2F5] dark:border-[#1E2D45]">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+              <div className="relative w-full sm:w-80">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
+                  search
+                </span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search projects by name or description..."
+                  className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] transition-all"
+                />
+              </div>
+
+              {/* Status Filter Tabs */}
+              <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('ALL')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+                    statusFilter === 'ALL'
+                      ? 'bg-[#1F3864] text-white'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  All ({totalProjects})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('ACTIVE')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+                    statusFilter === 'ACTIVE'
+                      ? 'bg-[#1F3864] text-white'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  Active ({activeProjects})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('INACTIVE')}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
+                    statusFilter === 'INACTIVE'
+                      ? 'bg-[#1F3864] text-white'
+                      : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  Archived ({archivedProjects})
+                </button>
+              </div>
             </div>
 
-            {/* Status Filter Tabs */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+            {/* Next Line: Medium Navy Blue Refresh Button */}
+            <div className="pt-2 flex justify-end border-t border-gray-100 dark:border-[#1E2D45]/60 w-full">
               <button
                 type="button"
-                onClick={() => setStatusFilter('ALL')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
-                  statusFilter === 'ALL'
-                    ? 'bg-[#1F3864] text-white'
-                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                }`}
+                onClick={() => {
+                  refetch();
+                  showToast("Refreshed projects list!");
+                }}
+                className="h-8 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
+                title="Refresh Projects List"
               >
-                All ({totalProjects})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('ACTIVE')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
-                  statusFilter === 'ACTIVE'
-                    ? 'bg-[#1F3864] text-white'
-                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                Active ({activeProjects})
-              </button>
-              <button
-                type="button"
-                onClick={() => setStatusFilter('INACTIVE')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors shrink-0 ${
-                  statusFilter === 'INACTIVE'
-                    ? 'bg-[#1F3864] text-white'
-                    : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                Archived ({archivedProjects})
+                <span className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}>
+                  refresh
+                </span>
+                <span>Refresh</span>
               </button>
             </div>
           </div>

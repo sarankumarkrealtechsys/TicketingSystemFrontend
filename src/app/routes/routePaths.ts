@@ -13,6 +13,8 @@ export const ROUTES = {
   DEPARTMENTS: "/admin/departments",
   MY_DEPARTMENT: "/my-department",
   PROJECTS: "/projects",
+  CREATE_TICKET: "/tickets/create",
+  TICKETS: "/tickets",
 } as const;
 
 

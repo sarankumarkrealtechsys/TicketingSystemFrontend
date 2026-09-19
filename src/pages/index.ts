@@ -6,4 +6,6 @@ export * from "./teams/MyTeamPage";
 export * from "./departments/DepartmentManagementPage";
 export * from "./departments/MyDepartmentPage";
 export * from "./projects/ProjectManagementPage";
+export * from "./tickets/CreateTicketPage";
+
 

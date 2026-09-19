@@ -12,6 +12,8 @@ import { ROUTES } from "./routePaths";
 import { AuthRoutes } from "./AuthRoutes";
 import { AdminRoutes } from "./AdminRoutes";
 import { UserRoutes } from "./UserRoutes";
+import { ProtectedRoute } from "./ProtectedRoute";
+import { CreateTicketPage } from "@/pages";
 
 /**
  * Root index redirector based on authentication status and user role.
@@ -84,6 +86,16 @@ export const AppRoutes: React.FC = () => {
 
           {/* Root Redirect */}
           <Route path={ROUTES.ROOT} element={<RootRedirect />} />
+
+          {/* Create Ticket Route (Accessible to both Admin and User) */}
+          <Route
+            path={ROUTES.CREATE_TICKET}
+            element={
+              <ProtectedRoute>
+                <CreateTicketPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Admin Routes (guarded by role + BRD permissions) */}
           {AdminRoutes}

@@ -11,6 +11,7 @@ import { TeamItem } from "../types";
 import { CreateTeamModal } from "./CreateTeamModal";
 import { EditTeamModal } from "./EditTeamModal";
 import { TeamRosterDrawer } from "./TeamRosterDrawer";
+import { ReassignDepartmentModal } from "./ReassignDepartmentModal";
 import { SelectDropdown, SelectOption } from "@/shared/components";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
@@ -32,14 +33,17 @@ export const AdminTeamManagement: React.FC = () => {
     useState<TeamItem | null>(null);
   const [selectedTeamForRoster, setSelectedTeamForRoster] =
     useState<TeamItem | null>(null);
+  const [isReassignOpen, setIsReassignOpen] = useState(false);
+  const [selectedTeamForReassign, setSelectedTeamForReassign] =
+    useState<TeamItem | null>(null);
   const [actionSuccessMessage, setActionSuccessMessage] = useState<
     string | null
   >(null);
 
-  const { data: teams = [], isLoading } = useTeamsQuery({
+  const { data: teams = [], isLoading, refetch: refetchTeams, isFetching: isFetchingTeams } = useTeamsQuery({
     includeInactive: true,
   });
-  const { data: departments = [] } = useDepartmentsQuery({
+  const { data: departments = [], refetch: refetchDepts } = useDepartmentsQuery({
     includeInactive: true,
   });
 
@@ -222,8 +226,18 @@ export const AdminTeamManagement: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             type="button"
+            onClick={() => setIsReassignOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-[#D1D5DB] text-gray-700 rounded-lg font-semibold text-xs shadow-sm transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px] text-[#0e61a1]">
+              swap_horiz
+            </span>
+            <span>Department Change</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.99] text-white rounded-lg font-semibold text-xs shadow-sm transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.99] text-white rounded-lg font-semibold text-xs shadow-sm transition-all cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">
               group_add
@@ -309,41 +323,63 @@ export const AdminTeamManagement: React.FC = () => {
       {/* Teams Table Section */}
       <div className="bg-white rounded-xl shadow-sm border border-[#E5E7EB] overflow-hidden flex flex-col">
         {/* Table Controls */}
-        <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border-b border-[#F0F2F5]">
-          <div className="relative w-full sm:w-80">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
-              search
-            </span>
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search teams by name, department, or lead..."
-              className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] focus:bg-white transition-all"
-            />
+        <div className="p-4 flex flex-col gap-3 bg-white border-b border-[#F0F2F5]">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full">
+            <div className="relative w-full sm:w-80">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
+                search
+              </span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search teams by name, department, or lead..."
+                className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] focus:bg-white transition-all"
+              />
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              {/* Department Filter */}
+              <div className="w-full sm:w-56">
+                <SelectDropdown<string>
+                  value={departmentFilter}
+                  onChange={(val) => setDepartmentFilter(val)}
+                  options={departmentOptions}
+                  placeholder="Filter by Department..."
+                  size="sm"
+                />
+              </div>
+
+              {/* Status Filter */}
+              <div className="w-full sm:w-44">
+                <SelectDropdown<"all" | "active" | "inactive">
+                  value={statusFilter}
+                  onChange={(val) => setStatusFilter(val)}
+                  options={STATUS_FILTER_OPTIONS}
+                  size="sm"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-            {/* Department Filter */}
-            <div className="w-full sm:w-56">
-              <SelectDropdown<string>
-                value={departmentFilter}
-                onChange={(val) => setDepartmentFilter(val)}
-                options={departmentOptions}
-                placeholder="Filter by Department..."
-                size="sm"
-              />
-            </div>
-
-            {/* Status Filter */}
-            <div className="w-full sm:w-44">
-              <SelectDropdown<"all" | "active" | "inactive">
-                value={statusFilter}
-                onChange={(val) => setStatusFilter(val)}
-                options={STATUS_FILTER_OPTIONS}
-                size="sm"
-              />
-            </div>
+          {/* Next Line: Medium Navy Blue Refresh Button */}
+          <div className="pt-2 flex justify-end border-t border-gray-100 w-full">
+            <button
+              type="button"
+              onClick={() => {
+                refetchTeams();
+                refetchDepts();
+                setActionSuccessMessage("Refreshed team list!");
+                setTimeout(() => setActionSuccessMessage(null), 3000);
+              }}
+              className="h-8 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
+              title="Refresh Teams List"
+            >
+              <span className={`material-symbols-outlined text-[16px] ${isFetchingTeams ? "animate-spin" : ""}`}>
+                refresh
+              </span>
+              <span>Refresh</span>
+            </button>
           </div>
         </div>
 
@@ -457,6 +493,18 @@ export const AdminTeamManagement: React.FC = () => {
                               >
                                 <span className="material-symbols-outlined text-[18px]">
                                   group
+                                </span>
+                              </button>
+
+                              {/* Change Department */}
+                              <button
+                                type="button"
+                                onClick={() => setSelectedTeamForReassign(t)}
+                                title="Change Department"
+                                className="p-1 rounded text-purple-600 hover:bg-purple-50 transition-colors cursor-pointer"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  swap_horiz
                                 </span>
                               </button>
 
@@ -621,6 +669,16 @@ export const AdminTeamManagement: React.FC = () => {
                         </button>
                         <button
                           type="button"
+                          onClick={() => setSelectedTeamForReassign(t)}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">
+                            swap_horiz
+                          </span>
+                          <span>Dept</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setSelectedTeamForEdit(t)}
                           className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
                         >
@@ -700,6 +758,16 @@ export const AdminTeamManagement: React.FC = () => {
         team={selectedTeamForRoster}
         isOpen={!!selectedTeamForRoster}
         onClose={() => setSelectedTeamForRoster(null)}
+      />
+
+      <ReassignDepartmentModal
+        isOpen={isReassignOpen || !!selectedTeamForReassign}
+        initialTeam={selectedTeamForReassign}
+        onClose={() => {
+          setIsReassignOpen(false);
+          setSelectedTeamForReassign(null);
+        }}
+        onSuccess={(msg) => showToast(msg)}
       />
 
       {/* Styled Archive / Unarchive / Permanent Delete Confirmation Modal */}

@@ -110,6 +110,8 @@ export const useCreateDepartmentMutation = () => {
     mutationFn: createDepartmentApi,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["team-management"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };
@@ -127,6 +129,8 @@ export const useUpdateDepartmentMutation = () => {
       queryClient.invalidateQueries({
         queryKey: departmentKeys.detail(variables.id),
       });
+      queryClient.invalidateQueries({ queryKey: ["team-management"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };
@@ -138,6 +142,8 @@ export const useRetireDepartmentMutation = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
       queryClient.invalidateQueries({ queryKey: departmentKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ["team-management"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };
@@ -149,6 +155,8 @@ export const useDeleteDepartmentPermanentMutation = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: departmentKeys.all });
       queryClient.invalidateQueries({ queryKey: departmentKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ["team-management"] });
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
     },
   });
 };

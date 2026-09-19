@@ -89,6 +89,7 @@ export const useCreateTeamMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamManagementKeys.all });
       queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
   });
 };
@@ -112,6 +113,7 @@ export const useUpdateTeamMutation = () => {
       queryClient.invalidateQueries({ queryKey: teamManagementKeys.all });
       queryClient.invalidateQueries({ queryKey: teamManagementKeys.detail(variables.id) });
       queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
   });
 };
@@ -128,6 +130,7 @@ export const useRetireTeamMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamManagementKeys.all });
       queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
   });
 };
@@ -143,6 +146,7 @@ export const useDeleteTeamPermanentMutation = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: teamManagementKeys.all });
       queryClient.invalidateQueries({ queryKey: ["admin", "teams"] });
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
   });
 };

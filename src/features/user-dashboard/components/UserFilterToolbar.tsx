@@ -6,6 +6,8 @@ export interface UserFilterToolbarProps {
   filters: UserTicketQueryParams;
   onFilterChange: (filters: Partial<UserTicketQueryParams>) => void;
   onClear: () => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   projects?: MasterDataItem[];
   priorities?: MasterDataItem[];
   statuses?: MasterDataItem[];
@@ -17,6 +19,8 @@ export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
   filters,
   onFilterChange,
   onClear,
+  onRefresh,
+  isRefreshing = false,
   projects = [],
   priorities = [],
   statuses = [],
@@ -28,23 +32,24 @@ export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
   const safeStatuses = Array.isArray(statuses) ? statuses : [];
 
   return (
-    <div className="bg-white rounded-[10px] p-3 sm:p-4 shadow-sm border border-[#EEEEEE] space-y-3">
-      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
-        {/* Search input on the left - full width on mobile */}
-        <div className="relative w-full xl:w-auto xl:flex-1 min-w-0 xl:min-w-[280px]">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#5F6368] text-[18px]">
-            search
-          </span>
-          <input
-            className="w-full h-9 pl-9 pr-3 bg-[#F6F3F2]/70 border border-[#E0E0E0] rounded-lg text-[13px] text-[#1A1A1A] placeholder:text-[#5F6368] focus:outline-none focus:bg-white focus:border-[#1E88E5] focus:ring-1 focus:ring-[#1E88E5] transition-all"
-            placeholder="Search your tickets by ID, summary, or keyword..."
-            type="text"
-            value={filters.search || ""}
-            onChange={(e) => onFilterChange({ search: e.target.value, page: 1 })}
-          />
-        </div>
+    <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-[#EEEEEE] space-y-3">
+      {/* Row 1: Full-Width Prominent Search Input */}
+      <div className="relative w-full">
+        <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5F6368] text-[20px]">
+          search
+        </span>
+        <input
+          className="w-full h-10 pl-10 pr-4 bg-[#F6F3F2]/70 border border-[#E0E0E0] rounded-xl text-xs sm:text-sm text-[#1A1A1A] placeholder:text-[#5F6368] focus:outline-none focus:bg-white focus:border-[#1E88E5] focus:ring-1 focus:ring-[#1E88E5] transition-all shadow-xs"
+          placeholder="Search your tickets by ID, summary, description, or keyword..."
+          type="text"
+          value={filters.search || ""}
+          onChange={(e) => onFilterChange({ search: e.target.value, page: 1 })}
+        />
+      </div>
 
-        {/* Scoped dropdown filters on the right */}
+      {/* Row 2: Dropdown Filters & Action Buttons */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 pt-1">
+        {/* Left Side: Filter Dropdowns */}
         <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full xl:w-auto">
           {/* 1. Project Filter Dropdown */}
           <div className="w-full sm:w-36">
@@ -147,12 +152,28 @@ export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
             </span>
             <span>Last 30 Days</span>
           </button>
+        </div>
 
-          {/* 6. Clear Filters */}
+        {/* Right Side: Refresh & Clear Buttons */}
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end shrink-0">
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="h-9 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-[12px] font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+              title="Refresh tickets list"
+            >
+              <span className={`material-symbols-outlined text-[16px] ${isRefreshing ? "animate-spin" : ""}`}>
+                refresh
+              </span>
+              <span>Refresh</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onClear}
-            className="h-9 px-2.5 text-[12px] font-semibold text-[#5F6368] hover:text-[#E53935] transition-colors flex items-center justify-center gap-1 active:scale-[0.98]"
+            className="h-9 px-3 text-[12px] font-semibold text-[#5F6368] hover:text-[#E53935] bg-[#F6F3F2]/40 rounded-lg border border-[#E0E0E0]/60 transition-colors flex items-center justify-center gap-1 active:scale-[0.98]"
             title="Reset all filters"
           >
             <span className="material-symbols-outlined text-[16px]">

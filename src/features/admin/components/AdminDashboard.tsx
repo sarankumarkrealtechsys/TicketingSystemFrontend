@@ -46,6 +46,7 @@ export const AdminDashboard: React.FC = () => {
     data: ticketsData,
     isLoading: isTicketsLoading,
     isFetching: isTicketsFetching,
+    refetch: refetchTickets,
   } = useTicketsTableQuery(currentUser?.id, filters);
   const { data: projects = [] } = useProjectsQuery();
   const { data: teams = [] } = useTeamsQuery();
@@ -200,6 +201,8 @@ export const AdminDashboard: React.FC = () => {
           filters={filters}
           onFilterChange={handleFilterChange}
           onClear={handleClearFilters}
+          onRefresh={refetchTickets}
+          isRefreshing={isTicketsFetching}
           projects={projects}
           teams={teams}
           users={users}
