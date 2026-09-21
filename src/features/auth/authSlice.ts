@@ -56,4 +56,14 @@ export const useCan = (permissionKey: string): boolean => {
   return scopes.length > 0;
 };
 
+/**
+ * Hook to check if the active user possesses a permission at a specific scope.
+ * Returns true only if the key exists with that exact scope string.
+ */
+export const useCanAtScope = (permissionKey: string, scope: string): boolean => {
+  const permissions = useAppSelector((state) => state.auth.permissions);
+  const scopes = permissions[permissionKey];
+  return Array.isArray(scopes) && scopes.includes(scope);
+};
+
 export default authSlice.reducer;

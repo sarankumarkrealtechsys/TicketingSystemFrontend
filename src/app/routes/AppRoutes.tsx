@@ -18,6 +18,8 @@ import {
   TeamManagementPage,
   ProjectManagementPage,
   RolesPermissionsPage,
+  UserManagementPage,
+  UserPerformanceProfilePage,
   UserDashboardPage,
   MyDepartmentPage,
   MyTeamPage,
@@ -28,18 +30,21 @@ import {
 } from "@/pages";
 
 /**
- * Root index redirector based on active session and user role.
+ * Root index redirector — driven by resolved DASHBOARD_VIEW scope.
+ * GLOBAL → Admin operational hub, otherwise → User personal workspace.
  */
 const RootRedirect: React.FC = () => {
-  const { status, user } = useAppSelector((state) => state.auth);
+  const { status, permissions } = useAppSelector((state) => state.auth);
 
   if (status === "loading") {
     return <LoadingSpinner message="Checking authentication..." />;
   }
 
-  if (status === "authenticated" && user) {
-    const isAdmin = (user.role?.name || "").toUpperCase() === "ADMIN";
-    return isAdmin ? (
+  if (status === "authenticated") {
+    const dashboardScopes = permissions?.DASHBOARD_VIEW;
+    const hasGlobalDashboard =
+      Array.isArray(dashboardScopes) && dashboardScopes.includes("GLOBAL");
+    return hasGlobalDashboard ? (
       <Navigate to={ROUTES.ADMIN_DASHBOARD} replace />
     ) : (
       <Navigate to={ROUTES.USER_DASHBOARD} replace />
@@ -62,12 +67,8 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (data?.data) {
-      if (data.data.token && !sessionStorage.getItem("rts_auth_token")) {
-        sessionStorage.setItem("rts_auth_token", data.data.token);
-      }
       dispatch(setSession(data.data));
     } else if (error) {
-      sessionStorage.removeItem("rts_auth_token");
       dispatch(clearSession());
     }
   }, [data, error, dispatch]);
@@ -81,7 +82,8 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
 
 /**
  * Master AppRoutes
- * Declarative route configuration with role and permission guards.
+ * Declarative route configuration with permission + scope guards.
+ * No role-name string matching — all access is permission-driven.
  */
 export const AppRoutes: React.FC = () => {
   return (
@@ -93,7 +95,7 @@ export const AppRoutes: React.FC = () => {
           {/* ============================================================= */}
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
 
-          {/* Root Redirect based on role */}
+          {/* Root Redirect based on DASHBOARD_VIEW scope */}
           <Route path={ROUTES.ROOT} element={<RootRedirect />} />
 
           {/* ============================================================= */}
@@ -102,7 +104,7 @@ export const AppRoutes: React.FC = () => {
           <Route
             path={ROUTES.CREATE_TICKET}
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredPermission={PERMISSIONS.TICKET_CREATE}>
                 <CreateTicketPage />
               </ProtectedRoute>
             }
@@ -110,13 +112,13 @@ export const AppRoutes: React.FC = () => {
 
           {/* ============================================================= */}
           {/* 3. USER WORKSPACE ROUTES                                      */}
+          {/* Accessible to anyone with DASHBOARD_VIEW at any scope.        */}
           {/* ============================================================= */}
           <Route
             path={ROUTES.USER_DASHBOARD}
             element={
               <ProtectedRoute
-                requiredRole="USER"
-                fallbackPath={ROUTES.ADMIN_DASHBOARD}
+                requiredPermission={PERMISSIONS.DASHBOARD_VIEW}
               >
                 <UserDashboardPage />
               </ProtectedRoute>
@@ -126,8 +128,7 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.MY_DEPARTMENT}
             element={
               <ProtectedRoute
-                requiredRole="USER"
-                fallbackPath={ROUTES.DEPARTMENTS}
+                requiredPermission={PERMISSIONS.DEPARTMENT_VIEW}
               >
                 <MyDepartmentPage />
               </ProtectedRoute>
@@ -137,8 +138,7 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.MY_TEAM}
             element={
               <ProtectedRoute
-                requiredRole="USER"
-                fallbackPath={ROUTES.TEAMS}
+                requiredPermission={PERMISSIONS.TEAM_VIEW}
               >
                 <MyTeamPage />
               </ProtectedRoute>
@@ -147,10 +147,7 @@ export const AppRoutes: React.FC = () => {
           <Route
             path={ROUTES.MY_PERMISSIONS}
             element={
-              <ProtectedRoute
-                requiredRole="USER"
-                fallbackPath={ROUTES.ROLES}
-              >
+              <ProtectedRoute>
                 <MyPermissionsPage />
               </ProtectedRoute>
             }
@@ -158,13 +155,14 @@ export const AppRoutes: React.FC = () => {
 
           {/* ============================================================= */}
           {/* 4. ADMIN CONSOLE ROUTES                                       */}
+          {/* Require permission at GLOBAL scope specifically.              */}
           {/* ============================================================= */}
           <Route
             path={ROUTES.ADMIN_DASHBOARD}
             element={
               <ProtectedRoute
-                requiredRole="ADMIN"
                 requiredPermission={PERMISSIONS.DASHBOARD_VIEW}
+                requiredScope="GLOBAL"
               >
                 <AdminDashboardPage />
               </ProtectedRoute>
@@ -174,8 +172,8 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.DEPARTMENTS}
             element={
               <ProtectedRoute
-                requiredRole="ADMIN"
                 requiredPermission={PERMISSIONS.DEPARTMENT_VIEW}
+                requiredScope="GLOBAL"
               >
                 <DepartmentManagementPage />
               </ProtectedRoute>
@@ -185,8 +183,8 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.TEAMS}
             element={
               <ProtectedRoute
-                requiredRole="ADMIN"
                 requiredPermission={PERMISSIONS.TEAM_VIEW}
+                requiredScope="GLOBAL"
               >
                 <TeamManagementPage />
               </ProtectedRoute>
@@ -196,7 +194,6 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.PROJECTS}
             element={
               <ProtectedRoute
-                requiredRole="ADMIN"
                 requiredPermission={PERMISSIONS.PROJECT_VIEW}
               >
                 <ProjectManagementPage />
@@ -207,7 +204,6 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.ROLES}
             element={
               <ProtectedRoute
-                requiredRole="ADMIN"
                 requiredPermission={PERMISSIONS.ROLE_MANAGE}
               >
                 <RolesPermissionsPage />
@@ -215,10 +211,47 @@ export const AppRoutes: React.FC = () => {
             }
           />
           <Route
+            path={ROUTES.USERS}
+            element={
+              <ProtectedRoute
+                requiredPermission={PERMISSIONS.USER_VIEW}
+                requiredScope="GLOBAL"
+              >
+                <UserManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.USER_PERFORMANCE}
+            element={
+              <ProtectedRoute
+                requiredPermission={PERMISSIONS.USER_VIEW}
+                resolveScope={(user, params, scopes) => {
+                  // GLOBAL scope: Admin can view any user's performance profile
+                  if (scopes.includes("GLOBAL")) return true;
+
+                  // OWN scope: User can ONLY view if route param userId matches their own logged-in user.id
+                  if (
+                    scopes.includes("OWN") &&
+                    user?.id &&
+                    params.userId &&
+                    String(user.id) === String(params.userId)
+                  ) {
+                    return true;
+                  }
+
+                  return false;
+                }}
+              >
+                <UserPerformanceProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path={ROUTES.TICKETS}
             element={
               <ProtectedRoute
-                requiredRole="ADMIN"
+                requiredPermission={PERMISSIONS.TICKET_VIEW}
               >
                 <AdminMyTicketsPage />
               </ProtectedRoute>

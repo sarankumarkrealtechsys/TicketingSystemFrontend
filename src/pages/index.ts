@@ -10,6 +10,9 @@ export * from "./tickets/CreateTicketPage";
 export * from "./tickets/AdminMyTicketsPage";
 export * from "./roles/RolesPermissionsPage";
 export * from "./roles/MyPermissionsPage";
+export * from "./users/UserManagementPage";
+export * from "./users/UserPerformanceProfilePage";
 export * from "./error/NotFoundPage";
+
 
 

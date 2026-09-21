@@ -16,7 +16,12 @@ export const ROUTES = {
   CREATE_TICKET: "/tickets/create",
   TICKETS: "/tickets",
   ROLES: "/roles",
+  USERS: "/users",
+  USER_PERFORMANCE: "/users/:userId/performance",
   MY_PERMISSIONS: "/my-permissions",
+  MY_TICKET_HISTORY: "/my-ticket-history",
+  AUDIT: "/audit",
+  SETTINGS: "/settings",
 } as const;
 
 

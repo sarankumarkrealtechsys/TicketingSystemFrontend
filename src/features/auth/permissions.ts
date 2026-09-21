@@ -50,6 +50,9 @@ export const PERMISSIONS = {
 
   // ─── Dashboards & Reporting ───
   DASHBOARD_VIEW: "DASHBOARD_VIEW",
+
+  // ─── System Administration ───
+  SYSTEM_SETTINGS_MANAGE: "SYSTEM_SETTINGS_MANAGE",
 } as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

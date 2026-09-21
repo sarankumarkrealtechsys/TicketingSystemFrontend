@@ -81,7 +81,6 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
   // ── Build sub-component props ──
   const sidebarProps: SidebarProps = {
-    role,
     workspaceName,
     workspaceIcon,
     brandTitle,

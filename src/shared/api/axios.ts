@@ -12,20 +12,11 @@ export const apiClient = axios.create({
   },
 });
 
-// Guard against duplicate /api prefix and attach tab-isolated Bearer token if present
+// Guard against duplicate /api prefix
 apiClient.interceptors.request.use((config) => {
   if (config.url?.startsWith("/api/")) {
     config.url = config.url.replace(/^\/api/, "");
   }
-
-  // Isolate authenticated session per browser tab using sessionStorage
-  if (typeof window !== "undefined") {
-    const tabToken = sessionStorage.getItem("rts_auth_token");
-    if (tabToken) {
-      config.headers.Authorization = `Bearer ${tabToken}`;
-    }
-  }
-
   return config;
 });
 

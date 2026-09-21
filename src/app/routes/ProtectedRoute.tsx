@@ -1,46 +1,63 @@
 import React, { ReactNode, useMemo } from "react";
-import { Navigate, useLocation, Outlet } from "react-router-dom";
+import { Navigate, useLocation, useParams, Outlet } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
+import { AuthUser } from "@/features/auth/types";
 import { PermissionKey } from "@/features/auth/permissions";
 import { LoadingSpinner } from "@/shared/components";
 import { ROUTES } from "./routePaths";
 
 export interface ProtectedRouteProps {
   children?: ReactNode;
-  /** Optional role requirement (e.g. "ADMIN" or "USER") */
-  requiredRole?: "ADMIN" | "USER";
   /** Optional granular permission requirement (e.g. "DASHBOARD_VIEW", "ROLE_MANAGE") */
   requiredPermission?: PermissionKey | string;
-  /** Custom fallback redirect path if role/permission check fails */
+  /** Optional required scope — when set, user must hold the permission at this exact scope */
+  requiredScope?: string;
+  /** Custom scope resolver callback mirroring backend scope resolvers */
+  resolveScope?: (
+    user: AuthUser | null,
+    params: Record<string, string | undefined>,
+    scopes: string[],
+  ) => boolean;
+  /** Custom fallback redirect path if permission check fails */
   fallbackPath?: string;
 }
 
 /**
  * Unified ProtectedRoute Guard
- * Handles authentication status, user role boundaries, and granular BRD permissions.
+ * Handles authentication status and granular BRD permission + scope checks.
+ * No longer uses role-name string matching — all access is permission-driven.
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
-  requiredRole,
   requiredPermission,
+  requiredScope,
+  resolveScope,
   fallbackPath,
 }) => {
   const { status, user, permissions } = useAppSelector((state) => state.auth);
   const location = useLocation();
-
-  const userRole = (user?.role?.name || "").toUpperCase();
-  const isAdmin = userRole === "ADMIN";
+  const params = useParams();
 
   // Evaluate granular BRD permissions safely without violating hook rules
   const hasPermission = useMemo(() => {
-    if (isAdmin) return true; // Administrators possess comprehensive global access
     if (!requiredPermission) return true;
     if (!permissions) return false;
     const scopes = permissions[requiredPermission];
-    if (!scopes) return false;
-    if (scopes.includes("GLOBAL")) return true;
-    return scopes.length > 0;
-  }, [isAdmin, requiredPermission, permissions]);
+    if (!scopes || scopes.length === 0) return false;
+
+    // If custom scope resolver provided, delegate to it
+    if (resolveScope) {
+      return resolveScope(user, params, scopes);
+    }
+
+    // If a specific scope is required, check for that exact scope
+    if (requiredScope) {
+      return scopes.includes(requiredScope);
+    }
+
+    // Otherwise, any scope grants access
+    return true;
+  }, [requiredPermission, requiredScope, resolveScope, permissions, user, params]);
 
   if (status === "loading") {
     return <LoadingSpinner message="Verifying authentication & access..." />;
@@ -62,17 +79,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // 1. Role enforcement check
-  if (requiredRole && userRole !== requiredRole.toUpperCase()) {
-    const defaultRedirect =
-      userRole === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.USER_DASHBOARD;
-    return <Navigate to={fallbackPath || defaultRedirect} replace />;
-  }
-
-  // 2. Granular permission enforcement check
+  // Permission enforcement check
   if (requiredPermission && !hasPermission) {
-    const defaultRedirect =
-      userRole === "ADMIN" ? ROUTES.ADMIN_DASHBOARD : ROUTES.USER_DASHBOARD;
+    // Determine safe fallback based on user's DASHBOARD_VIEW scope
+    const hasDashboardGlobal = permissions?.DASHBOARD_VIEW?.includes("GLOBAL");
+    const defaultRedirect = hasDashboardGlobal
+      ? ROUTES.ADMIN_DASHBOARD
+      : ROUTES.USER_DASHBOARD;
     return <Navigate to={fallbackPath || defaultRedirect} replace />;
   }
 

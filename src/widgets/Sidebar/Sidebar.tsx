@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
+import { PERMISSIONS } from "@/features/auth/permissions";
 
 export interface SidebarNavItem {
   name: string;
@@ -21,7 +22,6 @@ export interface SidebarNavGroup {
 }
 
 export interface SidebarProps {
-  role?: "ADMIN" | "USER";
   workspaceName?: string;
   workspaceIcon?: string;
   brandTitle?: string;
@@ -34,8 +34,13 @@ export interface SidebarProps {
   onCloseMobile?: () => void;
 }
 
+// ─── Permission Helper Hooks (non-hook inline) ───
+function usePermissionScopes(permissionKey: string): string[] {
+  const permissions = useAppSelector((state) => state.auth.permissions);
+  return permissions?.[permissionKey] ?? [];
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({
-  role: explicitRole,
   workspaceName: explicitWorkspaceName,
   workspaceIcon: explicitWorkspaceIcon,
   brandTitle = "RTS HELP DESK",
@@ -49,18 +54,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAppSelector((state) => state.auth);
 
-  // Determine active role (case-insensitive)
-  const userRoleName = (user?.role?.name || "").toUpperCase();
-  const role = explicitRole || (userRoleName === "ADMIN" ? "ADMIN" : "USER");
-  const isAdmin = role === "ADMIN";
+  // ── Resolve all permissions at top level (hooks must be unconditional) ──
+  const dashboardScopes = usePermissionScopes(PERMISSIONS.DASHBOARD_VIEW);
+  const ticketCreateScopes = usePermissionScopes(PERMISSIONS.TICKET_CREATE);
+  const ticketViewScopes = usePermissionScopes(PERMISSIONS.TICKET_VIEW);
+  const projectViewScopes = usePermissionScopes(PERMISSIONS.PROJECT_VIEW);
+  const departmentViewScopes = usePermissionScopes(PERMISSIONS.DEPARTMENT_VIEW);
+  const teamViewScopes = usePermissionScopes(PERMISSIONS.TEAM_VIEW);
+  const userViewScopes = usePermissionScopes(PERMISSIONS.USER_VIEW);
+  const roleManageScopes = usePermissionScopes(PERMISSIONS.ROLE_MANAGE);
+  const ticketHistoryScopes = usePermissionScopes(PERMISSIONS.TICKET_HISTORY_VIEW);
+  const settingsScopes = usePermissionScopes(PERMISSIONS.SYSTEM_SETTINGS_MANAGE);
 
-  // Dynamic Workspace Pill defaults
+  // ── Derive visibility flags ──
+  const hasGlobalDashboard = dashboardScopes.includes("GLOBAL");
+
+  const canCreateTicket = ticketCreateScopes.length > 0;
+  const canViewTickets = ticketViewScopes.length > 0;
+  const showTicketsAccordion = canCreateTicket || canViewTickets;
+
+  const canViewProjects = projectViewScopes.length > 0;
+
+  const hasDeptGlobal = departmentViewScopes.includes("GLOBAL");
+  const hasDeptAny = departmentViewScopes.length > 0;
+
+  const hasTeamGlobal = teamViewScopes.includes("GLOBAL");
+  const hasTeamAny = teamViewScopes.length > 0;
+
+  const hasUserViewGlobal = userViewScopes.includes("GLOBAL");
+  const hasRoleManage = roleManageScopes.length > 0;
+
+  const hasHistoryGlobal = ticketHistoryScopes.includes("GLOBAL");
+  const hasHistoryAny = ticketHistoryScopes.length > 0;
+
+  const hasSettings = settingsScopes.length > 0;
+
+  // ── Determine workspace pill text ──
+  const isAdminConsole = hasGlobalDashboard;
   const workspaceName =
-    explicitWorkspaceName || (isAdmin ? "Admin Console" : "User Workspace");
+    explicitWorkspaceName || (isAdminConsole ? "Admin Console" : "User Workspace");
   const workspaceIcon =
-    explicitWorkspaceIcon || (isAdmin ? "admin_panel_settings" : "person");
+    explicitWorkspaceIcon || (isAdminConsole ? "admin_panel_settings" : "person");
 
   // Effective collapsed mode: only collapsed on desktop if mobile drawer is not open
   const isCollapsedMode = collapsed && !mobileOpen;
@@ -178,6 +213,83 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </TooltipWrap>
     );
   };
+
+  // ── Tickets Accordion block (shared between admin + user views) ──
+  const TicketsAccordion = () => (
+    <div
+      className={`pt-0.5 ${
+        isCollapsedMode ? "w-full flex flex-col items-center" : ""
+      }`}
+    >
+      <TooltipWrap label="Tickets">
+        <button
+          onClick={handleTicketsClick}
+          type="button"
+          className={
+            isCollapsedMode
+              ? `relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                  isTicketActive
+                    ? "bg-white/15 text-white ring-1 ring-white/20 shadow-sm"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                }`
+              : `w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-[13px] font-medium group ${
+                  isTicketActive && !ticketsOpen ? "bg-white/10 text-white" : ""
+                }`
+          }
+        >
+          {isTicketActive && isCollapsedMode && (
+            <span className="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1E88E5] rounded-r-full shadow-[0_0_8px_rgba(30,136,229,0.6)]" />
+          )}
+
+          <span
+            className={`material-symbols-outlined text-[20px] transition-colors shrink-0 ${
+              isTicketActive
+                ? "text-[#1E88E5]"
+                : "text-white/70 group-hover:text-white"
+            }`}
+          >
+            confirmation_number
+          </span>
+
+          {!isCollapsedMode && (
+            <div className="flex items-center justify-between flex-1 ml-3">
+              <span>Tickets</span>
+              <span
+                className={`material-symbols-outlined text-[18px] text-white/60 transition-transform duration-200 ${
+                  ticketsOpen ? "rotate-180" : ""
+                }`}
+              >
+                expand_more
+              </span>
+            </div>
+          )}
+        </button>
+      </TooltipWrap>
+
+      {/* Sub-items (expanded mode only) */}
+      {ticketsOpen && !isCollapsedMode && (
+        <div className="pl-9 pr-2 py-1 space-y-1 transition-all duration-200">
+          {canCreateTicket && (
+            <NavLink
+              to="/tickets/create"
+              className={({ isActive }) => subLinkClass(isActive)}
+            >
+              Create Ticket
+            </NavLink>
+          )}
+          {canViewTickets && (
+            <NavLink
+              to="/tickets"
+              end
+              className={({ isActive }) => subLinkClass(isActive)}
+            >
+              My Tickets
+            </NavLink>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <>
@@ -305,7 +417,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Navigation Items */}
+          {/* ────────── Navigation Items ────────── */}
           <nav
             className={`flex-1 py-2 space-y-1.5 ${
               isCollapsedMode ? "px-0 flex flex-col items-center" : "px-3"
@@ -313,7 +425,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={handleNavClick}
           >
             {customNavItems ? (
-              // Custom Navigation Items
+              // Custom Navigation Items (pass-through)
               customNavItems.map((item, idx) => {
                 if ("children" in item) {
                   return (
@@ -352,174 +464,117 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 );
               })
-            ) : isAdmin ? (
-              /* ──────────────── Admin Default Navigation ──────────────── */
-              <>
-                {/* Dashboard Link */}
-                <SidebarLink
-                  to="/admin/dashboard"
-                  exact
-                  icon="dashboard"
-                  label="Dashboard"
-                  isBold
-                />
-
-                {/* Tickets Accordion */}
-                <div
-                  className={`pt-0.5 ${
-                    isCollapsedMode ? "w-full flex flex-col items-center" : ""
-                  }`}
-                >
-                  <TooltipWrap label="Tickets">
-                    <button
-                      onClick={handleTicketsClick}
-                      type="button"
-                      className={
-                        isCollapsedMode
-                          ? `relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
-                              isTicketActive
-                                ? "bg-white/15 text-white ring-1 ring-white/20 shadow-sm"
-                                : "text-white/70 hover:bg-white/10 hover:text-white"
-                            }`
-                          : `w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-[13px] font-medium group ${
-                              isTicketActive && !ticketsOpen ? "bg-white/10 text-white" : ""
-                            }`
-                      }
-                    >
-                      {isTicketActive && isCollapsedMode && (
-                        <span className="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1E88E5] rounded-r-full shadow-[0_0_8px_rgba(30,136,229,0.6)]" />
-                      )}
-
-                      <span
-                        className={`material-symbols-outlined text-[20px] transition-colors shrink-0 ${
-                          isTicketActive
-                            ? "text-[#1E88E5]"
-                            : "text-white/70 group-hover:text-white"
-                        }`}
-                      >
-                        confirmation_number
-                      </span>
-
-                      {!isCollapsedMode && (
-                        <div className="flex items-center justify-between flex-1 ml-3">
-                          <span>Tickets</span>
-                          <span
-                            className={`material-symbols-outlined text-[18px] text-white/60 transition-transform duration-200 ${
-                              ticketsOpen ? "rotate-180" : ""
-                            }`}
-                          >
-                            expand_more
-                          </span>
-                        </div>
-                      )}
-                    </button>
-                  </TooltipWrap>
-
-                  {/* Sub-items (expanded mode only) */}
-                  {ticketsOpen && !isCollapsedMode && (
-                    <div className="pl-9 pr-2 py-1 space-y-1 transition-all duration-200">
-                      <NavLink
-                        to="/tickets/create"
-                        className={({ isActive }) => subLinkClass(isActive)}
-                      >
-                        Create Ticket
-                      </NavLink>
-                      <NavLink
-                        to="/tickets"
-                        end
-                        className={({ isActive }) => subLinkClass(isActive)}
-                      >
-                        My Tickets
-                      </NavLink>
-                    </div>
-                  )}
-                </div>
-
-                {/* Management Links */}
-                <SidebarLink
-                  to="/projects"
-                  icon="folder_managed"
-                  label="Projects Management"
-                />
-
-                <SidebarLink
-                  to="/admin/departments"
-                  icon="corporate_fare"
-                  label="Department Management"
-                />
-
-                <SidebarLink
-                  to="/teams"
-                  icon="groups"
-                  label="Team Management"
-                />
-
-                <SidebarLink
-                  to="/users"
-                  icon="person_search"
-                  label="User Management"
-                />
-
-                <SidebarLink
-                  to="/roles"
-                  icon="shield_person"
-                  label="Roles & Permissions"
-                />
-
-                <SidebarLink
-                  to="/audit"
-                  icon="history_edu"
-                  label="Audit Reports & History"
-                />
-
-                <SidebarLink
-                  to="/settings"
-                  icon="settings"
-                  label="Settings"
-                />
-              </>
             ) : (
-              /* ──────────────── User Default Navigation ──────────────── */
+              /* ──────────────── Unified Permission-Based Navigation ──────────────── */
               <>
-                {/* Dashboard Link */}
-                <SidebarLink
-                  to="/dashboard"
-                  exact
-                  icon="dashboard"
-                  label="Dashboard"
-                  isBold
-                />
+                {/* ── Dashboard ── */}
+                {hasGlobalDashboard ? (
+                  <SidebarLink
+                    to="/admin/dashboard"
+                    exact
+                    icon="dashboard"
+                    label="Dashboard"
+                    isBold
+                  />
+                ) : (
+                  <SidebarLink
+                    to="/dashboard"
+                    exact
+                    icon="dashboard"
+                    label="Dashboard"
+                    isBold
+                  />
+                )}
 
-                {/* Create Ticket Link */}
-                <SidebarLink
-                  to="/tickets/create"
-                  icon="confirmation_number"
-                  label="Create Ticket"
-                />
+                {/* ── Tickets Accordion ── */}
+                {showTicketsAccordion && <TicketsAccordion />}
 
-                {/* Standard User Management Links */}
-                <SidebarLink
-                  to="/my-department"
-                  icon="domain"
-                  label="My Department"
-                />
+                {/* ── Projects Management ── */}
+                {canViewProjects && (
+                  <SidebarLink
+                    to="/projects"
+                    icon="folder_managed"
+                    label="Projects Management"
+                  />
+                )}
 
-                <SidebarLink
-                  to="/my-team"
-                  icon="groups"
-                  label="My Team"
-                />
+                {/* ── Department: GLOBAL → Management page, non-GLOBAL → My Department ── */}
+                {hasDeptGlobal ? (
+                  <SidebarLink
+                    to="/admin/departments"
+                    icon="corporate_fare"
+                    label="Department Management"
+                  />
+                ) : hasDeptAny ? (
+                  <SidebarLink
+                    to="/my-department"
+                    icon="domain"
+                    label="My Department"
+                  />
+                ) : null}
 
+                {/* ── Team: GLOBAL → Management page, non-GLOBAL → My Team ── */}
+                {hasTeamGlobal ? (
+                  <SidebarLink
+                    to="/teams"
+                    icon="groups"
+                    label="Team Management"
+                  />
+                ) : hasTeamAny ? (
+                  <SidebarLink
+                    to="/my-team"
+                    icon="groups"
+                    label="My Team"
+                  />
+                ) : null}
+
+                {/* ── User Management (GLOBAL only) ── */}
+                {hasUserViewGlobal && (
+                  <SidebarLink
+                    to="/users"
+                    icon="person_search"
+                    label="User Management"
+                  />
+                )}
+
+                {/* ── Roles & Permissions ── */}
+                {hasRoleManage && (
+                  <SidebarLink
+                    to="/roles"
+                    icon="shield_person"
+                    label="Roles & Permissions"
+                  />
+                )}
+
+                {/* ── Audit / Ticket History: GLOBAL → Org-wide audit, non-GLOBAL → My Ticket History ── */}
+                {hasHistoryGlobal ? (
+                  <SidebarLink
+                    to="/audit"
+                    icon="history_edu"
+                    label="Audit Reports & History"
+                  />
+                ) : hasHistoryAny ? (
+                  <SidebarLink
+                    to="/my-ticket-history"
+                    icon="history"
+                    label="My Ticket History"
+                  />
+                ) : null}
+
+                {/* ── Settings (SYSTEM_SETTINGS_MANAGE — GLOBAL only) ── */}
+                {hasSettings && (
+                  <SidebarLink
+                    to="/settings"
+                    icon="settings"
+                    label="Settings"
+                  />
+                )}
+
+                {/* ── My Permissions (always visible for authenticated users) ── */}
                 <SidebarLink
                   to="/my-permissions"
                   icon="verified_user"
                   label="My Permissions"
-                />
-
-                <SidebarLink
-                  to="/settings"
-                  icon="settings"
-                  label="Settings"
                 />
               </>
             )}

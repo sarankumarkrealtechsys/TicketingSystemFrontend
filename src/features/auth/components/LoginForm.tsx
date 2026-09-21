@@ -64,11 +64,6 @@ export const LoginForm: React.FC = () => {
     setServerError(null);
     loginMutation.mutate(values, {
       onSuccess: (response) => {
-        // Isolate authentication session in this browser tab
-        if (response.data?.token) {
-          sessionStorage.setItem("rts_auth_token", response.data.token);
-        }
-
         // Reset all stale query error states and set fresh active session
         queryClient.resetQueries({ queryKey: authKeys.all });
         queryClient.setQueryData(authKeys.me(), response);
