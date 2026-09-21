@@ -22,6 +22,8 @@ export interface UserTicketQueryParams {
   projectId?: number;
   priorityId?: number;
   statusId?: number;
+  ticketType?: "all" | "main" | "sub";
+  parentTicketId?: number;
   startDate?: string;
   endDate?: string;
   assigneeId?: number;

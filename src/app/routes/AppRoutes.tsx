@@ -23,6 +23,7 @@ import {
   MyTeamPage,
   MyPermissionsPage,
   CreateTicketPage,
+  AdminMyTicketsPage,
   NotFoundPage,
 } from "@/pages";
 
@@ -56,6 +57,7 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const dispatch = useAppDispatch();
+  const { user, status } = useAppSelector((state) => state.auth);
   const { data, error, isLoading } = useMeQuery();
 
   useEffect(() => {
@@ -70,7 +72,7 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [data, error, dispatch]);
 
-  if (isLoading) {
+  if (isLoading || status === "loading" || (data?.data && !user)) {
     return <LoadingSpinner message="Loading session..." />;
   }
 
@@ -209,6 +211,16 @@ export const AppRoutes: React.FC = () => {
                 requiredPermission={PERMISSIONS.ROLE_MANAGE}
               >
                 <RolesPermissionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.TICKETS}
+            element={
+              <ProtectedRoute
+                requiredRole="ADMIN"
+              >
+                <AdminMyTicketsPage />
               </ProtectedRoute>
             }
           />

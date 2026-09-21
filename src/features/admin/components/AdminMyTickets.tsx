@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
 import { AppLayout } from "@/layout/AppLayout";
-import { UserFilterToolbar } from "./UserFilterToolbar";
-import { TicketsTable } from "@/features/admin/components/TicketsTable";
+import { UserFilterToolbar } from "@/features/user-dashboard/components/UserFilterToolbar";
+import { TicketsTable } from "./TicketsTable";
 import {
   StatCard,
   PriorityBarChart,
@@ -15,11 +15,11 @@ import {
   useProjectsQuery,
   usePrioritiesQuery,
   useStatusesQuery,
-} from "../api";
-import { UserTicketQueryParams } from "../types";
+} from "@/features/user-dashboard/api";
+import { UserTicketQueryParams } from "@/features/user-dashboard/types";
 import { TicketDetailsOverlay } from "@/features/ticket-management";
 
-export const UserDashboard: React.FC = () => {
+export const AdminMyTickets: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = useAppSelector((state) => state.auth.user);
@@ -59,7 +59,7 @@ export const UserDashboard: React.FC = () => {
 
   const [isDateActive, setIsDateActive] = useState(false);
 
-  // Queries strictly scoped to active user
+  // Queries strictly scoped to active admin's personal tickets
   const { data: statsData } = useUserTicketStatsQuery(currentUser?.id, "personal");
   const {
     data: ticketsData,
@@ -127,14 +127,14 @@ export const UserDashboard: React.FC = () => {
   };
 
   return (
-    <AppLayout role="USER">
+    <AppLayout role="ADMIN">
       <div className="space-y-6">
-        {/* Page Title & Personal Scope Badge */}
+        {/* Page Title & Actions */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="font-semibold text-[24px] text-[#1A1A1A] tracking-tight">
-                My Workspace
+                My Tickets
               </h1>
             </div>
           </div>
@@ -153,7 +153,7 @@ export const UserDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* TOP ROW: 6 Stat Cards (2 per row on mobile, 3 on tablet, 6 on desktop) */}
+        {/* TOP ROW: 6 Stat Cards */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
           <StatCard
             title="Total Tickets"
@@ -197,7 +197,7 @@ export const UserDashboard: React.FC = () => {
           />
         </div>
 
-        {/* TWO-COLUMN CHART ROW (Priority Bar Chart & Status Donut Chart) */}
+        {/* TWO-COLUMN CHART ROW */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <PriorityBarChart
             total={total}
@@ -210,7 +210,6 @@ export const UserDashboard: React.FC = () => {
             title="Tickets by Status"
           />
         </div>
-
 
         {/* FILTER TOOLBAR */}
         <UserFilterToolbar
@@ -251,4 +250,4 @@ export const UserDashboard: React.FC = () => {
   );
 };
 
-export default UserDashboard;
+export default AdminMyTickets;

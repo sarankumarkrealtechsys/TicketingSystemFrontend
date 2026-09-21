@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
 import { AppLayout } from "@/layout/AppLayout";
 import { FilterToolbar } from "./FilterToolbar";
@@ -19,10 +19,31 @@ import {
   useStatusesQuery,
 } from "../api";
 import { TicketQueryParams } from "../types";
+import { TicketDetailsOverlay } from "@/features/ticket-management";
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = useAppSelector((state) => state.auth.user);
+
+  // Sync selectedTicketId with URL query param so refresh preserves overlay state
+  const ticketIdParam = searchParams.get("ticketId");
+  const selectedTicketId = ticketIdParam ? Number(ticketIdParam) : null;
+
+  const setSelectedTicketId = (id: number | null) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id !== null) {
+          next.set("ticketId", String(id));
+        } else {
+          next.delete("ticketId");
+        }
+        return next;
+      },
+      { replace: true }
+    );
+  };
 
   // Query parameters state
   const [filters, setFilters] = useState<TicketQueryParams>({
@@ -34,13 +55,14 @@ export const AdminDashboard: React.FC = () => {
     assigneeId: undefined,
     priorityId: undefined,
     statusId: undefined,
+    ticketType: undefined,
     startDate: undefined,
     endDate: undefined,
   });
 
   const [isDateActive, setIsDateActive] = useState(false);
 
-  // Queries scoped to authenticated user ID
+  // Queries
   const { data: statsData } = useTicketStatsQuery(currentUser?.id);
   const {
     data: ticketsData,
@@ -68,6 +90,7 @@ export const AdminDashboard: React.FC = () => {
       assigneeId: undefined,
       priorityId: undefined,
       statusId: undefined,
+      ticketType: undefined,
       startDate: undefined,
       endDate: undefined,
     });
@@ -97,7 +120,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleViewTicket = (ticketId: number) => {
-    navigate(`/tickets/${ticketId}`);
+    setSelectedTicketId(ticketId);
   };
 
   const total = statsData?.total ?? ticketsData?.total ?? 0;
@@ -117,7 +140,7 @@ export const AdminDashboard: React.FC = () => {
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="font-semibold text-[24px] text-[#1A1A1A] tracking-tight">
-                Operations Workspace
+                Enterprise Workspace
               </h1>
             </div>
           </div>
@@ -186,10 +209,12 @@ export const AdminDashboard: React.FC = () => {
           <PriorityBarChart
             total={total}
             byPriority={statsData?.byPriority || []}
+            title="Tickets by Priority"
           />
           <StatusDonutChart
             total={total}
             byStatusBehavior={statusBehaviors}
+            title="Tickets by Status"
           />
         </div>
 
@@ -220,6 +245,14 @@ export const AdminDashboard: React.FC = () => {
           onViewTicket={handleViewTicket}
           isLoading={isTicketsLoading}
           isFetching={isTicketsFetching}
+        />
+
+        {/* TICKET DETAILS OVERLAY DRAWER */}
+        <TicketDetailsOverlay
+          ticketId={selectedTicketId}
+          isOpen={selectedTicketId !== null}
+          onClose={() => setSelectedTicketId(null)}
+          onSelectTicket={(id) => setSelectedTicketId(id)}
         />
       </div>
     </AppLayout>

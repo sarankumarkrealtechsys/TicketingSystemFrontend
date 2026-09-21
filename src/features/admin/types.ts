@@ -49,6 +49,13 @@ export interface TicketListItem {
       email: string;
     };
   }>;
+  parentTicketId?: number | null;
+  parentTicket?: {
+    id: number;
+    ticketNumber: string;
+    summary: string;
+  } | null;
+  subTicketsCount?: number;
   createdAt: string;
 }
 
@@ -69,6 +76,8 @@ export interface TicketQueryParams {
   assigneeId?: string | number;
   priorityId?: string | number;
   statusId?: string | number;
+  ticketType?: "all" | "main" | "sub";
+  parentTicketId?: number;
   startDate?: string;
   endDate?: string;
 }

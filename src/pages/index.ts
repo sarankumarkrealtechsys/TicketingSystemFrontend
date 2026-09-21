@@ -7,6 +7,7 @@ export * from "./departments/DepartmentManagementPage";
 export * from "./departments/MyDepartmentPage";
 export * from "./projects/ProjectManagementPage";
 export * from "./tickets/CreateTicketPage";
+export * from "./tickets/AdminMyTicketsPage";
 export * from "./roles/RolesPermissionsPage";
 export * from "./roles/MyPermissionsPage";
 export * from "./error/NotFoundPage";

@@ -28,15 +28,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { status, user, permissions } = useAppSelector((state) => state.auth);
   const location = useLocation();
 
+  const userRole = (user?.role?.name || "").toUpperCase();
+  const isAdmin = userRole === "ADMIN";
+
   // Evaluate granular BRD permissions safely without violating hook rules
   const hasPermission = useMemo(() => {
+    if (isAdmin) return true; // Administrators possess comprehensive global access
     if (!requiredPermission) return true;
     if (!permissions) return false;
     const scopes = permissions[requiredPermission];
     if (!scopes) return false;
     if (scopes.includes("GLOBAL")) return true;
     return scopes.length > 0;
-  }, [requiredPermission, permissions]);
+  }, [isAdmin, requiredPermission, permissions]);
 
   if (status === "loading") {
     return <LoadingSpinner message="Verifying authentication & access..." />;
@@ -57,8 +61,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       />
     );
   }
-
-  const userRole = (user.role?.name || "").toUpperCase();
 
   // 1. Role enforcement check
   if (requiredRole && userRole !== requiredRole.toUpperCase()) {

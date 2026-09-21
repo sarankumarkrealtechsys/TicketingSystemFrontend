@@ -164,6 +164,25 @@ export const FilterToolbar: React.FC<FilterToolbarProps> = ({
             />
           </div>
 
+          {/* 6. Ticket Type / Hierarchy Filter Dropdown */}
+          <div className="w-full sm:w-36">
+            <SelectDropdown<string>
+              value={filters.ticketType || "all"}
+              onChange={(val) =>
+                onFilterChange({
+                  ticketType: (val === "all" ? undefined : val) as "all" | "main" | "sub" | undefined,
+                  page: 1,
+                })
+              }
+              options={[
+                { value: "all", label: "All Types" },
+                { value: "main", label: "Main Tickets" },
+                { value: "sub", label: "Sub-Tickets Only" },
+              ]}
+              size="sm"
+            />
+          </div>
+
           {/* 6. Date Range Picker Button */}
           <button
             className={`w-full sm:w-auto h-9 px-3 border rounded-lg text-[12px] font-medium transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] ${

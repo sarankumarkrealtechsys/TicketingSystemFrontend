@@ -133,6 +133,25 @@ export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
             />
           </div>
 
+          {/* 5. Ticket Type / Hierarchy Filter Dropdown */}
+          <div className="w-full sm:w-36">
+            <SelectDropdown<string>
+              value={filters.ticketType || "all"}
+              onChange={(val) =>
+                onFilterChange({
+                  ticketType: (val === "all" ? undefined : val) as "all" | "main" | "sub" | undefined,
+                  page: 1,
+                })
+              }
+              options={[
+                { value: "all", label: "All Types" },
+                { value: "main", label: "Main Tickets" },
+                { value: "sub", label: "Sub-Tickets Only" },
+              ]}
+              size="sm"
+            />
+          </div>
+
           {/* 5. Date Range Picker (Toggle Last 30 Days) */}
           <button
             type="button"

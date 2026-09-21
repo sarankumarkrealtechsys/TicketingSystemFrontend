@@ -16,10 +16,30 @@ export const CreateTicket: React.FC = () => {
   const navigate = useNavigate();
 
   // Queries for dynamic dropdown data
-  const { data: projects = [], isLoading: isLoadingProjects } = useActiveProjectsQuery();
-  const { data: departments = [], isLoading: isLoadingDepartments } = useActiveDepartmentsQuery();
-  const { data: allTeams = [], isLoading: isLoadingTeams } = useActiveTeamsQuery();
-  const { data: priorities = [], isLoading: isLoadingPriorities } = usePrioritiesQuery();
+  const {
+    data: projects = [],
+    isLoading: isLoadingProjects,
+    isFetching: isFetchingProjects,
+    refetch: refetchProjects,
+  } = useActiveProjectsQuery();
+  const {
+    data: departments = [],
+    isLoading: isLoadingDepartments,
+    isFetching: isFetchingDepartments,
+    refetch: refetchDepartments,
+  } = useActiveDepartmentsQuery();
+  const {
+    data: allTeams = [],
+    isLoading: isLoadingTeams,
+    isFetching: isFetchingTeams,
+    refetch: refetchTeams,
+  } = useActiveTeamsQuery();
+  const {
+    data: priorities = [],
+    isLoading: isLoadingPriorities,
+    isFetching: isFetchingPriorities,
+    refetch: refetchPriorities,
+  } = usePrioritiesQuery();
 
   // Dropdown open states
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
@@ -27,7 +47,6 @@ export const CreateTicket: React.FC = () => {
   const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
   const [isAssigneeDropdownOpen, setIsAssigneeDropdownOpen] = useState(false);
   const [isPriorityDropdownOpen, setIsPriorityDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
 
   // Dropdown click-outside refs
   const projectRef = useRef<HTMLDivElement>(null);
@@ -35,7 +54,6 @@ export const CreateTicket: React.FC = () => {
   const teamRef = useRef<HTMLDivElement>(null);
   const assigneeRef = useRef<HTMLDivElement>(null);
   const priorityRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLDivElement>(null);
 
   // Form State
   const [selectedProjectId, setSelectedProjectId] = useState<number | "">("");
@@ -87,9 +105,6 @@ export const CreateTicket: React.FC = () => {
       if (priorityRef.current && !priorityRef.current.contains(target)) {
         setIsPriorityDropdownOpen(false);
       }
-      if (statusRef.current && !statusRef.current.contains(target)) {
-        setIsStatusDropdownOpen(false);
-      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -136,7 +151,11 @@ export const CreateTicket: React.FC = () => {
   const primaryTeamId = selectedTeamIds[0] || null;
 
   // Fetch Primary Team detail for members list
-  const { data: primaryTeamDetail } = useSelectedTeamDetailQuery(primaryTeamId);
+  const {
+    data: primaryTeamDetail,
+    isFetching: isFetchingTeamDetail,
+    refetch: refetchTeamDetail,
+  } = useSelectedTeamDetailQuery(primaryTeamId);
 
   // Combine members from primary team
   const availableTeamMembers: UserSummary[] = useMemo(() => {
@@ -145,17 +164,28 @@ export const CreateTicket: React.FC = () => {
   }, [primaryTeamDetail]);
 
   // Fetch Global statuses (available to all)
-  const { data: statuses = [] } = useGlobalStatusesQuery();
+  const {
+    data: statuses = [],
+    isFetching: isFetchingStatuses,
+    refetch: refetchStatuses,
+  } = useGlobalStatusesQuery();
 
-  // Set default status when team statuses load
+  // Find default OPEN status
+  const openStatus = useMemo(() => {
+    return (
+      statuses.find((s) => s.behavior === "OPEN") ||
+      statuses.find((s) => (s.label || s.name || "").toLowerCase() === "open") ||
+      statuses.find((s) => s.isDefault) ||
+      statuses[0]
+    );
+  }, [statuses]);
+
+  // Set default status when statuses load
   useEffect(() => {
-    if (statuses.length > 0 && !selectedStatusId) {
-      const defaultStatus = statuses.find((s) => s.isDefault) || statuses[0];
-      if (defaultStatus) {
-        setSelectedStatusId(defaultStatus.id);
-      }
+    if (openStatus && !selectedStatusId) {
+      setSelectedStatusId(openStatus.id);
     }
-  }, [statuses, selectedStatusId]);
+  }, [openStatus, selectedStatusId]);
 
   // Set default priority when priorities load
   useEffect(() => {
@@ -173,6 +203,30 @@ export const CreateTicket: React.FC = () => {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const isRefreshingAll =
+    isFetchingProjects ||
+    isFetchingDepartments ||
+    isFetchingTeams ||
+    isFetchingTeamDetail ||
+    isFetchingPriorities ||
+    isFetchingStatuses;
+
+  const handleRefreshAll = async () => {
+    try {
+      await Promise.all([
+        refetchProjects(),
+        refetchDepartments(),
+        refetchTeams(),
+        primaryTeamId ? refetchTeamDetail() : Promise.resolve(),
+        refetchPriorities(),
+        refetchStatuses(),
+      ]);
+      showToast("Dropdown options updated");
+    } catch {
+      showToast("Failed to refresh some dropdown options");
+    }
   };
 
   // Filtered Departments by search query
@@ -272,8 +326,8 @@ export const CreateTicket: React.FC = () => {
   const selectedDepartment = departments.find((d) => d.id === selectedDepartmentId);
   // Selected Priority object
   const selectedPriority = priorities.find((p) => p.id === selectedPriorityId);
-  // Selected Status object
-  const selectedStatus = statuses.find((s) => s.id === selectedStatusId);
+  // Selected Status object (always defaulted to Open status)
+  const selectedStatus = openStatus || statuses.find((s) => s.id === selectedStatusId);
 
   // Form Submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -363,10 +417,26 @@ export const CreateTicket: React.FC = () => {
                 Create Ticket
               </span>
             </div>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <h1 className="text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
                 Create Ticket
               </h1>
+              <button
+                type="button"
+                onClick={handleRefreshAll}
+                disabled={isRefreshingAll}
+                className="h-9 px-3.5 bg-white dark:bg-[#121E30] hover:bg-gray-50 dark:hover:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] text-[#1F3864] dark:text-blue-300 rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 active:scale-[0.98] cursor-pointer disabled:opacity-60"
+                title="Refresh all dropdown options (projects, departments, teams, assignees, priorities, statuses)"
+              >
+                <span
+                  className={`material-symbols-outlined text-[17px] ${
+                    isRefreshingAll ? "animate-spin text-[#1E88E5]" : "text-[#5F6368] dark:text-gray-400"
+                  }`}
+                >
+                  refresh
+                </span>
+                <span>{isRefreshingAll ? "Refreshing..." : "Refresh"}</span>
+              </button>
             </div>
           </div>
 
@@ -889,54 +959,19 @@ export const CreateTicket: React.FC = () => {
                   )}
                 </div>
 
-                {/* Status Selector */}
-                <div className="relative" ref={statusRef}>
+                {/* Status (Default Open - Read Only) */}
+                <div className="relative">
                   <label className="block text-xs font-semibold text-[#1A1A1A] dark:text-gray-200 mb-1.5">
                     Status
                   </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsStatusDropdownOpen((prev) => !prev)}
-                    className="w-full h-10 px-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-left flex items-center justify-between text-[#1A1A1A] dark:text-white focus:outline-none focus:border-[#0e61a1] transition-colors cursor-pointer"
-                  >
-                    <span className="truncate">
-                      {selectedStatus
-                        ? `${selectedStatus.label || selectedStatus.name} ${selectedStatus.isDefault ? "(Default)" : ""}`
-                        : "Default Team Status"}
-                    </span>
-                    <span className="material-symbols-outlined text-gray-400 text-[18px]">
-                      expand_more
-                    </span>
-                  </button>
-
-                  {isStatusDropdownOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-white dark:bg-[#121E30] border border-[#E5E7EB] dark:border-[#1E2D45] rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-gray-100 dark:divide-slate-800">
-                      {statuses.map((s) => (
-                        <div
-                          key={s.id}
-                          onClick={() => {
-                            setSelectedStatusId(s.id);
-                            setIsStatusDropdownOpen(false);
-                          }}
-                          className={`p-2.5 text-xs flex items-center justify-between cursor-pointer hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors ${
-                            selectedStatusId === s.id
-                              ? "bg-blue-50 dark:bg-blue-900/30 text-[#0e61a1] dark:text-blue-300 font-semibold"
-                              : "text-[#1A1A1A] dark:text-white"
-                          }`}
-                        >
-                          <span>
-                            {s.label || s.name || `Status #${s.id}`}{" "}
-                            {s.isDefault ? "(Default)" : ""}
-                          </span>
-                          {selectedStatusId === s.id && (
-                            <span className="material-symbols-outlined text-[16px] text-[#0e61a1]">
-                              check
-                            </span>
-                          )}
-                        </div>
-                      ))}
+                  <div className="w-full h-10 px-3.5 bg-[#F3F4F6]/80 dark:bg-[#152236] border border-[#E5E7EB] dark:border-[#1E2D45] rounded-lg text-xs flex items-center justify-between text-[#1A1A1A] dark:text-white cursor-default select-none">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#1E88E5] ring-2 ring-blue-500/20"></span>
+                      <span className="font-bold text-[#1E88E5] uppercase tracking-wide text-[11px]">
+                        {selectedStatus?.label || selectedStatus?.name || "Open"}
+                      </span>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </section>

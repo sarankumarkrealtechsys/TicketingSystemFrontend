@@ -429,25 +429,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         end
                         className={({ isActive }) => subLinkClass(isActive)}
                       >
-                        All Tickets
-                      </NavLink>
-                      <NavLink
-                        to="/tickets?filter=my"
-                        className={subLinkClass(
-                          location.pathname === "/tickets" &&
-                            location.search.includes("filter=my")
-                        )}
-                      >
                         My Tickets
-                      </NavLink>
-                      <NavLink
-                        to="/tickets?filter=assigned"
-                        className={subLinkClass(
-                          location.pathname === "/tickets" &&
-                            location.search.includes("filter=assigned")
-                        )}
-                      >
-                        Assigned Tickets
                       </NavLink>
                     </div>
                   )}
@@ -508,94 +490,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   isBold
                 />
 
-                {/* Tickets Accordion */}
-                <div
-                  className={`pt-0.5 ${
-                    isCollapsedMode ? "w-full flex flex-col items-center" : ""
-                  }`}
-                >
-                  <TooltipWrap label="Tickets">
-                    <button
-                      onClick={handleTicketsClick}
-                      type="button"
-                      className={
-                        isCollapsedMode
-                          ? `relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
-                              isTicketActive
-                                ? "bg-white/15 text-white ring-1 ring-white/20 shadow-sm"
-                                : "text-white/70 hover:bg-white/10 hover:text-white"
-                            }`
-                          : `w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-[13px] font-medium group ${
-                              isTicketActive && !ticketsOpen ? "bg-white/10 text-white" : ""
-                            }`
-                      }
-                    >
-                      {isTicketActive && isCollapsedMode && (
-                        <span className="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1E88E5] rounded-r-full shadow-[0_0_8px_rgba(30,136,229,0.6)]" />
-                      )}
-
-                      <span
-                        className={`material-symbols-outlined text-[20px] transition-colors shrink-0 ${
-                          isTicketActive
-                            ? "text-[#1E88E5]"
-                            : "text-white/70 group-hover:text-white"
-                        }`}
-                      >
-                        confirmation_number
-                      </span>
-
-                      {!isCollapsedMode && (
-                        <div className="flex items-center justify-between flex-1 ml-3">
-                          <span>Tickets</span>
-                          <span
-                            className={`material-symbols-outlined text-[18px] text-white/60 transition-transform duration-200 ${
-                              ticketsOpen ? "rotate-180" : ""
-                            }`}
-                          >
-                            expand_more
-                          </span>
-                        </div>
-                      )}
-                    </button>
-                  </TooltipWrap>
-
-                  {/* Sub-items (expanded mode only) */}
-                  {ticketsOpen && !isCollapsedMode && (
-                    <div className="pl-9 pr-2 py-1 space-y-1 transition-all duration-200">
-                      <NavLink
-                        to="/tickets/create"
-                        className={({ isActive }) => subLinkClass(isActive)}
-                      >
-                        Create Ticket
-                      </NavLink>
-                      <NavLink
-                        to="/tickets"
-                        end
-                        className={({ isActive }) => subLinkClass(isActive)}
-                      >
-                        All Tickets
-                      </NavLink>
-                      <NavLink
-                        to="/tickets?filter=my"
-                        className={subLinkClass(
-                          location.pathname === "/tickets" &&
-                            location.search.includes("filter=my")
-                        )}
-                      >
-                        My Tickets
-                      </NavLink>
-                      <NavLink
-                        to="/tickets?filter=assigned"
-                        className={subLinkClass(
-                          location.pathname === "/tickets" &&
-                            location.search.includes("filter=assigned")
-                        )}
-                      >
-                        Assigned Tickets
-                      </NavLink>
-                    </div>
-                  )}
-                </div>
+                {/* Create Ticket Link */}
+                <SidebarLink
+                  to="/tickets/create"
+                  icon="confirmation_number"
+                  label="Create Ticket"
+                />
 
                 {/* Standard User Management Links */}
                 <SidebarLink

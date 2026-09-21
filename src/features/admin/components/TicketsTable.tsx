@@ -48,14 +48,49 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
             </span>
           </div>
         ),
-        cell: (info) => (
-          <span
-            className="font-mono font-semibold text-[#1E88E5] hover:underline cursor-pointer"
-            onClick={() => onViewTicket(info.row.original.id)}
-          >
-            #{info.getValue()}
-          </span>
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          const isSubTicket = Boolean(row.parentTicketId || row.parentTicket);
+          const hasSubs = Boolean(row.subTicketsCount && row.subTicketsCount > 0);
+
+          return (
+            <div className="flex flex-col items-start gap-0.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span
+                  className="font-mono font-semibold text-[#1E88E5] hover:underline cursor-pointer"
+                  onClick={() => onViewTicket(row.id)}
+                >
+                  #{info.getValue()}
+                </span>
+                {isSubTicket && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold font-sans bg-indigo-50 text-indigo-700 border border-indigo-200/70 rounded shadow-2xs">
+                    <span className="material-symbols-outlined text-[11px]">subdirectory_arrow_right</span>
+                    Sub
+                  </span>
+                )}
+                {hasSubs && (
+                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold font-sans bg-slate-100 text-slate-600 border border-slate-200 rounded">
+                    <span className="material-symbols-outlined text-[11px]">account_tree</span>
+                    {row.subTicketsCount} sub{row.subTicketsCount! > 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+              {isSubTicket && row.parentTicket && (
+                <span
+                  className="text-[11px] text-gray-400 hover:text-indigo-600 hover:underline cursor-pointer flex items-center gap-0.5 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewTicket(row.parentTicket!.id);
+                  }}
+                  title={`Parent: #${row.parentTicket.ticketNumber} - ${row.parentTicket.summary}`}
+                >
+                  <span>↳</span>
+                  <span className="font-mono">#{row.parentTicket.ticketNumber}</span>
+                </span>
+              )}
+            </div>
+          );
+        },
       }),
       columnHelper.accessor("summary", {
         header: () => (

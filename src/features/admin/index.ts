@@ -1,4 +1,5 @@
 export * from "./components/AdminDashboard";
+export * from "./components/AdminMyTickets";
 export * from "./components/AdminSidebar";
 export * from "./components/AdminHeader";
 export * from "./components/PriorityBarChart";
