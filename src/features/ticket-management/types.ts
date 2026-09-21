@@ -159,10 +159,22 @@ export interface SubTicketItem {
   id: number;
   ticketNumber: string;
   summary: string;
-  statusId: number;
-  priorityId: number;
-  status?: { id: number; name: string; behavior?: string; color?: string };
-  priority?: { id: number; name: string; color?: string };
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  resolvedAt?: string | null;
+  closedAt?: string | null;
+  statusId?: number;
+  priorityId?: number;
+  status?: { id: number; label?: string; name?: string; behavior?: string; color?: string };
+  priority?: { id: number; label?: string; name?: string; color?: string; sortOrder?: number };
+  team?: { id: number; name: string };
+  assignees?: Array<{
+    id: number;
+    userId: number;
+    user?: UserSummary;
+  }>;
+  createdBy?: UserSummary;
 }
 
 export interface TicketDetailResponse {

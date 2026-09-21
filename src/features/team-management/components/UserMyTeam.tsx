@@ -5,6 +5,7 @@ import {
   useTeamStatusesQuery,
 } from "../api";
 import { CreateStatusModal } from "./CreateStatusModal";
+import { StatCard } from "@/shared/components";
 
 export const UserMyTeam: React.FC = () => {
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
@@ -144,95 +145,38 @@ export const UserMyTeam: React.FC = () => {
       )}
 
       {/* TOP ROW: 4 KPI Cards (Strictly 2 per row on mobile, 4 per row on desktop) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Card 1: Team Name */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between space-y-3 hover:border-[#1F3864]/30 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Team Name
-            </span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1F3864]/10 text-[#1F3864] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                groups
-              </span>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-[#1A1A1A] truncate" title={currentTeam?.name}>
-              {currentTeam?.name || "—"}
-            </h3>
-            <p className="text-xs text-gray-500 truncate mt-0.5" title={currentTeam?.description || "Operational Unit"}>
-              {currentTeam?.description || "Operational Unit"}
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: Department */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between space-y-3 hover:border-blue-300 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Department
-            </span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E3F2FD] text-[#1E88E5] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                corporate_fare
-              </span>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-[#1A1A1A] truncate" title={currentTeam?.department?.name}>
-              {currentTeam?.department?.name || "—"}
-            </h3>
-            <p className="text-xs text-gray-500 font-mono mt-0.5">
-              Dept ID: #{currentTeam?.departmentId || "—"}
-            </p>
-          </div>
-        </div>
-
-        {/* Card 3: Team Lead */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between space-y-3 hover:border-amber-300 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Team Lead
-            </span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FFF8E1] text-[#F57F17] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                military_tech
-              </span>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-base sm:text-lg font-bold text-[#1A1A1A] truncate capitalize">
-              {currentTeam?.teamAdminEmail ? currentTeam.teamAdminEmail.split("@")[0].replace(".", " ") : "Primary Lead"}
-            </h3>
-            <p className="text-xs text-gray-500 font-mono truncate mt-0.5" title={currentTeam?.teamAdminEmail}>
-              {currentTeam?.teamAdminEmail || "Not assigned"}
-            </p>
-          </div>
-        </div>
-
-        {/* Card 4: Active Members Count */}
-        <div className="bg-white rounded-xl p-4 sm:p-5 border border-[#E5E7EB] shadow-xs flex flex-col justify-between space-y-3 hover:border-emerald-300 transition-colors">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Active Members
-            </span>
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                person_check
-              </span>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A]">
-              {activeMembers.length}
-            </h3>
-            <p className="text-xs text-emerald-600 font-medium flex items-center gap-1.5 mt-0.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Active team members
-            </p>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <StatCard
+          title="Team Unit"
+          count={currentTeam?.name || "—"}
+          icon="groups"
+          accentColor="#1F3864"
+          subtitle={currentTeam?.description || "Operational Unit"}
+        />
+        <StatCard
+          title="Department"
+          count={currentTeam?.department?.name || "—"}
+          icon="corporate_fare"
+          accentColor="#1E88E5"
+          subtitle={`Dept ID: #${currentTeam?.departmentId || "—"}`}
+          subtitleColor="#1E88E5"
+        />
+        <StatCard
+          title="Team Lead"
+          count={currentTeam?.teamAdminEmail ? currentTeam.teamAdminEmail.split("@")[0].replace(".", " ") : "Primary Lead"}
+          icon="military_tech"
+          accentColor="#FB8C00"
+          subtitle={currentTeam?.teamAdminEmail || "Not assigned"}
+          subtitleColor="#FB8C00"
+        />
+        <StatCard
+          title="Active Members"
+          count={activeMembers.length}
+          icon="person_check"
+          accentColor="#43A047"
+          subtitle="Team Strength"
+          subtitleColor="#43A047"
+        />
       </div>
 
       {/* TEAM MEMBER DETAILS SECTION */}

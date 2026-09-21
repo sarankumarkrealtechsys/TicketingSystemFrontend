@@ -12,7 +12,7 @@ import { CreateTeamModal } from "./CreateTeamModal";
 import { EditTeamModal } from "./EditTeamModal";
 import { TeamRosterDrawer } from "./TeamRosterDrawer";
 import { ReassignDepartmentModal } from "./ReassignDepartmentModal";
-import { SelectDropdown, SelectOption } from "@/shared/components";
+import { SelectDropdown, SelectOption, StatCard } from "@/shared/components";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
   { value: "all", label: "All Statuses" },
@@ -248,76 +248,38 @@ export const AdminTeamManagement: React.FC = () => {
       </div>
 
       {/* Quick Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Active Teams */}
-        <div className="p-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Active Teams
-            </span>
-            <span className="text-2xl font-bold text-[#1F3864] mt-0.5">
-              {stats.activeTeams}
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-[#1F3864]/5 flex items-center justify-center text-[#1F3864]">
-            <span className="material-symbols-outlined text-[24px]">
-              corporate_fare
-            </span>
-          </div>
-        </div>
-
-        {/* Total Members */}
-        <div className="p-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Total Members
-            </span>
-            <span className="text-2xl font-bold text-[#1F3864] mt-0.5">
-              {stats.totalMembers}
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-[#0e61a1]">
-            <span className="material-symbols-outlined text-[24px]">badge</span>
-          </div>
-        </div>
-
-        {/* Assigned Incidents */}
-        <div className="p-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Assigned Tickets
-            </span>
-            <span className="text-2xl font-bold text-[#1F3864] mt-0.5">
-              {stats.assignedIncidents}
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-            <span className="material-symbols-outlined text-[24px]">
-              confirmation_number
-            </span>
-          </div>
-        </div>
-
-
-        {/* Team Capacity */}
-        <div className="p-4 bg-white rounded-xl shadow-sm border border-[#E5E7EB] flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-              Team Capacity
-            </span>
-            <span className="text-2xl font-bold text-emerald-600 mt-0.5">
-              {stats.capacity}
-            </span>
-            <div className="w-24 bg-gray-100 rounded-full h-1.5 mt-2 overflow-hidden">
-              <div className="bg-emerald-500 h-1.5 rounded-full w-4/5" />
-            </div>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-            <span className="material-symbols-outlined text-[24px]">
-              insights
-            </span>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        <StatCard
+          title="Active Teams"
+          count={stats.activeTeams}
+          icon="corporate_fare"
+          accentColor="#1F3864"
+          subtitle="Active Units"
+        />
+        <StatCard
+          title="Total Members"
+          count={stats.totalMembers}
+          icon="badge"
+          accentColor="#1E88E5"
+          subtitle="Across Teams"
+          subtitleColor="#1E88E5"
+        />
+        <StatCard
+          title="Assigned Tickets"
+          count={stats.assignedIncidents}
+          icon="confirmation_number"
+          accentColor="#FB8C00"
+          subtitle="Active Workload"
+          subtitleColor="#FB8C00"
+        />
+        <StatCard
+          title="Team Capacity"
+          count={stats.capacity}
+          icon="insights"
+          accentColor="#43A047"
+          subtitle="Optimal Bandwidth"
+          subtitleColor="#43A047"
+        />
       </div>
 
       {/* Teams Table Section */}

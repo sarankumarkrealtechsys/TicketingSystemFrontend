@@ -2,6 +2,7 @@ import React from "react";
 import { useAppSelector } from "@/features/auth/authSlice";
 import { AppLayout } from "@/layout/AppLayout";
 import { useDepartmentDetailQuery } from "../api";
+import { StatCard } from "@/shared/components";
 
 export const UserMyDepartment: React.FC = () => {
   const currentUser = useAppSelector((state) => state.auth.user);
@@ -63,63 +64,30 @@ export const UserMyDepartment: React.FC = () => {
 
 
         {/* TOP ROW: 3 Overview KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-          {/* Card 1: Department Name */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                Department Unit
-              </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1F3864]/10 text-[#1F3864] dark:text-blue-300 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  corporate_fare
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-[#1A1A1A] dark:text-white truncate" title={department.name}>
-                {department.name}
-              </h3>
-            </div>
-          </div>
-
-          {/* Card 2: Department Colleagues */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                Department Colleagues
-              </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FFF8E1] text-[#F57F17] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  badge
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-                {usersList.length}
-              </h3>
-            </div>
-          </div>
-
-          {/* Card 3: Operational Status */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                Department Status
-              </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  verified
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                Active
-              </h3>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4">
+          <StatCard
+            title="Department Unit"
+            count={department.name}
+            icon="corporate_fare"
+            accentColor="#1F3864"
+            subtitle="Department Entity"
+          />
+          <StatCard
+            title="Colleagues"
+            count={usersList.length}
+            icon="badge"
+            accentColor="#1E88E5"
+            subtitle="Registered Members"
+            subtitleColor="#1E88E5"
+          />
+          <StatCard
+            title="Status"
+            count="Active"
+            icon="check_circle"
+            accentColor="#43A047"
+            subtitle="Operational Status"
+            subtitleColor="#43A047"
+          />
         </div>
 
 

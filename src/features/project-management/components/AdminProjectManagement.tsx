@@ -5,6 +5,7 @@ import { useProjectsQuery, useUpdateProjectMutation, useRetireProjectMutation, u
 import { ProjectItem } from '../types';
 import CreateProjectModal from './CreateProjectModal';
 import EditProjectModal from './EditProjectModal';
+import { StatCard } from '@/shared/components';
 
 export const AdminProjectManagement: React.FC = () => {
   const { data: projects = [], isLoading, isError, refetch, isFetching } = useProjectsQuery({ includeInactive: true });
@@ -154,51 +155,29 @@ export const AdminProjectManagement: React.FC = () => {
         </div>
 
         {/* TOP ROW: 3 Quick KPI Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          {/* Active Projects Card */}
-          <div className="p-4 sm:p-5 bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                Active Projects
-              </span>
-              <span className="text-2xl font-bold text-[#1F3864] dark:text-white mt-0.5">
-                {activeProjects}
-              </span>
-            </div>
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-              <span className="material-symbols-outlined text-[24px]">check_circle</span>
-            </div>
-          </div>
-
-          {/* Total Projects Card */}
-          <div className="p-4 sm:p-5 bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                Total Projects
-              </span>
-              <span className="text-2xl font-bold text-[#1F3864] dark:text-white mt-0.5">
-                {totalProjects}
-              </span>
-            </div>
-            <div className="w-11 h-11 rounded-xl bg-[#1F3864]/5 dark:bg-blue-900/30 flex items-center justify-center text-[#1F3864] dark:text-blue-300">
-              <span className="material-symbols-outlined text-[24px]">folder_managed</span>
-            </div>
-          </div>
-
-          {/* Archived Projects Card */}
-          <div className="p-4 sm:p-5 bg-white dark:bg-[#121E30] rounded-xl shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                Archived Projects
-              </span>
-              <span className="text-2xl font-bold text-gray-600 dark:text-gray-300 mt-0.5">
-                {archivedProjects}
-              </span>
-            </div>
-            <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 dark:text-gray-400">
-              <span className="material-symbols-outlined text-[24px]">archive</span>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
+          <StatCard
+            title="Active Projects"
+            count={activeProjects}
+            icon="check_circle"
+            accentColor="#43A047"
+            subtitle="Operational"
+            subtitleColor="#43A047"
+          />
+          <StatCard
+            title="Total Projects"
+            count={totalProjects}
+            icon="layers"
+            accentColor="#1F3864"
+            subtitle="All Portfolios"
+          />
+          <StatCard
+            title="Archived Projects"
+            count={archivedProjects}
+            icon="archive"
+            accentColor="#757575"
+            subtitle="Inactive"
+          />
         </div>
 
 

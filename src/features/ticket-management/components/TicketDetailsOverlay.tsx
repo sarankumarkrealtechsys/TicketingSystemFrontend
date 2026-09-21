@@ -1353,36 +1353,114 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                     </div>
 
                     {/* Sub-Tickets List */}
-                    <ul className="mt-4 divide-y divide-gray-100 text-xs">
-                      {ticket.subTickets.map((st: any) => (
-                        <li
-                          key={st.id}
-                          onClick={() => onSelectTicket ? onSelectTicket(st.id) : undefined}
-                          className={`py-3 flex items-center justify-between hover:bg-slate-50 px-3 rounded-lg transition border border-transparent hover:border-slate-200 ${
-                            onSelectTicket ? "cursor-pointer" : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="font-mono font-bold text-[#1F3864] text-xs bg-blue-50 px-2.5 py-1 rounded border border-blue-200">
-                              {st.ticketNumber}
-                            </span>
-                            <span className="text-gray-900 font-bold text-xs">{st.summary}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {st.status && (
-                              <span
-                                className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${getStatusBadge(
-                                  (st.status as any).label || st.status.name,
-                                  st.status.behavior
-                                )}`}
-                              >
-                                {(st.status as any).label || st.status.name || st.status.behavior}
-                              </span>
+                    <div className="mt-4 space-y-3">
+                      {ticket.subTickets.map((st: any) => {
+                        const assigneeNames =
+                          st.assignees && st.assignees.length > 0
+                            ? st.assignees
+                                .map((a: any) => a.user?.name || a.user?.username)
+                                .filter(Boolean)
+                                .join(", ")
+                            : null;
+
+                        const priorityLabel =
+                          st.priority?.label || st.priority?.name || null;
+                        const statusLabel =
+                          st.status?.label || st.status?.name || st.status?.behavior || "Open";
+
+                        return (
+                          <div
+                            key={st.id}
+                            onClick={() => (onSelectTicket ? onSelectTicket(st.id) : undefined)}
+                            className={`p-3.5 bg-slate-50/90 hover:bg-blue-50/40 rounded-xl border border-slate-200 hover:border-blue-300 transition-all duration-150 flex flex-col gap-2.5 group shadow-2xs ${
+                              onSelectTicket ? "cursor-pointer" : ""
+                            }`}
+                          >
+                            {/* Card Header: Number, Summary, Badges */}
+                            <div className="flex items-start justify-between gap-2.5 flex-wrap">
+                              <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+                                <span className="font-mono font-bold text-[#1F3864] text-xs bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 shrink-0">
+                                  {st.ticketNumber}
+                                </span>
+                                <span className="text-gray-900 font-bold text-xs group-hover:text-[#1F3864] transition-colors line-clamp-1">
+                                  {st.summary}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {priorityLabel && (
+                                  <span
+                                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getPriorityBadge(
+                                      priorityLabel
+                                    )}`}
+                                  >
+                                    {priorityLabel}
+                                  </span>
+                                )}
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getStatusBadge(
+                                    statusLabel,
+                                    st.status?.behavior
+                                  )}`}
+                                >
+                                  {statusLabel}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Card Body: Description snippet (if available) */}
+                            {st.description && (
+                              <p className="text-[11.5px] text-gray-600 line-clamp-2 leading-relaxed bg-white/80 p-2.5 rounded-lg border border-slate-200/80 font-medium">
+                                {st.description}
+                              </p>
                             )}
+
+                            {/* Card Footer: Team, Assignees, Created Date, View Action */}
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/70 text-[11px] text-gray-500 flex-wrap">
+                              <div className="flex items-center gap-3 flex-wrap">
+                                {st.team?.name && (
+                                  <span className="flex items-center gap-1 font-semibold text-gray-700">
+                                    <span className="material-symbols-outlined text-[14px] text-[#1F3864]">
+                                      corporate_fare
+                                    </span>
+                                    <span>{st.team.name}</span>
+                                  </span>
+                                )}
+
+                                {assigneeNames ? (
+                                  <span className="flex items-center gap-1 font-medium text-gray-700">
+                                    <span className="material-symbols-outlined text-[14px] text-blue-600">
+                                      person
+                                    </span>
+                                    <span>{assigneeNames}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 italic font-medium">Unassigned</span>
+                                )}
+
+                                {st.createdAt && (
+                                  <span className="flex items-center gap-1 text-gray-400 font-medium">
+                                    <span className="material-symbols-outlined text-[14px]">
+                                      schedule
+                                    </span>
+                                    <span>{safeDistanceToNow(st.createdAt)}</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {onSelectTicket && (
+                                <span className="text-[11px] font-bold text-[#1F3864] group-hover:text-blue-700 flex items-center gap-0.5">
+                                  <span>View Details</span>
+                                  <span className="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform">
+                                    arrow_forward
+                                  </span>
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </li>
-                      ))}
-                    </ul>
+                        );
+                      })}
+                    </div>
                   </>
                 ) : (
                   <div className="py-6 text-center text-xs">

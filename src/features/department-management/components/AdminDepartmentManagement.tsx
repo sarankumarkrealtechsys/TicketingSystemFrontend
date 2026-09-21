@@ -12,7 +12,7 @@ import { CreateDepartmentModal } from "./CreateDepartmentModal";
 import { EditDepartmentModal } from "./EditDepartmentModal";
 import { ViewDepartmentModal } from "./ViewDepartmentModal";
 import { DepartmentDonutChart } from "./DepartmentDonutChart";
-import { SelectDropdown, SelectOption } from "@/shared/components";
+import { SelectDropdown, SelectOption, StatCard } from "@/shared/components";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
   { value: "all", label: "All Departments" },
@@ -192,86 +192,38 @@ export const AdminDepartmentManagement: React.FC = () => {
         </div>
 
         {/* TOP ROW: 4 Overview KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Card 1: Active Departments */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Active Departments
-              </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#1F3864]/10 dark:bg-[#1F3864]/30 text-[#1F3864] dark:text-blue-300 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  corporate_fare
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-                {stats.activeCount}
-              </h3>
-            </div>
-          </div>
-
-          {/* Card 2: Total Personnel */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Total Personnel
-              </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E3F2FD] dark:bg-blue-900/30 text-[#1E88E5] dark:text-blue-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  badge
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-                {stats.totalUsers}
-              </h3>
-            </div>
-          </div>
-
-          {/* Card 3: Total Teams */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Total Teams
-              </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#FFF8E1] dark:bg-amber-900/30 text-[#F57F17] dark:text-amber-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  groups
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white">
-                {stats.totalTeams}
-              </h3>
-            </div>
-          </div>
-
-
-          {/* Card 4: Department Capacity */}
-          <div className="bg-white dark:bg-[#121E30] rounded-xl p-4 sm:p-5 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs flex flex-col justify-between space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
-                Capacity
-              </span>
-              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#E8F5E9] dark:bg-emerald-900/30 text-[#2E7D32] dark:text-emerald-400 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[18px] sm:text-[20px]">
-                  insights
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                Optimal
-              </h3>
-              <div className="w-full bg-gray-100 dark:bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
-                <div className="bg-emerald-500 h-1.5 rounded-full w-4/5" />
-              </div>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+          <StatCard
+            title="Active Departments"
+            count={stats.activeCount}
+            icon="corporate_fare"
+            accentColor="#1F3864"
+            subtitle="Operational"
+          />
+          <StatCard
+            title="Total Personnel"
+            count={stats.totalUsers}
+            icon="badge"
+            accentColor="#1E88E5"
+            subtitle="Active Staff"
+            subtitleColor="#1E88E5"
+          />
+          <StatCard
+            title="Total Teams"
+            count={stats.totalTeams}
+            icon="groups"
+            accentColor="#FB8C00"
+            subtitle="Operational Units"
+            subtitleColor="#FB8C00"
+          />
+          <StatCard
+            title="Capacity"
+            count="Optimal"
+            icon="insights"
+            accentColor="#43A047"
+            subtitle="Load Optimal"
+            subtitleColor="#43A047"
+          />
         </div>
 
         {/* DONUT CHART SECTION: Department Personnel Breakdown */}
