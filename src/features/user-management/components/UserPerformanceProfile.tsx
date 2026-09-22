@@ -7,6 +7,8 @@ import {
   StatusDonutChart,
   SelectDropdown,
   SelectOption,
+  PriorityBadge,
+  StatusBadge,
 } from "@/shared/components";
 import { ROUTES } from "@/app/routes/routePaths";
 
@@ -39,25 +41,24 @@ export const UserPerformanceProfile: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const parsedUserId = userId ? Number(userId) : null;
 
-  const [activeTab, setActiveTab] = useState<"assigned" | "created">("assigned");
+  const [activeTab, setActiveTab] = useState<"assigned" | "created">(
+    "assigned",
+  );
   const [dateRange, setDateRange] = useState<string>("30d");
   const [ticketSearch, setTicketSearch] = useState<string>("");
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>("all");
-  const [ticketPriorityFilter, setTicketPriorityFilter] = useState<string>("all");
+  const [ticketPriorityFilter, setTicketPriorityFilter] =
+    useState<string>("all");
 
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-    isFetching,
-  } = useUserPerformanceQuery(parsedUserId);
+  const { data, isLoading, isError, refetch, isFetching } =
+    useUserPerformanceQuery(parsedUserId);
 
   const user = data?.user;
   const metrics = data?.metrics;
   const assignedTickets = data?.assignedTickets || data?.tickets || [];
   const createdTickets = data?.createdTickets || [];
-  const activeTicketsList = activeTab === "assigned" ? assignedTickets : createdTickets;
+  const activeTicketsList =
+    activeTab === "assigned" ? assignedTickets : createdTickets;
 
   // Filter scoped tickets by Search, Status, and Priority
   const filteredTickets = useMemo(() => {
@@ -71,7 +72,12 @@ export const UserPerformanceProfile: React.FC = () => {
       // Priority filter
       if (ticketPriorityFilter !== "all") {
         const pLabel = (t.priority?.name || "").toUpperCase();
-        if (ticketPriorityFilter === "HIGH" && !pLabel.includes("HIGH") && !pLabel.includes("CRITICAL") && !pLabel.includes("URGENT")) {
+        if (
+          ticketPriorityFilter === "HIGH" &&
+          !pLabel.includes("HIGH") &&
+          !pLabel.includes("CRITICAL") &&
+          !pLabel.includes("URGENT")
+        ) {
           return false;
         }
         if (ticketPriorityFilter === "MEDIUM" && !pLabel.includes("MED")) {
@@ -89,7 +95,12 @@ export const UserPerformanceProfile: React.FC = () => {
       const matchTitle = t.title.toLowerCase().includes(q);
       return matchNum || matchTitle;
     });
-  }, [activeTicketsList, ticketStatusFilter, ticketPriorityFilter, ticketSearch]);
+  }, [
+    activeTicketsList,
+    ticketStatusFilter,
+    ticketPriorityFilter,
+    ticketSearch,
+  ]);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -117,7 +128,8 @@ export const UserPerformanceProfile: React.FC = () => {
           Failed to load user performance profile
         </h2>
         <p className="text-xs text-gray-500">
-          The requested user could not be found or performance metrics are unavailable.
+          The requested user could not be found or performance metrics are
+          unavailable.
         </p>
         <button
           type="button"
@@ -143,7 +155,11 @@ export const UserPerformanceProfile: React.FC = () => {
 
   const byPriorityList = [
     { priorityId: 1, label: "High Priority", count: priorityBreakdown.high },
-    { priorityId: 2, label: "Medium Priority", count: priorityBreakdown.medium },
+    {
+      priorityId: 2,
+      label: "Medium Priority",
+      count: priorityBreakdown.medium,
+    },
     { priorityId: 3, label: "Low Priority", count: priorityBreakdown.low },
   ];
 
@@ -156,7 +172,9 @@ export const UserPerformanceProfile: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
           <span>Home</span>
-          <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span className="material-symbols-outlined text-[14px]">
+            chevron_right
+          </span>
           <button
             type="button"
             onClick={() => navigate(ROUTES.USERS)}
@@ -164,7 +182,9 @@ export const UserPerformanceProfile: React.FC = () => {
           >
             User Management
           </button>
-          <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+          <span className="material-symbols-outlined text-[14px]">
+            chevron_right
+          </span>
           <span className="text-[#1F3864] dark:text-blue-400 font-semibold">
             User Performance Profile
           </span>
@@ -175,7 +195,9 @@ export const UserPerformanceProfile: React.FC = () => {
           onClick={() => navigate(ROUTES.USERS)}
           className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-[#1F3864] text-[#1F3864] dark:text-blue-300 dark:border-blue-400 text-xs font-semibold hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors self-start sm:self-auto cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+          <span className="material-symbols-outlined text-[16px]">
+            arrow_back
+          </span>
           <span>Back to User Directory</span>
         </button>
       </div>
@@ -201,7 +223,9 @@ export const UserPerformanceProfile: React.FC = () => {
                 {user.name}
               </h1>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                <span className="material-symbols-outlined text-[14px]">badge</span>
+                <span className="material-symbols-outlined text-[14px]">
+                  badge
+                </span>
                 {roleName}
               </span>
               {isActive ? (
@@ -263,7 +287,9 @@ export const UserPerformanceProfile: React.FC = () => {
             className="h-9 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
             title="Refresh Performance Data"
           >
-            <span className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}>
+            <span
+              className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}
+            >
               refresh
             </span>
             <span>Refresh</span>
@@ -427,7 +453,9 @@ export const UserPerformanceProfile: React.FC = () => {
                 <tr className="bg-[#FAFBFD] dark:bg-[#162234] border-b border-gray-100 dark:border-[#1E2D45] text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider text-[11px]">
                   <th className="py-3 px-4 w-[16%] min-w-[120px]">Ticket #</th>
                   <th className="py-3 px-4 w-[32%] min-w-[200px]">Summary</th>
-                  <th className="py-3 px-4 w-[16%] min-w-[130px]">Department</th>
+                  <th className="py-3 px-4 w-[16%] min-w-[130px]">
+                    Department
+                  </th>
                   <th className="py-3 px-4 w-[12%] min-w-[100px]">Team</th>
                   <th className="py-3 px-4 w-[12%] min-w-[100px]">Status</th>
                   <th className="py-3 px-4 w-[12%] min-w-[100px]">Priority</th>
@@ -454,14 +482,17 @@ export const UserPerformanceProfile: React.FC = () => {
                       {t.team?.name || "—"}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                        {t.status?.name || "Open"}
-                      </span>
+                      <StatusBadge
+                        status={t.status?.name || "Open"}
+                        statusId={t.status?.id}
+                        behavior={t.status?.behavior}
+                      />
                     </td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                        {t.priority?.name || "Normal"}
-                      </span>
+                      <PriorityBadge
+                        priority={t.priority?.name || "Normal"}
+                        priorityId={t.priority?.id}
+                      />
                     </td>
                   </tr>
                 ))}

@@ -1,33 +1,42 @@
-import React from "react";
+import React from 'react';
+import { getPriorityColor, getColorBadgeStyles } from '@/features/priority-status-management/colorRegistry';
 
 export interface PriorityBadgeProps {
-  priority: string;
+  priority?: string;
+  priorityId?: number;
+  color?: string;
+  className?: string;
+  size?: 'sm' | 'md';
 }
 
-export const PriorityBadge: React.FC<PriorityBadgeProps> = ({ priority }) => {
-  const norm = (priority || "").toUpperCase();
+export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
+  priority = 'Normal',
+  priorityId,
+  color,
+  className = '',
+  size = 'sm',
+}) => {
+  const displayLabel = priority || 'Normal';
+  const resolvedColor = color || getPriorityColor(priorityId, displayLabel);
+  const badgeStyle = getColorBadgeStyles(resolvedColor);
 
-  switch (norm) {
-    case "HIGH":
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-50 text-[#E53935] border border-red-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#E53935]" /> High
-        </span>
-      );
-    case "MEDIUM":
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-[#FB8C00] border border-amber-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#FB8C00]" /> Medium
-        </span>
-      );
-    case "LOW":
-    default:
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-[#43A047] border border-emerald-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#43A047]" /> Low
-        </span>
-      );
-  }
+  const isSmall = size === 'sm';
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 font-bold tracking-tight rounded-full border transition-all duration-150 select-none shadow-2xs ${
+        isSmall ? 'px-2.5 py-0.5 text-[11px]' : 'px-3 py-1 text-xs'
+      } ${className}`}
+      style={badgeStyle}
+    >
+      <span
+        className="w-1.5 h-1.5 rounded-full shrink-0 shadow-2xs"
+        style={{ backgroundColor: resolvedColor }}
+      />
+      <span className="truncate">{displayLabel}</span>
+    </span>
+  );
 };
 
 export default PriorityBadge;
+

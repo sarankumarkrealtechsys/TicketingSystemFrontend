@@ -26,6 +26,7 @@ import {
   MyPermissionsPage,
   CreateTicketPage,
   AdminMyTicketsPage,
+  PriorityStatusManagementPage,
   NotFoundPage,
 } from "@/pages";
 
@@ -214,7 +215,12 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.USERS}
             element={
               <ProtectedRoute
-                requiredPermission={PERMISSIONS.USER_VIEW}
+                requiredPermission={[
+                  PERMISSIONS.USER_VIEW,
+                  PERMISSIONS.USER_CREATE,
+                  PERMISSIONS.USER_UPDATE,
+                  PERMISSIONS.USER_DELETE,
+                ]}
                 requiredScope="GLOBAL"
               >
                 <UserManagementPage />
@@ -225,29 +231,38 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.USER_PERFORMANCE}
             element={
               <ProtectedRoute
-                requiredPermission={[
-                  PERMISSIONS.USER_PERFORMANCE_VIEW,
-                  PERMISSIONS.USER_VIEW,
-                ]}
-                resolveScope={(user, params, scopes) => {
-                  // GLOBAL scope: Admin can view any user's performance profile
-                  if (scopes.includes("GLOBAL")) return true;
-
-                  // OWN scope: User can ONLY view if route param userId matches their own logged-in user.id
-                  if (
-                    scopes.includes("OWN") &&
-                    user?.id &&
-                    params.userId &&
-                    String(user.id) === String(params.userId)
-                  ) {
-                    return true;
-                  }
-
-                  return false;
-                }}
+                requiredPermission={PERMISSIONS.USER_PERFORMANCE_VIEW}
+                requiredScope="GLOBAL"
               >
                 <UserPerformanceProfilePage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.PRIORITIES}
+            element={
+              <ProtectedRoute
+                requiredPermission={[
+                  PERMISSIONS.PRIORITY_MANAGE,
+                  PERMISSIONS.STATUS_CREATE,
+                  PERMISSIONS.STATUS_UPDATE,
+                  PERMISSIONS.STATUS_RETIRE,
+                ]}
+              >
+                <PriorityStatusManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.PRIORITY_LEVELS}
+            element={
+              <Navigate to={ROUTES.PRIORITIES} replace />
+            }
+          />
+          <Route
+            path={ROUTES.STATUSES}
+            element={
+              <Navigate to={ROUTES.PRIORITIES} replace />
             }
           />
           <Route

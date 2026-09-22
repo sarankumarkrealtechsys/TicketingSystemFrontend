@@ -63,6 +63,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const departmentViewScopes = usePermissionScopes(PERMISSIONS.DEPARTMENT_VIEW);
   const teamViewScopes = usePermissionScopes(PERMISSIONS.TEAM_VIEW);
   const userViewScopes = usePermissionScopes(PERMISSIONS.USER_VIEW);
+  const userCreateScopes = usePermissionScopes(PERMISSIONS.USER_CREATE);
+  const userUpdateScopes = usePermissionScopes(PERMISSIONS.USER_UPDATE);
+  const userDeleteScopes = usePermissionScopes(PERMISSIONS.USER_DELETE);
+  const priorityManageScopes = usePermissionScopes(PERMISSIONS.PRIORITY_MANAGE);
+  const statusCreateScopes = usePermissionScopes(PERMISSIONS.STATUS_CREATE);
+  const statusUpdateScopes = usePermissionScopes(PERMISSIONS.STATUS_UPDATE);
+  const statusRetireScopes = usePermissionScopes(PERMISSIONS.STATUS_RETIRE);
   const roleManageScopes = usePermissionScopes(PERMISSIONS.ROLE_MANAGE);
   const ticketHistoryScopes = usePermissionScopes(PERMISSIONS.TICKET_HISTORY_VIEW);
   const settingsScopes = usePermissionScopes(PERMISSIONS.SYSTEM_SETTINGS_MANAGE);
@@ -82,7 +89,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const hasTeamGlobal = teamViewScopes.includes("GLOBAL");
   const hasTeamAny = teamViewScopes.length > 0;
 
-  const hasUserViewGlobal = userViewScopes.includes("GLOBAL");
+  const hasPriorityOrStatusAccess =
+    priorityManageScopes.length > 0 ||
+    statusCreateScopes.length > 0 ||
+    statusUpdateScopes.length > 0 ||
+    statusRetireScopes.length > 0;
+
+  const hasUserManagementAccess =
+    userViewScopes.includes("GLOBAL") ||
+    userCreateScopes.includes("GLOBAL") ||
+    userUpdateScopes.includes("GLOBAL") ||
+    userDeleteScopes.includes("GLOBAL");
   const hasRoleManage = roleManageScopes.length > 0;
 
   const hasHistoryGlobal = ticketHistoryScopes.includes("GLOBAL");
@@ -528,8 +545,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 ) : null}
 
+                {/* ── Priorities & Statuses ── */}
+                {hasPriorityOrStatusAccess && (
+                  <SidebarLink
+                    to="/admin/priorities"
+                    icon="tune"
+                    label="Priorities & Statuses"
+                  />
+                )}
+
                 {/* ── User Management (GLOBAL only) ── */}
-                {hasUserViewGlobal && (
+                {hasUserManagementAccess && (
                   <SidebarLink
                     to="/users"
                     icon="person_search"

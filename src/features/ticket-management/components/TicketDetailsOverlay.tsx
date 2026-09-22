@@ -52,6 +52,14 @@ import {
 import { formatDistanceToNow, format } from "date-fns";
 import { TicketStatusItem, PriorityItem, TicketHistoryItem, SubTicketItem } from "../types";
 import { TeamItem } from "@/features/team-management/types";
+import { PriorityBadge, StatusBadge } from "@/shared/components";
+import { getPriorityColor } from "@/features/priority-status-management/colorRegistry";
+import {
+  DynamicCustomFieldsRenderer,
+  AddFieldModal,
+  useTicketFieldsQuery,
+  TicketFieldDefinition,
+} from "@/features/ticket-fields";
 
 interface TicketDetailsOverlayProps {
   ticketId: number | null;
@@ -83,6 +91,87 @@ const safeDistanceToNow = (dateStr?: string | null) => {
   }
 };
 
+const renderCustomFieldValue = (cf: any) => {
+  const def = cf.fieldDefinition;
+  if (!def) return cf.value || cf.textValue || "—";
+
+  if (def.fieldType === "BOOLEAN") {
+    const isTrue = cf.booleanValue === true || cf.value === true || cf.value === "true";
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${
+          isTrue
+            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+            : "bg-gray-100 text-gray-700 border border-gray-200"
+        }`}
+      >
+        <span className="material-symbols-outlined text-[13px]">
+          {isTrue ? "check" : "close"}
+        </span>
+        <span>{isTrue ? "Yes" : "No"}</span>
+      </span>
+    );
+  }
+
+  if (def.fieldType === "SELECT") {
+    const val = cf.textValue || cf.value;
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+        {val || "—"}
+      </span>
+    );
+  }
+
+  if (def.fieldType === "MULTI_SELECT") {
+    const opts = Array.isArray(cf.selectedOptions)
+      ? cf.selectedOptions
+      : Array.isArray(cf.value)
+      ? cf.value
+      : [];
+    if (opts.length === 0) return "—";
+    return (
+      <div className="flex flex-wrap gap-1">
+        {opts.map((opt: string, i: number) => (
+          <span
+            key={i}
+            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200"
+          >
+            {opt}
+          </span>
+        ))}
+      </div>
+    );
+  }
+
+  if (def.fieldType === "DATE" || def.fieldType === "DATETIME") {
+    const dateVal = cf.dateValue || cf.value;
+    if (!dateVal) return "—";
+    try {
+      return format(new Date(dateVal), def.fieldType === "DATETIME" ? "PPp" : "PP");
+    } catch {
+      return String(dateVal);
+    }
+  }
+
+  if (def.fieldType === "URL") {
+    const url = cf.textValue || cf.value;
+    if (!url) return "—";
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="text-blue-600 hover:underline flex items-center gap-1 font-mono text-xs"
+      >
+        <span className="truncate max-w-[200px]">{url}</span>
+        <span className="material-symbols-outlined text-[13px]">open_in_new</span>
+      </a>
+    );
+  }
+
+  return String(cf.textValue ?? cf.numberValue ?? cf.decimalValue ?? cf.value ?? "—");
+};
+
 const WORK_TYPES = [
   "INVESTIGATION",
   "DEVELOPMENT",
@@ -102,7 +191,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   onSubTicketCreate,
   onSelectTicket,
 }) => {
-  const currentUser = useAppSelector((state) => state.auth.user);
+  const { user: currentUser, permissions } = useAppSelector((state) => state.auth);
 
   // Modal states
   const [activeModal, setActiveModal] = useState<
@@ -164,6 +253,34 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [subTicketDescription, setSubTicketDescription] = useState("");
   const [subTicketPriorityId, setSubTicketPriorityId] = useState<number | "">("");
   const [subTicketAssigneeIds, setSubTicketAssigneeIds] = useState<number[]>([]);
+  const [subTicketCustomFields, setSubTicketCustomFields] = useState<Record<number, any>>({});
+  const [subTicketCustomFieldErrors, setSubTicketCustomFieldErrors] = useState<Record<number, string>>({});
+  const [isSubTicketAddFieldOpen, setIsSubTicketAddFieldOpen] = useState(false);
+
+  // Dynamic custom fields for selected sub-ticket team
+  const { data: subTicketAvailableFields = [] } = useTicketFieldsQuery({
+    teamId: subTicketTeamId ? Number(subTicketTeamId) : undefined,
+    includeInactive: false,
+  });
+
+  const handleSubTicketCustomFieldChange = (fieldId: number, val: any) => {
+    setSubTicketCustomFields((prev) => ({ ...prev, [fieldId]: val }));
+    if (subTicketCustomFieldErrors[fieldId]) {
+      setSubTicketCustomFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      });
+    }
+  };
+
+  const handleSubTicketCustomFieldCreated = (newField: TicketFieldDefinition) => {
+    setSubTicketCustomFields((prev) => ({
+      ...prev,
+      [newField.id]: newField.fieldType === "BOOLEAN" ? false : "",
+    }));
+    setActionSuccessMsg(`Custom field "${newField.name}" added to sub-ticket!`);
+  };
 
   // Form states for Sub-Ticket Edit / Delete
   const [editingSubTicket, setEditingSubTicket] = useState<SubTicketItem | null>(null);
@@ -229,7 +346,17 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const updateTicketMutation = useUpdateTicketMutation(ticketId || 0);
   const deleteTicketMutation = useDeleteTicketMutation();
 
-  // Capability flags derived strictly from backend computed ticket.actions
+  // Capability flags derived from backend computed ticket.actions + RBAC fallback
+  const isGlobalUpdate = Boolean(permissions?.["TICKET_UPDATE"]?.includes("GLOBAL"));
+  const isCreator = Boolean(
+    currentUser?.id &&
+      (Number(ticket?.createdById) === Number(currentUser.id) ||
+        Number(ticket?.createdBy?.id) === Number(currentUser.id) ||
+        (ticket?.parentTicket && Number((ticket.parentTicket as any).createdById) === Number(currentUser.id)))
+  );
+  const isClosed = ticket?.status?.behavior === "CLOSED";
+  const canUpdateTicket = Boolean(!isClosed && (ticket?.actions?.update || isGlobalUpdate || isCreator));
+
   const canChangeStatus = Boolean(ticket?.actions?.changeStatus);
   const canChangePriority = Boolean(ticket?.actions?.changePriority);
   const canReassign = Boolean(ticket?.actions?.reassign);
@@ -379,6 +506,39 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
       return;
     }
 
+    // Validate required custom fields for sub-ticket
+    const missingField = subTicketAvailableFields.find(
+      (f) =>
+        f.isRequired &&
+        f.status === "ACTIVE" &&
+        (subTicketCustomFields[f.id] === undefined ||
+          subTicketCustomFields[f.id] === null ||
+          subTicketCustomFields[f.id] === "" ||
+          (Array.isArray(subTicketCustomFields[f.id]) &&
+            subTicketCustomFields[f.id].length === 0))
+    );
+    if (missingField) {
+      setActionErrorMsg(`Custom field "${missingField.name}" is required.`);
+      setSubTicketCustomFieldErrors((prev) => ({
+        ...prev,
+        [missingField.id]: "This field is required",
+      }));
+      return;
+    }
+
+    const formattedCustomFields = Object.entries(subTicketCustomFields)
+      .filter(
+        ([_, val]) =>
+          val !== undefined &&
+          val !== null &&
+          val !== "" &&
+          (!Array.isArray(val) || val.length > 0)
+      )
+      .map(([fieldDefId, value]) => ({
+        fieldDefinitionId: Number(fieldDefId),
+        value,
+      }));
+
     try {
       await createSubTicketMutation.mutateAsync({
         projectId: ticket.projectId,
@@ -387,9 +547,12 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
         description: subTicketDescription.trim(),
         priorityId: Number(subTicketPriorityId),
         assigneeIds: subTicketAssigneeIds,
+        customFields:
+          formattedCustomFields.length > 0 ? formattedCustomFields : undefined,
       });
 
       setActionSuccessMsg("Sub-ticket created successfully!");
+      setSubTicketCustomFields({});
       setActiveModal(null);
       await handleRefresh();
     } catch (err: any) {
@@ -659,15 +822,27 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
   // Priority color styling
   const getPriorityBadge = (priorityName?: string) => {
+    const hex = getPriorityColor(null, priorityName);
+    if (
+      hex.toLowerCase() === '#000000' ||
+      hex.toLowerCase() === '#000' ||
+      hex.toLowerCase() === '#111827' ||
+      hex.toLowerCase() === '#1e293b'
+    ) {
+      return "bg-zinc-900 text-white border-zinc-700";
+    }
     const p = (priorityName || "").toUpperCase();
-    if (p.includes("URGENT") || p.includes("CRITICAL") || p.includes("HIGH")) {
+    if (p.includes("URGENT") || p.includes("CRITICAL") || p.includes("BLOCK")) {
       return "bg-red-100 text-red-900 border-red-300";
+    }
+    if (p.includes("HIGH")) {
+      return "bg-orange-100 text-orange-900 border-orange-300";
     }
     if (p.includes("MEDIUM")) {
       return "bg-amber-100 text-amber-900 border-amber-300";
     }
     if (p.includes("LOW")) {
-      return "bg-slate-100 text-slate-900 border-slate-300";
+      return "bg-emerald-100 text-emerald-900 border-emerald-300";
     }
     return "bg-blue-100 text-blue-900 border-blue-300";
   };
@@ -1051,29 +1226,23 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                 {ticket?.ticketNumber || `#${ticketId}`}
               </span>
 
-              {/* Status Badge (Static display pill with full name and matching color) */}
+              {/* Status Badge */}
               {ticket?.status && (
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getStatusBadge(
-                    (ticket.status as any).label || ticket.status.name,
-                    ticket.status.behavior
-                  )}`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-current" />
-                  <span>{(ticket.status as any).label || ticket.status.name || ticket.status.behavior}</span>
-                </span>
+                <StatusBadge
+                  status={(ticket.status as any).label || ticket.status.name || ticket.status.behavior}
+                  statusId={ticket.status.id}
+                  behavior={ticket.status.behavior}
+                  size="md"
+                />
               )}
 
-              {/* Priority Badge (Static display pill with full name and matching color) */}
+              {/* Priority Badge */}
               {ticket?.priority && (
-                <span
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold border shadow-2xs ${getPriorityBadge(
-                    (ticket.priority as any).label || ticket.priority.name
-                  )}`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-current" />
-                  <span>{(ticket.priority as any).label || ticket.priority.name}</span>
-                </span>
+                <PriorityBadge
+                  priority={(ticket.priority as any).label || ticket.priority.name}
+                  priorityId={ticket.priority.id}
+                  size="md"
+                />
               )}
             </div>
 
@@ -1117,12 +1286,25 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
           )}
 
           {/* Ticket Title / Summary (Bold & Prominent) */}
-          <h2
-            id="ticket-drawer-title"
-            className="text-xl font-extrabold text-gray-900 tracking-tight leading-snug line-clamp-2 mt-1"
-          >
-            {ticket?.summary || (isTicketLoading ? "Loading ticket..." : "Ticket Details")}
-          </h2>
+          <div className="flex items-center justify-between gap-3 mt-1">
+            <h2
+              id="ticket-drawer-title"
+              className="text-xl font-extrabold text-gray-900 tracking-tight leading-snug line-clamp-2"
+            >
+              {ticket?.summary || (isTicketLoading ? "Loading ticket..." : "Ticket Details")}
+            </h2>
+            {canUpdateTicket && (
+              <button
+                type="button"
+                onClick={handleOpenEditModal}
+                className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-[#1F3864] bg-blue-50/80 hover:bg-blue-100 border border-blue-200/80 rounded-md transition shadow-2xs cursor-pointer"
+                title="Edit Ticket Details"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit</span>
+              </button>
+            )}
+          </div>
 
           {/* Action Success / Error Notifications */}
           {actionSuccessMsg && (
@@ -1158,6 +1340,19 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
           {/* PROMINENT ACTION TOOLBAR */}
           <div className="mt-3.5 pt-3 border-t border-gray-100 flex items-center justify-between gap-2 overflow-x-auto pb-1">
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Edit Ticket Action */}
+              {canUpdateTicket && (
+                <button
+                  type="button"
+                  onClick={handleOpenEditModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-900 bg-sky-50/90 border border-sky-200 rounded-md hover:bg-sky-100 hover:border-sky-300 transition shadow-xs cursor-pointer"
+                  title="Edit Ticket Details"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-sky-700" />
+                  <span>Edit Ticket</span>
+                </button>
+              )}
+
               {/* Change Status Action */}
               {canChangeStatus && (
                 <button
@@ -1312,9 +1507,22 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
                 {/* Description (Bold & High Contrast) */}
                 <div className="mt-4 pt-3.5 border-t border-gray-100">
-                  <label className="text-[11px] font-extrabold uppercase tracking-wider text-gray-700 block mb-1.5">
-                    Description
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[11px] font-extrabold uppercase tracking-wider text-gray-700 block">
+                      Description
+                    </label>
+                    {canUpdateTicket && (
+                      <button
+                        type="button"
+                        onClick={handleOpenEditModal}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1F3864] hover:text-blue-800 hover:underline cursor-pointer"
+                        title="Edit Description"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                        <span>Edit</span>
+                      </button>
+                    )}
+                  </div>
                   <div className="bg-slate-50 rounded-lg p-4 text-sm font-bold text-gray-900 leading-relaxed border border-slate-200 whitespace-pre-wrap font-sans">
                     {ticket.description || "No description provided."}
                   </div>
@@ -1421,18 +1629,18 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                     <Layers className="w-4 h-4 text-[#1F3864]" />
                     <span>Custom Fields</span>
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mt-4">
                     {ticket.customFieldValues.map((cf) => (
                       <div
                         key={cf.id}
                         className="p-3 bg-slate-50 rounded-lg border border-slate-200"
                       >
-                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-700 block">
-                          {cf.fieldDefinition.name}
+                        <span className="text-[11px] font-extrabold uppercase tracking-wider text-gray-700 block mb-1">
+                          {cf.fieldDefinition?.name || `Field #${cf.fieldDefinitionId}`}
                         </span>
-                        <span className="text-xs font-bold text-gray-900 block mt-1">
-                          {String(cf.value)}
-                        </span>
+                        <div className="text-xs font-bold text-gray-900">
+                          {renderCustomFieldValue(cf)}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1572,7 +1780,17 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                                 )}
                               </div>
 
-                              <div className="flex items-center gap-1.5 shrink-0">
+                              <div className="flex items-center gap-2 shrink-0">
+                                {(st.actions?.update || canUpdateTicket) && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleOpenEditSubTicketModal(st, e)}
+                                    className="p-1 rounded hover:bg-slate-200 text-gray-500 hover:text-[#1F3864] transition cursor-pointer"
+                                    title="Edit Sub-Ticket"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                                 {onSelectTicket && (
                                   <span className="text-[11px] font-bold text-[#1F3864] group-hover:text-blue-700 flex items-center gap-0.5 ml-1">
                                     <span>View Details</span>
@@ -2807,6 +3025,22 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                   />
                 </div>
 
+                {/* Dynamic Custom Fields for Sub-Ticket */}
+                {subTicketTeamId && (
+                  <div className="pt-1">
+                    <DynamicCustomFieldsRenderer
+                      fields={subTicketAvailableFields}
+                      values={subTicketCustomFields}
+                      onChange={handleSubTicketCustomFieldChange}
+                      onOpenAddFieldModal={() => setIsSubTicketAddFieldOpen(true)}
+                      teamName={allTeams.find((t) => t.id === subTicketTeamId)?.name}
+                      errors={subTicketCustomFieldErrors}
+                      compact={true}
+                      sectionNumber=""
+                    />
+                  </div>
+                )}
+
                 {/* Form Actions */}
                 <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
                   <button
@@ -2829,6 +3063,15 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
             </div>
           </div>
         )}
+
+        {/* Inline Add Custom Field Modal for Sub-Ticket */}
+        <AddFieldModal
+          isOpen={isSubTicketAddFieldOpen}
+          onClose={() => setIsSubTicketAddFieldOpen(false)}
+          onFieldCreated={handleSubTicketCustomFieldCreated}
+          currentTeamId={subTicketTeamId ? Number(subTicketTeamId) : null}
+          currentTeamName={allTeams.find((t) => t.id === subTicketTeamId)?.name}
+        />
 
         {/* ================= MODAL: EDIT TICKET ================= */}
         {activeModal === "editTicket" && (

@@ -12,6 +12,7 @@ export * from "./roles/RolesPermissionsPage";
 export * from "./roles/MyPermissionsPage";
 export * from "./users/UserManagementPage";
 export * from "./users/UserPerformanceProfilePage";
+export * from "./priorities/PriorityStatusManagementPage";
 export * from "./error/NotFoundPage";
 
 

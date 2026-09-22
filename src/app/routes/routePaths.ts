@@ -22,6 +22,9 @@ export const ROUTES = {
   MY_TICKET_HISTORY: "/my-ticket-history",
   AUDIT: "/audit",
   SETTINGS: "/settings",
+  PRIORITIES: "/admin/priorities",
+  PRIORITY_LEVELS: "/priority-levels",
+  STATUSES: "/admin/statuses",
 } as const;
 
 

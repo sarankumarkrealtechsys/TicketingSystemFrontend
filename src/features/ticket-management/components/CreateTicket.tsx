@@ -10,7 +10,14 @@ import {
   useSelectedTeamDetailQuery,
   useCreateTicketMutation,
 } from "../api";
+import { apiClient } from "@/shared/api";
 import { UserSummary } from "../types";
+import {
+  DynamicCustomFieldsRenderer,
+  AddFieldModal,
+  useTicketFieldsQuery,
+  TicketFieldDefinition,
+} from "@/features/ticket-fields";
 
 export const CreateTicket: React.FC = () => {
   const navigate = useNavigate();
@@ -84,6 +91,37 @@ export const CreateTicket: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  const primaryTeamId = selectedTeamIds[0] || null;
+  const primaryTeam = allTeams.find((t) => t.id === primaryTeamId);
+
+  // Dynamic Custom Fields State & Query
+  const { data: availableCustomFields = [] } = useTicketFieldsQuery({
+    teamId: primaryTeamId ?? undefined,
+    includeInactive: false,
+  });
+  const [customFieldValues, setCustomFieldValues] = useState<Record<number, any>>({});
+  const [customFieldErrors, setCustomFieldErrors] = useState<Record<number, string>>({});
+  const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false);
+
+  const handleCustomFieldChange = (fieldId: number, val: any) => {
+    setCustomFieldValues((prev) => ({ ...prev, [fieldId]: val }));
+    if (customFieldErrors[fieldId]) {
+      setCustomFieldErrors((prev) => {
+        const next = { ...prev };
+        delete next[fieldId];
+        return next;
+      });
+    }
+  };
+
+  const handleCustomFieldCreated = (newField: TicketFieldDefinition) => {
+    setCustomFieldValues((prev) => ({
+      ...prev,
+      [newField.id]: newField.fieldType === "BOOLEAN" ? false : "",
+    }));
+    showToast(`Custom field "${newField.name}" added to ticket!`);
+  };
+
   const createTicketMutation = useCreateTicketMutation();
 
   // Click Outside Handler for closing custom dropdowns
@@ -146,9 +184,6 @@ export const CreateTicket: React.FC = () => {
       setSelectedTeamIds([]);
     }
   }, [departmentTeams]);
-
-  // Primary team ID (first selected team)
-  const primaryTeamId = selectedTeamIds[0] || null;
 
   // Fetch Primary Team detail for members list
   const {
@@ -300,12 +335,19 @@ export const CreateTicket: React.FC = () => {
     }
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return "0 B";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
   const processFiles = (newFiles: File[]) => {
     const formatted = newFiles.map((f) => ({
       id: Math.random().toString(36).substring(2, 9),
       file: f,
       name: f.name,
-      size: (f.size / (1024 * 1024)).toFixed(1) + " MB",
+      size: formatFileSize(f.size),
       progress: 100,
       status: "completed" as const,
     }));
@@ -363,11 +405,45 @@ export const CreateTicket: React.FC = () => {
       return;
     }
 
+    // Validate required custom fields
+    const missingRequiredField = availableCustomFields.find(
+      (f) =>
+        f.isRequired &&
+        f.status === "ACTIVE" &&
+        (customFieldValues[f.id] === undefined ||
+          customFieldValues[f.id] === null ||
+          customFieldValues[f.id] === "" ||
+          (Array.isArray(customFieldValues[f.id]) &&
+            customFieldValues[f.id].length === 0))
+    );
+    if (missingRequiredField) {
+      setFormError(`Custom field "${missingRequiredField.name}" is required.`);
+      setCustomFieldErrors((prev) => ({
+        ...prev,
+        [missingRequiredField.id]: "This field is required",
+      }));
+      return;
+    }
+
+    // Format non-empty custom fields array
+    const formattedCustomFields = Object.entries(customFieldValues)
+      .filter(
+        ([_, val]) =>
+          val !== undefined &&
+          val !== null &&
+          val !== "" &&
+          (!Array.isArray(val) || val.length > 0)
+      )
+      .map(([fieldDefId, value]) => ({
+        fieldDefinitionId: Number(fieldDefId),
+        value,
+      }));
+
     const primaryId = selectedTeamIds[0];
     const collaboratingIds = selectedTeamIds.slice(1);
 
     try {
-      await createTicketMutation.mutateAsync({
+      const createdTicket = await createTicketMutation.mutateAsync({
         projectId: Number(selectedProjectId),
         departmentId: Number(selectedDepartmentId),
         teamId: Number(primaryId),
@@ -377,7 +453,28 @@ export const CreateTicket: React.FC = () => {
         assigneeIds: selectedAssigneeIds,
         priorityId: Number(selectedPriorityId),
         statusId: selectedStatusId ? Number(selectedStatusId) : undefined,
+        customFields:
+          formattedCustomFields.length > 0 ? formattedCustomFields : undefined,
       });
+
+      // Upload file attachments to backend storage and link to created ticket
+      if (uploadedFiles.length > 0 && createdTicket?.id) {
+        for (const uf of uploadedFiles) {
+          try {
+            const formData = new FormData();
+            formData.append("file", uf.file);
+            await apiClient.post(
+              `/tickets/${createdTicket.id}/attachments`,
+              formData,
+              {
+                headers: { "Content-Type": "multipart/form-data" },
+              }
+            );
+          } catch (attErr) {
+            console.error("Failed to upload attachment:", attErr);
+          }
+        }
+      }
 
       showToast("Ticket created successfully!");
       setTimeout(() => {
@@ -757,7 +854,18 @@ export const CreateTicket: React.FC = () => {
               </div>
             </section>
 
-            {/* SECTION 3: Filtered Multi-Assignees & Triage */}
+            {/* SECTION 3: Dynamic Custom Fields */}
+            <DynamicCustomFieldsRenderer
+              fields={availableCustomFields}
+              values={customFieldValues}
+              onChange={handleCustomFieldChange}
+              onOpenAddFieldModal={() => setIsAddFieldModalOpen(true)}
+              teamName={primaryTeam?.name}
+              errors={customFieldErrors}
+              sectionNumber="3"
+            />
+
+            {/* SECTION 4: Filtered Multi-Assignees & Triage */}
             <section className="bg-white dark:bg-[#121E30] rounded-xl p-5 shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#F0F2F5] dark:border-[#1E2D45]">
                 <div className="flex items-center gap-2.5">
@@ -765,7 +873,7 @@ export const CreateTicket: React.FC = () => {
                     <span className="material-symbols-outlined text-[18px]">assignment_ind</span>
                   </div>
                   <h2 className="font-bold text-sm text-[#1A1A1A] dark:text-white">
-                    3. Multi-Assignees & Triage
+                    4. Multi-Assignees & Triage
                   </h2>
                 </div>
                 <span className="text-[11px] font-semibold text-[#0e61a1] dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded">
@@ -976,7 +1084,7 @@ export const CreateTicket: React.FC = () => {
               </div>
             </section>
 
-            {/* SECTION 4: Attachments */}
+            {/* SECTION 5: Attachments */}
             <section className="bg-white dark:bg-[#121E30] rounded-xl p-5 shadow-xs border border-[#E5E7EB] dark:border-[#1E2D45] space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#F0F2F5] dark:border-[#1E2D45]">
                 <div className="flex items-center gap-2.5">
@@ -984,7 +1092,7 @@ export const CreateTicket: React.FC = () => {
                     <span className="material-symbols-outlined text-[18px]">attach_file</span>
                   </div>
                   <h2 className="font-bold text-sm text-[#1A1A1A] dark:text-white">
-                    4. Attachments
+                    5. Attachments
                   </h2>
                 </div>
                 <span className="text-[11px] font-medium text-gray-400">
@@ -1093,6 +1201,15 @@ export const CreateTicket: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Inline Add Custom Field Modal */}
+        <AddFieldModal
+          isOpen={isAddFieldModalOpen}
+          onClose={() => setIsAddFieldModalOpen(false)}
+          onFieldCreated={handleCustomFieldCreated}
+          currentTeamId={primaryTeamId}
+          currentTeamName={primaryTeam?.name}
+        />
       </div>
     </AppLayout>
   );

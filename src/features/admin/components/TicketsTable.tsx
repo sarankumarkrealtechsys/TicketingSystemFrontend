@@ -51,7 +51,9 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
         cell: (info) => {
           const row = info.row.original;
           const isSubTicket = Boolean(row.parentTicketId || row.parentTicket);
-          const hasSubs = Boolean(row.subTicketsCount && row.subTicketsCount > 0);
+          const hasSubs = Boolean(
+            row.subTicketsCount && row.subTicketsCount > 0,
+          );
 
           return (
             <div className="flex flex-col items-start gap-0.5">
@@ -64,14 +66,19 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                 </span>
                 {isSubTicket && (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold font-sans bg-indigo-50 text-indigo-700 border border-indigo-200/70 rounded shadow-2xs">
-                    <span className="material-symbols-outlined text-[11px]">subdirectory_arrow_right</span>
+                    <span className="material-symbols-outlined text-[11px]">
+                      subdirectory_arrow_right
+                    </span>
                     Sub
                   </span>
                 )}
                 {hasSubs && (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold font-sans bg-slate-100 text-slate-600 border border-slate-200 rounded">
-                    <span className="material-symbols-outlined text-[11px]">account_tree</span>
-                    {row.subTicketsCount} sub{row.subTicketsCount! > 1 ? "s" : ""}
+                    <span className="material-symbols-outlined text-[11px]">
+                      account_tree
+                    </span>
+                    {row.subTicketsCount} sub
+                    {row.subTicketsCount! > 1 ? "s" : ""}
                   </span>
                 )}
               </div>
@@ -85,7 +92,9 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                   title={`Parent: #${row.parentTicket.ticketNumber} - ${row.parentTicket.summary}`}
                 >
                   <span>↳</span>
-                  <span className="font-mono">#{row.parentTicket.ticketNumber}</span>
+                  <span className="font-mono">
+                    #{row.parentTicket.ticketNumber}
+                  </span>
                 </span>
               )}
             </div>
@@ -149,29 +158,45 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
       columnHelper.accessor((row) => row.priority?.label, {
         id: "priority",
         header: "Priority",
-        cell: (info) => (
-          <PriorityBadge priority={info.getValue() || "LOW"} />
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <PriorityBadge
+              priority={row.priority?.label || "Normal"}
+              priorityId={row.priority?.id}
+            />
+          );
+        },
       }),
-      columnHelper.accessor((row) => row.status?.behavior, {
+      columnHelper.accessor((row) => row.status?.label || row.status?.behavior, {
         id: "status",
         header: "Status",
-        cell: (info) => (
-          <StatusBadge status={info.getValue() || "OPEN"} />
-        ),
+        cell: (info) => {
+          const row = info.row.original;
+          return (
+            <StatusBadge
+              status={row.status?.label || row.status?.behavior || "Open"}
+              statusId={row.status?.id}
+              behavior={row.status?.behavior}
+            />
+          );
+        },
       }),
-      columnHelper.accessor((row) => row.createdBy?.email || row.createdBy?.name, {
-        id: "createdBy",
-        header: "Created By",
-        cell: (info) => (
-          <span
-            className="font-mono text-[12px] text-[#5F6368] truncate max-w-[150px] block"
-            title={info.getValue()}
-          >
-            {info.getValue() || "-"}
-          </span>
-        ),
-      }),
+      columnHelper.accessor(
+        (row) => row.createdBy?.email || row.createdBy?.name,
+        {
+          id: "createdBy",
+          header: "Created By",
+          cell: (info) => (
+            <span
+              className="font-mono text-[12px] text-[#5F6368] truncate max-w-[150px] block"
+              title={info.getValue()}
+            >
+              {info.getValue() || "-"}
+            </span>
+          ),
+        },
+      ),
       columnHelper.accessor("createdAt", {
         header: "Created On",
         cell: (info) => {
@@ -239,7 +264,8 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                 {headerGroup.headers.map((header) => {
                   let widthClass = "";
                   if (header.id === "ticketNumber") widthClass = "w-28";
-                  else if (header.id === "summary") widthClass = "min-w-[260px]";
+                  else if (header.id === "summary")
+                    widthClass = "min-w-[260px]";
                   else if (header.id === "project") widthClass = "w-40";
                   else if (header.id === "team") widthClass = "w-32";
                   else if (header.id === "assignee") widthClass = "w-44";
@@ -247,7 +273,8 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                   else if (header.id === "status") widthClass = "w-32";
                   else if (header.id === "createdBy") widthClass = "w-44";
                   else if (header.id === "createdAt") widthClass = "w-40";
-                  else if (header.id === "actions") widthClass = "w-24 text-right";
+                  else if (header.id === "actions")
+                    widthClass = "w-24 text-right";
 
                   return (
                     <th
@@ -275,24 +302,36 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
           >
             {isInitialLoading ? (
               <tr>
-                <td colSpan={columns.length} className="py-12 text-center text-[#5F6368]">
+                <td
+                  colSpan={columns.length}
+                  className="py-12 text-center text-[#5F6368]"
+                >
                   <div className="flex flex-col items-center justify-center gap-2">
                     <span className="material-symbols-outlined animate-spin text-[24px] text-[#1E88E5]">
                       progress_activity
                     </span>
-                    <span className="text-xs font-medium">Loading tickets...</span>
+                    <span className="text-xs font-medium">
+                      Loading tickets...
+                    </span>
                   </div>
                 </td>
               </tr>
             ) : table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="py-12 text-center text-[#5F6368]">
+                <td
+                  colSpan={columns.length}
+                  className="py-12 text-center text-[#5F6368]"
+                >
                   <div className="flex flex-col items-center justify-center gap-1">
                     <span className="material-symbols-outlined text-[32px] text-[#C4C6D0]">
                       inbox
                     </span>
-                    <p className="font-semibold text-sm text-[#1A1A1A]">No tickets found</p>
-                    <p className="text-xs">Try adjusting your filters or search query.</p>
+                    <p className="font-semibold text-sm text-[#1A1A1A]">
+                      No tickets found
+                    </p>
+                    <p className="text-xs">
+                      Try adjusting your filters or search query.
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -338,15 +377,22 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
               <span className="material-symbols-outlined text-[32px] text-[#C4C6D0]">
                 inbox
               </span>
-              <p className="font-semibold text-sm text-[#1A1A1A]">No tickets found</p>
-              <p className="text-xs">Try adjusting your filters or search query.</p>
+              <p className="font-semibold text-sm text-[#1A1A1A]">
+                No tickets found
+              </p>
+              <p className="text-xs">
+                Try adjusting your filters or search query.
+              </p>
             </div>
           </div>
         ) : (
           tickets.map((ticket) => {
-            const priorityName = ticket.priority?.label || "MEDIUM";
+            const priorityName = ticket.priority?.label || "Normal";
+            const priorityId = ticket.priority?.id;
             const statusName =
-              ticket.status?.behavior || ticket.status?.label || "OPEN";
+              ticket.status?.label || ticket.status?.behavior || "Open";
+            const statusId = ticket.status?.id;
+            const statusBehavior = ticket.status?.behavior;
             const primaryAssignee = ticket.assignees?.[0]?.user;
             const extraAssigneesCount = (ticket.assignees?.length || 0) - 1;
             const formattedDate = ticket.createdAt
@@ -365,9 +411,13 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                     <span className="font-mono font-bold text-[13px] text-[#1E88E5]">
                       #{ticket.ticketNumber}
                     </span>
-                    <PriorityBadge priority={priorityName} />
+                    <PriorityBadge priority={priorityName} priorityId={priorityId} />
                   </div>
-                  <StatusBadge status={statusName} />
+                  <StatusBadge
+                    status={statusName}
+                    statusId={statusId}
+                    behavior={statusBehavior}
+                  />
                 </div>
 
                 {/* Summary */}
@@ -405,7 +455,11 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                     {primaryAssignee ? (
                       <>
                         <UserAvatar
-                          name={primaryAssignee.name || primaryAssignee.email || "User"}
+                          name={
+                            primaryAssignee.name ||
+                            primaryAssignee.email ||
+                            "User"
+                          }
                           size="sm"
                         />
                         <span className="truncate max-w-[120px] font-medium text-[#1A1A1A]">
@@ -439,17 +493,9 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
       <div className="p-3 sm:p-4 border-t border-[#EEEEEE] flex flex-col sm:flex-row items-center justify-between gap-3 text-[12px] sm:text-[13px] text-[#5F6368]">
         <div>
           Showing{" "}
-          <strong className="font-semibold text-[#1A1A1A]">
-            {startItem}
-          </strong>{" "}
-          to{" "}
-          <strong className="font-semibold text-[#1A1A1A]">
-            {endItem}
-          </strong>{" "}
-          of{" "}
-          <strong className="font-semibold text-[#1A1A1A]">
-            {total}
-          </strong>{" "}
+          <strong className="font-semibold text-[#1A1A1A]">{startItem}</strong>{" "}
+          to <strong className="font-semibold text-[#1A1A1A]">{endItem}</strong>{" "}
+          of <strong className="font-semibold text-[#1A1A1A]">{total}</strong>{" "}
           tickets
         </div>
 

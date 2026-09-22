@@ -109,6 +109,8 @@ export interface UpdateTicketPayload {
 }
 
 export interface TicketActions {
+  update?: boolean;
+  canUpdate?: boolean;
   canChangeStatus?: boolean;
   canChangePriority?: boolean;
   canReassign?: boolean;
