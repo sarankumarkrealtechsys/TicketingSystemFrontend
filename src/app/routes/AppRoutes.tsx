@@ -28,6 +28,8 @@ import {
   AdminMyTicketsPage,
   PriorityStatusManagementPage,
   NotFoundPage,
+  AuditReportsPage,
+  MyTicketReportsPage,
 } from "@/pages";
 
 /**
@@ -277,7 +279,32 @@ export const AppRoutes: React.FC = () => {
           />
 
           {/* ============================================================= */}
-          {/* 5. CATCH-ALL 404 FALLBACK                                     */}
+          {/* 5. REPORTS & AUDIT ROUTES                                     */}
+          {/* ============================================================= */}
+          <Route
+            path={ROUTES.AUDIT}
+            element={
+              <ProtectedRoute
+                requiredPermission={PERMISSIONS.TICKET_VIEW}
+                requiredScope="GLOBAL"
+              >
+                <AuditReportsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.MY_TICKET_REPORTS}
+            element={
+              <ProtectedRoute
+                requiredPermission={PERMISSIONS.TICKET_VIEW}
+              >
+                <MyTicketReportsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ============================================================= */}
+          {/* 6. CATCH-ALL 404 FALLBACK                                     */}
           {/* ============================================================= */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

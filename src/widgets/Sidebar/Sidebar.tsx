@@ -572,7 +572,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 )}
 
-                {/* ── Audit / Ticket History: GLOBAL → Org-wide audit, non-GLOBAL → My Ticket History ── */}
+                {/* ── Audit / Ticket Reports: GLOBAL → Org-wide audit, non-GLOBAL → My Ticket Reports ── */}
                 {hasHistoryGlobal ? (
                   <SidebarLink
                     to="/audit"
@@ -581,9 +581,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 ) : hasHistoryAny ? (
                   <SidebarLink
-                    to="/my-ticket-history"
-                    icon="history"
-                    label="My Ticket History"
+                    to="/my-ticket-reports"
+                    icon="description"
+                    label="My Ticket Reports"
                   />
                 ) : null}
 

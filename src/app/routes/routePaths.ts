@@ -21,6 +21,7 @@ export const ROUTES = {
   MY_PERMISSIONS: "/my-permissions",
   MY_TICKET_HISTORY: "/my-ticket-history",
   AUDIT: "/audit",
+  MY_TICKET_REPORTS: "/my-ticket-reports",
   SETTINGS: "/settings",
   PRIORITIES: "/admin/priorities",
   PRIORITY_LEVELS: "/priority-levels",

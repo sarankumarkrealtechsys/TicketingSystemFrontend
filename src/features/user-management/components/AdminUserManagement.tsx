@@ -163,22 +163,22 @@ export const AdminUserManagement: React.FC = () => {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-row items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mb-1">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-medium mb-0.5 sm:mb-1">
             <span>Home</span>
-            <span className="material-symbols-outlined text-[14px]">
+            <span className="material-symbols-outlined text-[13px] sm:text-[14px]">
               chevron_right
             </span>
             <span>Management</span>
-            <span className="material-symbols-outlined text-[14px]">
+            <span className="material-symbols-outlined text-[13px] sm:text-[14px]">
               chevron_right
             </span>
             <span className="text-[#1F3864] dark:text-blue-400 font-semibold">
               Users
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
             User Management
           </h1>
         </div>
@@ -187,9 +187,9 @@ export const AdminUserManagement: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 sm:gap-2 shrink-0 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
               person_add
             </span>
             <span>Create User</span>
@@ -198,7 +198,7 @@ export const AdminUserManagement: React.FC = () => {
       </div>
 
       {/* 4 Quick KPI Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
         <StatCard
           title="Active Users"
           count={activeUsers}

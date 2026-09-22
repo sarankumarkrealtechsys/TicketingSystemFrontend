@@ -14,6 +14,7 @@ export * from "./users/UserManagementPage";
 export * from "./users/UserPerformanceProfilePage";
 export * from "./priorities/PriorityStatusManagementPage";
 export * from "./error/NotFoundPage";
+export * from "./reports";
 
 
 
