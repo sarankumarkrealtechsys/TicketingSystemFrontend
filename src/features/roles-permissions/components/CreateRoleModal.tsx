@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { RoleItem } from '../types';
+import { SelectDropdown } from '@/shared/components';
 
 interface CreateRoleModalProps {
   isOpen: boolean;
@@ -104,20 +105,24 @@ export const CreateRoleModal: React.FC<CreateRoleModalProps> = ({
             >
               Base Role Template (Optional Clone)
             </label>
-            <select
+            <SelectDropdown<string>
               id="new-role-template"
               value={cloneFromRoleId}
-              onChange={(e) => setCloneFromRoleId(e.target.value)}
+              onChange={(val) => setCloneFromRoleId(val)}
+              options={[
+                { value: '', label: 'Start with Empty Matrix', sublabel: 'No permissions granted' },
+                ...existingRoles.map((r) => ({
+                  value: String(r.id),
+                  label: r.name,
+                  sublabel: `${r.permissionCount} permissions configured`,
+                  dotColor: r.status === 'ACTIVE' ? 'bg-emerald-500' : 'bg-gray-400',
+                })),
+              ]}
               disabled={isLoading}
-              className="w-full h-10 px-3 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#1E88E5] focus:border-transparent transition-all"
-            >
-              <option value="">-- Start with Empty Matrix --</option>
-              {existingRoles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name} ({r.permissionCount} permissions)
-                </option>
-              ))}
-            </select>
+              size="md"
+              searchable
+              searchPlaceholder="Search base template..."
+            />
             <p className="text-[11px] text-gray-500 mt-1">
               Copies initial capability grants and scopes from the chosen role.
             </p>

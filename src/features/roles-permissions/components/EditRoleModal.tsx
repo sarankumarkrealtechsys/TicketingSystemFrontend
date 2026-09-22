@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RoleItem, RoleDetail } from '../types';
+import { SelectDropdown } from '@/shared/components';
 
 interface EditRoleModalProps {
   isOpen: boolean;
@@ -138,16 +139,17 @@ export const EditRoleModal: React.FC<EditRoleModalProps> = ({
               >
                 Status
               </label>
-              <select
+              <SelectDropdown<'ACTIVE' | 'INACTIVE'>
                 id="edit-role-status"
                 value={status}
-                onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')}
+                onChange={(val) => setStatus(val)}
+                options={[
+                  { value: 'ACTIVE', label: 'Active', dotColor: 'bg-emerald-500', sublabel: 'Assignable to active users' },
+                  { value: 'INACTIVE', label: 'Inactive (Retired)', dotColor: 'bg-gray-400', sublabel: 'Cannot be assigned to users' },
+                ]}
                 disabled={isLoading}
-                className="w-full h-10 px-3 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:ring-2 focus:ring-[#1E88E5] focus:border-transparent transition-all"
-              >
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive (Retired)</option>
-              </select>
+                size="md"
+              />
             </div>
           )}
 

@@ -20,6 +20,7 @@ import {
   Loader2,
   ChevronDown,
   Edit3,
+  Trash2,
   Search,
   CheckCircle2,
   RotateCw,
@@ -45,9 +46,11 @@ import {
   useAddCollaboratingTeamMutation,
   useRemoveCollaboratingTeamMutation,
   useCreateSubTicketMutation,
+  useUpdateTicketMutation,
+  useDeleteTicketMutation,
 } from "../api";
 import { formatDistanceToNow, format } from "date-fns";
-import { TicketStatusItem, PriorityItem, TicketHistoryItem } from "../types";
+import { TicketStatusItem, PriorityItem, TicketHistoryItem, SubTicketItem } from "../types";
 import { TeamItem } from "@/features/team-management/types";
 
 interface TicketDetailsOverlayProps {
@@ -69,11 +72,11 @@ const safeFormatDate = (dateVal: any, formatStr = "MMM d, yyyy, h:mm a") => {
   }
 };
 
-const safeDistanceToNow = (dateVal: any) => {
-  if (!dateVal) return "just now";
+const safeDistanceToNow = (dateStr?: string | null) => {
+  if (!dateStr) return "";
   try {
-    const d = new Date(dateVal);
-    if (isNaN(d.getTime())) return "just now";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
     return formatDistanceToNow(d, { addSuffix: true });
   } catch {
     return "just now";
@@ -103,8 +106,24 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
   // Modal states
   const [activeModal, setActiveModal] = useState<
-    "status" | "priority" | "reassign" | "close" | "logTime" | "addTeam" | "createSubTicket" | null
+    | "status"
+    | "priority"
+    | "reassign"
+    | "close"
+    | "logTime"
+    | "addTeam"
+    | "createSubTicket"
+    | "editTicket"
+    | "deleteTicket"
+    | "editSubTicket"
+    | "deleteSubTicket"
+    | null
   >(null);
+
+  // Form states for Edit Ticket Modal
+  const [editSummary, setEditSummary] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editRemarks, setEditRemarks] = useState("");
 
   // Dropdown open states inside modals
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -139,12 +158,20 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null);
 
-  // Form states for Sub-Ticket Modal
+  // Form states for Sub-Ticket Modal (Create)
   const [subTicketTeamId, setSubTicketTeamId] = useState<number | "">("");
   const [subTicketSummary, setSubTicketSummary] = useState("");
   const [subTicketDescription, setSubTicketDescription] = useState("");
   const [subTicketPriorityId, setSubTicketPriorityId] = useState<number | "">("");
   const [subTicketAssigneeIds, setSubTicketAssigneeIds] = useState<number[]>([]);
+
+  // Form states for Sub-Ticket Edit / Delete
+  const [editingSubTicket, setEditingSubTicket] = useState<SubTicketItem | null>(null);
+  const [editSubSummary, setEditSubSummary] = useState("");
+  const [editSubDescription, setEditSubDescription] = useState("");
+  const [editSubPriorityId, setEditSubPriorityId] = useState<number | "">("");
+  const [editSubRemarks, setEditSubRemarks] = useState("");
+  const [deletingSubTicket, setDeletingSubTicket] = useState<SubTicketItem | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -199,32 +226,19 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const addTeamMutation = useAddCollaboratingTeamMutation(ticketId || 0);
   const removeTeamMutation = useRemoveCollaboratingTeamMutation(ticketId || 0);
   const createSubTicketMutation = useCreateSubTicketMutation(ticketId || 0);
+  const updateTicketMutation = useUpdateTicketMutation(ticketId || 0);
+  const deleteTicketMutation = useDeleteTicketMutation();
 
-  // Permission evaluation (Admin, Creator, or Assignee)
-  const isUserAdmin = (currentUser?.role?.name || "").toUpperCase() === "ADMIN";
-  const isUserCreator = Number(currentUser?.id) === Number(ticket?.createdById);
-  const isUserAssignee = ticket?.assignees?.some(
-    (a) => Number(a.userId) === Number(currentUser?.id)
-  );
-
-  // Status changes on any ticket/sub-ticket strictly locked to its assigned workers & Admins
-  const canChangeStatus =
-    isUserAdmin || isUserAssignee || Boolean(ticket?.actions?.canChangeStatus && isUserAssignee);
-  const canChangePriority = isUserAdmin;
-  const canReassign = isUserAdmin || isUserCreator || Boolean(ticket?.actions?.canReassign);
-  const canClose =
-    (isUserAdmin && ticket?.status?.behavior !== "CLOSED") ||
-    (isUserAssignee && ticket?.status?.behavior === "RESOLVED") ||
-    Boolean(ticket?.actions?.canClose);
-  const canAddRemark =
-    isUserAdmin || isUserCreator || isUserAssignee || Boolean(ticket?.actions?.canAddRemark);
-  const canLogTime =
-    isUserAdmin || isUserAssignee || Boolean(ticket?.actions?.canLogTime);
-  const canCreateSubTicket =
-    isUserAdmin || isUserCreator || isUserAssignee || Boolean(ticket?.actions?.canCreateSubTicket);
-  const canManageAttachments =
-    isUserAdmin || isUserCreator || isUserAssignee || Boolean(ticket?.actions?.canManageAttachments);
-  const canManageTeams = isUserAdmin || Boolean(ticket?.actions?.canManageTeams);
+  // Capability flags derived strictly from backend computed ticket.actions
+  const canChangeStatus = Boolean(ticket?.actions?.changeStatus);
+  const canChangePriority = Boolean(ticket?.actions?.changePriority);
+  const canReassign = Boolean(ticket?.actions?.reassign);
+  const canClose = Boolean(ticket?.actions?.close);
+  const canAddRemark = Boolean(ticket?.actions?.addRemark);
+  const canLogTime = Boolean(ticket?.actions?.logTime);
+  const canCreateSubTicket = Boolean(ticket?.actions?.createSubticket);
+  const canManageAttachments = Boolean(ticket?.actions?.addAttachment);
+  const canManageTeams = Boolean(ticket?.actions?.manageTeams);
 
   // Time logging calculations with fallback to sum of time entries
   const totalMinutesSpent = useMemo(() => {
@@ -511,6 +525,114 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
       setActionSuccessMsg("Collaborating team removed");
     } catch (err: any) {
       setActionErrorMsg(err.response?.data?.message || "Failed to remove team");
+    }
+  };
+
+  const handleOpenEditModal = () => {
+    if (ticket) {
+      setEditSummary(ticket.summary || "");
+      setEditDescription(ticket.description || "");
+      setEditRemarks("");
+      setActionErrorMsg(null);
+      setActiveModal("editTicket");
+    }
+  };
+
+  const handleOpenDeleteModal = () => {
+    if (ticket) {
+      setActionErrorMsg(null);
+      setActiveModal("deleteTicket");
+    }
+  };
+
+  const handleSubmitEditTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editSummary.trim()) {
+      setActionErrorMsg("Ticket summary is required.");
+      return;
+    }
+    try {
+      await updateTicketMutation.mutateAsync({
+        summary: editSummary.trim(),
+        description: editDescription.trim(),
+        version: ticket?.version,
+        remarks: editRemarks.trim() || undefined,
+      });
+      setActionSuccessMsg("Ticket updated successfully!");
+      setActiveModal(null);
+      await handleRefresh();
+    } catch (err: any) {
+      setActionErrorMsg(err?.response?.data?.message || "Failed to update ticket.");
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ticketId) return;
+    try {
+      await deleteTicketMutation.mutateAsync(ticketId);
+      setActionSuccessMsg("Ticket deleted successfully!");
+      setActiveModal(null);
+      onClose();
+    } catch (err: any) {
+      setActionErrorMsg(err?.response?.data?.message || "Failed to delete ticket.");
+    }
+  };
+
+  const handleOpenEditSubTicketModal = (st: SubTicketItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setEditingSubTicket(st);
+    setEditSubSummary(st.summary || "");
+    setEditSubDescription(st.description || "");
+    setEditSubPriorityId(st.priorityId || st.priority?.id || "");
+    setEditSubRemarks("");
+    setActionErrorMsg(null);
+    setActiveModal("editSubTicket");
+  };
+
+  const handleSubmitEditSubTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSubTicket) return;
+    if (!editSubSummary.trim()) {
+      setActionErrorMsg("Sub-ticket summary is required.");
+      return;
+    }
+    try {
+      await updateTicketMutation.mutateAsync({
+        ticketId: editingSubTicket.id,
+        payload: {
+          summary: editSubSummary.trim(),
+          description: editSubDescription.trim(),
+          priorityId: editSubPriorityId ? Number(editSubPriorityId) : undefined,
+          version: editingSubTicket.version,
+          remarks: editSubRemarks.trim() || undefined,
+        },
+      });
+      setActionSuccessMsg(`Sub-ticket #${editingSubTicket.ticketNumber} updated successfully!`);
+      setActiveModal(null);
+      setEditingSubTicket(null);
+      await handleRefresh();
+    } catch (err: any) {
+      setActionErrorMsg(err?.response?.data?.message || "Failed to update sub-ticket.");
+    }
+  };
+
+  const handleOpenDeleteSubTicketModal = (st: SubTicketItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setDeletingSubTicket(st);
+    setActionErrorMsg(null);
+    setActiveModal("deleteSubTicket");
+  };
+
+  const handleConfirmDeleteSubTicket = async () => {
+    if (!deletingSubTicket) return;
+    try {
+      await deleteTicketMutation.mutateAsync(deletingSubTicket.id);
+      setActionSuccessMsg(`Sub-ticket #${deletingSubTicket.ticketNumber} deleted successfully!`);
+      setActiveModal(null);
+      setDeletingSubTicket(null);
+      await handleRefresh();
+    } catch (err: any) {
+      setActionErrorMsg(err?.response?.data?.message || "Failed to delete sub-ticket.");
     }
   };
 
@@ -1041,7 +1163,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenStatusModal}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1F3864] bg-blue-50/80 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1F3864] bg-blue-50/80 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition shadow-xs cursor-pointer"
                 >
                   <ArrowRightLeft className="w-3.5 h-3.5 text-[#1F3864]" />
                   <span>Change Status</span>
@@ -1053,19 +1175,19 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenPriorityModal}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-900 bg-amber-50/80 border border-amber-200 rounded-md hover:bg-amber-100 hover:border-amber-300 transition shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-900 bg-amber-50/80 border border-amber-200 rounded-md hover:bg-amber-100 hover:border-amber-300 transition shadow-xs cursor-pointer"
                 >
                   <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
                   <span>Change Priority</span>
                 </button>
               )}
 
-              {/* Reassign Action (Admin) */}
+              {/* Reassign Action (Admin or Creator with TICKET_REASSIGN) */}
               {canReassign && (
                 <button
                   type="button"
                   onClick={handleOpenReassignModal}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-900 bg-purple-50/80 border border-purple-200 rounded-md hover:bg-purple-100 hover:border-purple-300 transition shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-900 bg-purple-50/80 border border-purple-200 rounded-md hover:bg-purple-100 hover:border-purple-300 transition shadow-xs cursor-pointer"
                 >
                   <Users className="w-3.5 h-3.5 text-purple-700" />
                   <span>Reassign</span>
@@ -1089,7 +1211,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                 <button
                   type="button"
                   onClick={handleOpenLogTimeModal}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-900 bg-emerald-50/80 border border-emerald-200 rounded-md hover:bg-emerald-100 hover:border-emerald-300 transition shadow-xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-900 bg-emerald-50/80 border border-emerald-200 rounded-md hover:bg-emerald-100 hover:border-emerald-300 transition shadow-xs cursor-pointer"
                 >
                   <Clock className="w-3.5 h-3.5 text-emerald-700" />
                   <span>Log Time</span>
@@ -1097,17 +1219,19 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
               )}
             </div>
 
-            {/* Close Ticket (Danger Action) */}
-            {canClose && (
-              <button
-                type="button"
-                onClick={handleOpenCloseModal}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#D32F2F] hover:bg-[#b71c1c] rounded-md shadow-xs transition ml-auto"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Close Ticket</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2 ml-auto">
+              {/* Close Ticket (Danger Action) */}
+              {canClose && (
+                <button
+                  type="button"
+                  onClick={handleOpenCloseModal}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-[#D32F2F] hover:bg-[#b71c1c] rounded-md shadow-xs transition cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Close Ticket</span>
+                </button>
+              )}
+            </div>
           </div>
         </header>
 
@@ -1415,7 +1539,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                               </p>
                             )}
 
-                            {/* Card Footer: Team, Assignees, Created Date, View Action */}
+                            {/* Card Footer: Team, Assignees, Created Date, Actions */}
                             <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-200/70 text-[11px] text-gray-500 flex-wrap">
                               <div className="flex items-center gap-3 flex-wrap">
                                 {st.team?.name && (
@@ -1448,14 +1572,16 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                                 )}
                               </div>
 
-                              {onSelectTicket && (
-                                <span className="text-[11px] font-bold text-[#1F3864] group-hover:text-blue-700 flex items-center gap-0.5">
-                                  <span>View Details</span>
-                                  <span className="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform">
-                                    arrow_forward
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                {onSelectTicket && (
+                                  <span className="text-[11px] font-bold text-[#1F3864] group-hover:text-blue-700 flex items-center gap-0.5 ml-1">
+                                    <span>View Details</span>
+                                    <span className="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform">
+                                      arrow_forward
+                                    </span>
                                   </span>
-                                </span>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -2700,6 +2826,399 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* ================= MODAL: EDIT TICKET ================= */}
+        {activeModal === "editTicket" && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActiveModal(null);
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-sky-100 rounded-lg text-sky-800">
+                    <Edit3 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Edit Ticket Details</h3>
+                    <p className="text-[11px] text-gray-500 font-mono">#{ticket?.ticketNumber}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveModal(null)}
+                  className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {actionErrorMsg && (
+                <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800 font-medium">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{actionErrorMsg}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmitEditTicket} className="p-4 space-y-4">
+                {/* Summary */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Summary <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editSummary}
+                    onChange={(e) => setEditSummary(e.target.value)}
+                    placeholder="Ticket summary..."
+                    required
+                    className="w-full h-9 px-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs font-medium text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    placeholder="Full description of the issue or request..."
+                    rows={4}
+                    className="w-full p-2.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs font-medium text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                  />
+                </div>
+
+                {/* Optional Update Remarks */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Update Remarks <span className="text-gray-400 font-normal">(Optional audit note)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editRemarks}
+                    onChange={(e) => setEditRemarks(e.target.value)}
+                    placeholder="Reason for changes..."
+                    className="w-full h-9 px-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                  />
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(null)}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-md transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!editSummary.trim() || updateTicketMutation.isPending}
+                    className="px-4 py-1.5 bg-[#1F3864] hover:bg-[#162847] text-white text-xs font-bold rounded-md shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {updateTicketMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Save Changes</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ================= MODAL: DELETE TICKET CONFIRMATION ================= */}
+        {activeModal === "deleteTicket" && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setActiveModal(null);
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-2xl border border-red-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+              <div className="p-4 border-b border-red-100 flex items-center justify-between bg-red-50/70">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-red-100 rounded-lg text-red-700">
+                    <Trash2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-red-900">Delete Ticket</h3>
+                    <p className="text-[11px] text-red-700 font-mono">#{ticket?.ticketNumber}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveModal(null)}
+                  className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <p className="text-xs text-gray-800 font-medium leading-relaxed">
+                  Are you sure you want to permanently delete ticket{" "}
+                  <span className="font-bold text-gray-900">
+                    #{ticket?.ticketNumber} — "{ticket?.summary}"
+                  </span>
+                  ?
+                </p>
+
+                <div className="p-3 bg-red-50/60 border border-red-200/80 rounded-lg text-[11.5px] text-red-800 leading-relaxed space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    <span>Warning: Irreversible Action</span>
+                  </div>
+                  <p className="text-red-700 font-medium">
+                    This will permanently delete this ticket along with all its attachments, time entries, history logs, and custom fields.
+                  </p>
+                </div>
+
+                {actionErrorMsg && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800 font-medium">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{actionErrorMsg}</span>
+                  </div>
+                )}
+
+                {/* Modal Actions */}
+                <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(null)}
+                    disabled={deleteTicketMutation.isPending}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-md transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    disabled={deleteTicketMutation.isPending}
+                    className="px-4 py-1.5 bg-[#D32F2F] hover:bg-[#b71c1c] text-white text-xs font-bold rounded-md shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {deleteTicketMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Delete Permanently</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= MODAL: EDIT SUB-TICKET ================= */}
+        {activeModal === "editSubTicket" && editingSubTicket && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setActiveModal(null);
+                setEditingSubTicket(null);
+              }
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+              <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 bg-sky-100 rounded-lg text-sky-800">
+                    <Edit3 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Edit Sub-Ticket</h3>
+                    <p className="text-[11px] text-gray-500 font-mono">#{editingSubTicket.ticketNumber} (Parent: #{ticket?.ticketNumber})</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModal(null);
+                    setEditingSubTicket(null);
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {actionErrorMsg && (
+                <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800 font-medium">
+                  <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  <span>{actionErrorMsg}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmitEditSubTicket} className="p-4 space-y-4">
+                {/* Summary */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Summary <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editSubSummary}
+                    onChange={(e) => setEditSubSummary(e.target.value)}
+                    placeholder="Sub-ticket summary..."
+                    required
+                    className="w-full h-9 px-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs font-medium text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                  />
+                </div>
+
+                {/* Priority Level */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Priority</label>
+                  <select
+                    value={editSubPriorityId}
+                    onChange={(e) => setEditSubPriorityId(e.target.value ? Number(e.target.value) : "")}
+                    className="w-full h-9 px-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs font-medium text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                  >
+                    {priorities.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.label || p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={editSubDescription}
+                    onChange={(e) => setEditSubDescription(e.target.value)}
+                    placeholder="Sub-ticket description..."
+                    rows={3}
+                    className="w-full p-2.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs font-medium text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                  />
+                </div>
+
+                {/* Optional Update Remarks */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 mb-1">
+                    Update Remarks <span className="text-gray-400 font-normal">(Optional audit note)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editSubRemarks}
+                    onChange={(e) => setEditSubRemarks(e.target.value)}
+                    placeholder="Reason for changes..."
+                    className="w-full h-9 px-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                  />
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModal(null);
+                      setEditingSubTicket(null);
+                    }}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-md transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!editSubSummary.trim() || updateTicketMutation.isPending}
+                    className="px-4 py-1.5 bg-[#1F3864] hover:bg-[#162847] text-white text-xs font-bold rounded-md shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {updateTicketMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Save Sub-Ticket</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ================= MODAL: DELETE SUB-TICKET CONFIRMATION ================= */}
+        {activeModal === "deleteSubTicket" && deletingSubTicket && (
+          <div
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setActiveModal(null);
+                setDeletingSubTicket(null);
+              }
+            }}
+          >
+            <div className="bg-white rounded-xl shadow-2xl border border-red-200 w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+              <div className="p-4 border-b border-red-100 flex items-center justify-between bg-red-50/70">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-red-100 rounded-lg text-red-700">
+                    <Trash2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-red-900">Delete Sub-Ticket</h3>
+                    <p className="text-[11px] text-red-700 font-mono">#{deletingSubTicket.ticketNumber}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModal(null);
+                    setDeletingSubTicket(null);
+                  }}
+                  className="p-1 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-3">
+                <p className="text-xs text-gray-800 font-medium leading-relaxed">
+                  Are you sure you want to permanently delete sub-ticket{" "}
+                  <span className="font-bold text-gray-900">
+                    #{deletingSubTicket.ticketNumber} — "{deletingSubTicket.summary}"
+                  </span>
+                  ?
+                </p>
+
+                <div className="p-3 bg-red-50/60 border border-red-200/80 rounded-lg text-[11.5px] text-red-800 leading-relaxed space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+                    <span>Warning: Irreversible Action</span>
+                  </div>
+                  <p className="text-red-700 font-medium">
+                    This will permanently delete this sub-ticket and update parent resolution progress.
+                  </p>
+                </div>
+
+                {actionErrorMsg && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800 font-medium">
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{actionErrorMsg}</span>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-gray-100 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModal(null);
+                      setDeletingSubTicket(null);
+                    }}
+                    disabled={deleteTicketMutation.isPending}
+                    className="px-3.5 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-md transition cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDeleteSubTicket}
+                    disabled={deleteTicketMutation.isPending}
+                    className="px-4 py-1.5 bg-[#D32F2F] hover:bg-[#b71c1c] text-white text-xs font-bold rounded-md shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {deleteTicketMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    <span>Delete Sub-Ticket</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

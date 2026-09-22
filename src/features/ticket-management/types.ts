@@ -96,16 +96,38 @@ export interface TicketItem {
   createdBy?: UserSummary;
 }
 
+export interface UpdateTicketPayload {
+  summary?: string;
+  description?: string;
+  priorityId?: number;
+  version?: number;
+  remarks?: string;
+  customFields?: Array<{
+    fieldDefinitionId: number;
+    value: any;
+  }>;
+}
+
 export interface TicketActions {
-  canChangeStatus: boolean;
-  canChangePriority: boolean;
-  canReassign: boolean;
-  canClose: boolean;
-  canAddRemark: boolean;
-  canLogTime: boolean;
-  canCreateSubTicket: boolean;
-  canManageAttachments: boolean;
-  canManageTeams: boolean;
+  canChangeStatus?: boolean;
+  canChangePriority?: boolean;
+  canReassign?: boolean;
+  canClose?: boolean;
+  canAddRemark?: boolean;
+  canLogTime?: boolean;
+  canCreateSubTicket?: boolean;
+  canManageAttachments?: boolean;
+  canManageTeams?: boolean;
+  changeStatus?: boolean;
+  changePriority?: boolean;
+  reassign?: boolean;
+  close?: boolean;
+  addRemark?: boolean;
+  logTime?: boolean;
+  createSubticket?: boolean;
+  addAttachment?: boolean;
+  removeAttachment?: boolean;
+  manageTeams?: boolean;
 }
 
 export interface TicketAssigneeItem {
@@ -160,12 +182,16 @@ export interface SubTicketItem {
   ticketNumber: string;
   summary: string;
   description?: string;
+  projectId?: number;
+  teamId?: number;
+  createdById?: number;
+  priorityId?: number;
+  statusId?: number;
+  version?: number;
   createdAt?: string;
   updatedAt?: string;
   resolvedAt?: string | null;
   closedAt?: string | null;
-  statusId?: number;
-  priorityId?: number;
   status?: { id: number; label?: string; name?: string; behavior?: string; color?: string };
   priority?: { id: number; label?: string; name?: string; color?: string; sortOrder?: number };
   team?: { id: number; name: string };
@@ -175,6 +201,7 @@ export interface SubTicketItem {
     user?: UserSummary;
   }>;
   createdBy?: UserSummary;
+  actions?: TicketActions;
 }
 
 export interface TicketDetailResponse {
@@ -188,6 +215,7 @@ export interface TicketDetailResponse {
   statusId: number;
   parentTicketId?: number | null;
   createdById: number;
+  version?: number;
   createdAt: string;
   updatedAt: string;
   closedAt?: string | null;

@@ -16,6 +16,7 @@ import {
   CloseTicketPayload,
   AddRemarkPayload,
   LogTimePayload,
+  UpdateTicketPayload,
 } from "./types";
 import { ProjectItem } from "@/features/project-management/types";
 import { TeamItem, TeamDetailResponse } from "@/features/team-management/types";
@@ -374,6 +375,52 @@ export const useCreateSubTicketMutation = (parentTicketId: number) => {
       queryClient.invalidateQueries({ queryKey: ticketKeys.detail(parentTicketId) });
       queryClient.invalidateQueries({ queryKey: ticketKeys.history(parentTicketId) });
       queryClient.invalidateQueries({ queryKey: ticketKeys.all });
+    },
+  });
+};
+
+// PATCH /api/tickets/:id — Update ticket summary, description, and custom fields
+export const useUpdateTicketMutation = (defaultTicketId?: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, AxiosError<any>, { ticketId?: number; payload: UpdateTicketPayload } | UpdateTicketPayload>({
+    mutationFn: async (arg) => {
+      const targetId = (arg && "payload" in arg && arg.ticketId) ? arg.ticketId : defaultTicketId;
+      const payload = (arg && "payload" in arg) ? arg.payload : arg;
+      const { data } = await apiClient.patch(`/tickets/${targetId}`, payload);
+      return data?.data ?? data;
+    },
+    onSuccess: (_data, arg) => {
+      const targetId = (arg && "payload" in arg && arg.ticketId) ? arg.ticketId : defaultTicketId;
+      if (targetId) {
+        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(targetId) });
+        queryClient.invalidateQueries({ queryKey: ticketKeys.history(targetId) });
+      }
+      if (defaultTicketId && defaultTicketId !== targetId) {
+        queryClient.invalidateQueries({ queryKey: ticketKeys.detail(defaultTicketId) });
+      }
+      queryClient.invalidateQueries({ queryKey: ticketKeys.all });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["user-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    },
+  });
+};
+
+// DELETE /api/tickets/:id — Delete ticket and its associated records
+export const useDeleteTicketMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, AxiosError<any>, number>({
+    mutationFn: async (ticketId: number) => {
+      const { data } = await apiClient.delete(`/tickets/${ticketId}`);
+      return data?.data ?? data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.all });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["user-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
     },
   });
 };

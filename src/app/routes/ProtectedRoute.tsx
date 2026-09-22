@@ -8,8 +8,8 @@ import { ROUTES } from "./routePaths";
 
 export interface ProtectedRouteProps {
   children?: ReactNode;
-  /** Optional granular permission requirement (e.g. "DASHBOARD_VIEW", "ROLE_MANAGE") */
-  requiredPermission?: PermissionKey | string;
+  /** Optional granular permission requirement (e.g. "DASHBOARD_VIEW", "ROLE_MANAGE" or array of keys) */
+  requiredPermission?: PermissionKey | PermissionKey[] | string | string[];
   /** Optional required scope — when set, user must hold the permission at this exact scope */
   requiredScope?: string;
   /** Custom scope resolver callback mirroring backend scope resolvers */
@@ -42,8 +42,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const hasPermission = useMemo(() => {
     if (!requiredPermission) return true;
     if (!permissions) return false;
-    const scopes = permissions[requiredPermission];
-    if (!scopes || scopes.length === 0) return false;
+
+    const keys = Array.isArray(requiredPermission)
+      ? requiredPermission
+      : [requiredPermission];
+
+    const scopes = keys.flatMap((k) => permissions[k] || []);
+    if (scopes.length === 0) return false;
 
     // If custom scope resolver provided, delegate to it
     if (resolveScope) {

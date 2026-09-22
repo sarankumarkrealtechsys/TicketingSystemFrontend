@@ -12,6 +12,8 @@ import {
   useDeleteRoleMutation,
 } from '../api';
 import { RoleItem, PermissionItem, PermissionScope } from '../types';
+import { PERMISSION_ALLOWED_SCOPES } from '@/features/auth';
+import { SelectDropdown } from '@/shared/components';
 import CreateRoleModal from './CreateRoleModal';
 import EditRoleModal from './EditRoleModal';
 import DeleteRoleModal from './DeleteRoleModal';
@@ -20,6 +22,27 @@ import RolesGuideModal from './RolesGuideModal';
 import MyPermissionsView from './MyPermissionsView';
 
 const SCOPES: PermissionScope[] = ['GLOBAL', 'DEPARTMENT', 'TEAM', 'ASSIGNED', 'OWN'];
+
+const SCOPE_LABELS: Record<PermissionScope, string> = {
+  GLOBAL: 'Global (Org-wide)',
+  DEPARTMENT: 'Department Only',
+  TEAM: 'Team Only',
+  ASSIGNED: 'Assigned Only',
+  OWN: 'Own / Created Only',
+};
+
+const CATEGORY_ICONS: Record<string, string> = {
+  User: 'person',
+  Department: 'domain',
+  Team: 'group',
+  Project: 'folder_open',
+  Priority: 'flag',
+  Status: 'checklist',
+  Ticket: 'confirmation_number',
+  Dashboard: 'dashboard',
+  Role: 'admin_panel_settings',
+  System: 'settings',
+};
 
 export const AdminRolesPermissions: React.FC = () => {
   // View mode switcher: 'admin' (Matrix) or 'user' (My Permissions)
@@ -67,22 +90,21 @@ export const AdminRolesPermissions: React.FC = () => {
   const [roleSearchQuery, setRoleSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
 
-  // Local state for Permission Matrix checkboxes: Set of `${permissionId}_${scope}`
-  const [activeGrants, setActiveGrants] = useState<Set<string>>(new Set());
+  // Local state for Permission Matrix: Record<permissionId, PermissionScope>
+  const [selectedGrants, setSelectedGrants] = useState<Record<number, PermissionScope>>({});
   const [isDirty, setIsDirty] = useState(false);
 
   // Sync server role permissions into local state whenever selected role changes
   useEffect(() => {
     if (roleDetail && roleDetail.rolePermissions) {
-      const grantSet = new Set<string>();
+      const grants: Record<number, PermissionScope> = {};
       roleDetail.rolePermissions.forEach((rp) => {
-        if (rp.scope) {
-          grantSet.add(`${rp.permissionId}_${rp.scope}`);
-        } else {
-          grantSet.add(`${rp.permissionId}_GLOBAL`);
+        // If multiple entries exist, keep GLOBAL if present, or first scope
+        if (!grants[rp.permissionId] || rp.scope === 'GLOBAL') {
+          grants[rp.permissionId] = (rp.scope as PermissionScope) || 'GLOBAL';
         }
       });
-      setActiveGrants(grantSet);
+      setSelectedGrants(grants);
       setIsDirty(false);
     }
   }, [roleDetail]);
@@ -132,45 +154,49 @@ export const AdminRolesPermissions: React.FC = () => {
     return roles.find((r) => r.id === selectedRoleId) || null;
   }, [roles, selectedRoleId]);
 
-  // Checkbox toggle handler
-  const handleToggleScope = (permissionId: number, scope: PermissionScope) => {
-    const key = `${permissionId}_${scope}`;
-    setActiveGrants((prev) => {
-      const next = new Set(prev);
-      if (scope === 'GLOBAL') {
-        if (next.has(key)) {
-          // Unchecking GLOBAL
-          next.delete(key);
-        } else {
-          // Checking GLOBAL: clear narrower scopes since GLOBAL covers all levels
-          SCOPES.forEach((s) => next.delete(`${permissionId}_${s}`));
-          next.add(key);
-        }
+  // Checkbox toggle handler for single permission
+  const handleTogglePermission = (permissionId: number, permKey: string) => {
+    const allowedScopes = PERMISSION_ALLOWED_SCOPES[permKey] || ['GLOBAL'];
+    setSelectedGrants((prev) => {
+      const next = { ...prev };
+      if (next[permissionId]) {
+        delete next[permissionId];
       } else {
-        // Checking or unchecking a narrower scope (DEPARTMENT, TEAM, ASSIGNED, OWN)
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          // When a narrower scope is selected, remove GLOBAL
-          next.delete(`${permissionId}_GLOBAL`);
-          next.add(key);
-        }
+        const defaultScope = allowedScopes.includes('OWN')
+          ? 'OWN'
+          : allowedScopes[allowedScopes.length - 1] || 'GLOBAL';
+        next[permissionId] = defaultScope;
       }
       return next;
     });
     setIsDirty(true);
   };
 
-  // Quick toggle all scopes for a permission
-  const handleToggleAllScopesForPerm = (permissionId: number) => {
-    const isGlobal = activeGrants.has(`${permissionId}_GLOBAL`);
-    const hasAny = SCOPES.some((s) => activeGrants.has(`${permissionId}_${s}`));
-    setActiveGrants((prev) => {
-      const next = new Set(prev);
-      if (hasAny) {
-        SCOPES.forEach((s) => next.delete(`${permissionId}_${s}`));
+  // Scope change dropdown handler
+  const handleScopeChange = (permissionId: number, scope: PermissionScope) => {
+    setSelectedGrants((prev) => ({
+      ...prev,
+      [permissionId]: scope,
+    }));
+    setIsDirty(true);
+  };
+
+  // Category Bulk Toggle
+  const handleToggleCategory = (items: PermissionItem[]) => {
+    const allEnabled = items.every((p) => Boolean(selectedGrants[p.id]));
+    setSelectedGrants((prev) => {
+      const next = { ...prev };
+      if (allEnabled) {
+        items.forEach((p) => delete next[p.id]);
       } else {
-        next.add(`${permissionId}_GLOBAL`);
+        items.forEach((p) => {
+          if (!next[p.id]) {
+            const allowedScopes = PERMISSION_ALLOWED_SCOPES[p.key] || ['GLOBAL'];
+            next[p.id] = allowedScopes.includes('OWN')
+              ? 'OWN'
+              : allowedScopes[allowedScopes.length - 1] || 'GLOBAL';
+          }
+        });
       }
       return next;
     });
@@ -180,15 +206,13 @@ export const AdminRolesPermissions: React.FC = () => {
   // Discard changes
   const handleDiscard = () => {
     if (roleDetail && roleDetail.rolePermissions) {
-      const grantSet = new Set<string>();
+      const grants: Record<number, PermissionScope> = {};
       roleDetail.rolePermissions.forEach((rp) => {
-        if (rp.scope) {
-          grantSet.add(`${rp.permissionId}_${rp.scope}`);
-        } else {
-          grantSet.add(`${rp.permissionId}_GLOBAL`);
+        if (!grants[rp.permissionId] || rp.scope === 'GLOBAL') {
+          grants[rp.permissionId] = (rp.scope as PermissionScope) || 'GLOBAL';
         }
       });
-      setActiveGrants(grantSet);
+      setSelectedGrants(grants);
       setIsDirty(false);
       showToast('Modifications discarded. Reverted to saved matrix.');
     }
@@ -200,10 +224,8 @@ export const AdminRolesPermissions: React.FC = () => {
 
     try {
       const payloadPermissions: Array<{ permissionId: number; scope: PermissionScope }> = [];
-      activeGrants.forEach((grantKey) => {
-        const [pIdStr, scopeStr] = grantKey.split('_');
+      Object.entries(selectedGrants).forEach(([pIdStr, scope]) => {
         const permissionId = parseInt(pIdStr, 10);
-        const scope = scopeStr as PermissionScope;
         if (!isNaN(permissionId) && scope) {
           payloadPermissions.push({ permissionId, scope });
         }
@@ -753,32 +775,26 @@ export const AdminRolesPermissions: React.FC = () => {
                             info
                           </span>
                           <span className="font-medium text-[11px]">
-                            Scope Hierarchy: Global &gt; Department &gt; Team &gt; Assigned &gt; Own
+                            Scope Granularity: Global grants tenant-wide access. Scoped options restrict access to assigned or created records.
                           </span>
                         </div>
                         <div className="flex items-center gap-4 text-[11px] text-gray-500 font-medium">
                           <span className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-[#1F3864]" /> Global
+                            <span className="w-2 h-2 rounded-full bg-[#1F3864]" /> Global (Org-wide)
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-[#1E88E5]" /> Dept
+                            <span className="w-2 h-2 rounded-full bg-[#1E88E5]" /> Dept / Team
                           </span>
                           <span className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full bg-slate-500" /> Team / Own
+                            <span className="w-2 h-2 rounded-full bg-slate-500" /> Assigned / Own
                           </span>
                         </div>
                       </div>
 
                       {/* Fixed Table Column Header Row */}
                       <div className="grid grid-cols-12 px-5 py-2.5 bg-[#F1F5F9] text-[#334155] text-[11px] font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0]">
-                        <div className="col-span-6 sm:col-span-7">Capability & Description</div>
-                        <div className="col-span-6 sm:col-span-5 grid grid-cols-5 text-center">
-                          <span title="Global unbounded access">Global</span>
-                          <span title="Department scope">Dept</span>
-                          <span title="Team scope">Team</span>
-                          <span title="Assigned tickets scope">Assigned</span>
-                          <span title="Own created scope">Own</span>
-                        </div>
+                        <div className="col-span-7 sm:col-span-8">Capability & Description</div>
+                        <div className="col-span-5 sm:col-span-4 text-right">Scope Configuration</div>
                       </div>
                     </div>
 
@@ -792,65 +808,113 @@ export const AdminRolesPermissions: React.FC = () => {
                       ) : (
                         Object.entries(categorizedPermissions).map(([category, items]) => {
                           const categoryGrantsCount = items.reduce((acc, p) => {
-                            const isGranted = SCOPES.some((s) => activeGrants.has(`${p.id}_${s}`));
-                            return isGranted ? acc + 1 : acc;
+                            return selectedGrants[p.id] ? acc + 1 : acc;
                           }, 0);
+                          const allCategoryEnabled = items.length > 0 && categoryGrantsCount === items.length;
 
                           return (
                             <div key={category} className="flex flex-col">
                               {/* Sticky Category Header Row */}
                               <div className="bg-[#F8FAFC] px-5 py-2 flex items-center justify-between border-b border-[#E2E8F0] sticky top-0 z-10 shadow-xs">
                                 <div className="flex items-center gap-2">
+                                  <span className="material-symbols-outlined text-[18px] text-[#1F3864]">
+                                    {CATEGORY_ICONS[category] || 'tune'}
+                                  </span>
                                   <span className="font-bold text-xs text-[#1F3864] uppercase tracking-wide">
                                     {category} Management
                                   </span>
                                 </div>
-                                <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                                  {categoryGrantsCount} / {items.length} Enabled
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleCategory(items)}
+                                    className="text-[11px] text-[#1E88E5] hover:text-[#1565C0] font-medium hover:underline cursor-pointer"
+                                  >
+                                    {allCategoryEnabled ? 'Revoke All' : 'Grant All'}
+                                  </button>
+                                  <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    {categoryGrantsCount} / {items.length} Enabled
+                                  </span>
+                                </div>
                               </div>
 
                               {/* Permission Rows */}
                               {items.map((perm) => {
-                                const hasAnyGrant = SCOPES.some((s) => activeGrants.has(`${perm.id}_${s}`));
+                                const isEnabled = Boolean(selectedGrants[perm.id]);
+                                const currentScope = selectedGrants[perm.id] || 'GLOBAL';
+                                const allowedScopes: PermissionScope[] =
+                                  PERMISSION_ALLOWED_SCOPES[perm.key] || ['GLOBAL'];
+                                const isSingleGlobal =
+                                  allowedScopes.length === 1 && allowedScopes[0] === 'GLOBAL';
 
                                 return (
                                   <div
                                     key={perm.id}
-                                    className="grid grid-cols-12 px-5 py-3 items-center hover:bg-[#F8FAFC] transition-colors border-b border-[#F1F5F9] last:border-b-0"
+                                    className={`grid grid-cols-12 px-5 py-3 items-center hover:bg-[#F8FAFC] transition-colors border-b border-[#F1F5F9] last:border-b-0 ${
+                                      isEnabled ? 'bg-white' : 'bg-gray-50/40'
+                                    }`}
                                   >
-                                    <div className="col-span-6 sm:col-span-7 pr-3">
-                                      <div className="flex items-center gap-2">
+                                    {/* Checkbox + Title & Description */}
+                                    <div className="col-span-7 sm:col-span-8 pr-3 flex items-start gap-3">
+                                      <input
+                                        type="checkbox"
+                                        checked={isEnabled}
+                                        onChange={() => handleTogglePermission(perm.id, perm.key)}
+                                        className="w-4 h-4 mt-0.5 accent-[#1F3864] rounded cursor-pointer transition-transform active:scale-95 shrink-0"
+                                        title={`Toggle ${perm.key}`}
+                                      />
+                                      <div>
                                         <span
-                                          onClick={() => handleToggleAllScopesForPerm(perm.id)}
+                                          onClick={() => handleTogglePermission(perm.id, perm.key)}
                                           className={`font-semibold text-xs cursor-pointer hover:underline ${
-                                            hasAnyGrant ? 'text-[#0F172A]' : 'text-gray-500'
+                                            isEnabled ? 'text-[#0F172A]' : 'text-gray-500'
                                           }`}
-                                          title="Click to toggle all scopes for this capability"
                                         >
                                           {perm.key.replace(/_/g, ' ')}
                                         </span>
+                                        <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
+                                          {perm.description}
+                                        </p>
                                       </div>
-                                      <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
-                                        {perm.description}
-                                      </p>
                                     </div>
 
-                                    {/* 5 Scope Checkboxes */}
-                                    <div className="col-span-6 sm:col-span-5 grid grid-cols-5 items-center justify-items-center">
-                                      {SCOPES.map((scope) => {
-                                        const isChecked = activeGrants.has(`${perm.id}_${scope}`);
-                                        return (
-                                          <input
-                                            key={scope}
-                                            type="checkbox"
-                                            checked={isChecked}
-                                            onChange={() => handleToggleScope(perm.id, scope)}
-                                            className="w-4 h-4 accent-[#1F3864] rounded cursor-pointer transition-transform active:scale-95"
-                                            title={`${perm.key} (${scope})`}
-                                          />
-                                        );
-                                      })}
+                                    {/* Scope Configuration */}
+                                    <div className="col-span-5 sm:col-span-4 flex items-center justify-end">
+                                      {!isEnabled ? (
+                                        <span className="text-[11px] text-gray-400 italic">
+                                          Disabled
+                                        </span>
+                                      ) : isSingleGlobal ? (
+                                        <span
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-700 border border-gray-200 shadow-2xs"
+                                          title="This permission only supports Global scope across the entire organization"
+                                        >
+                                          <span className="material-symbols-outlined text-[13px] text-gray-500">
+                                            lock
+                                          </span>
+                                          <span>Global (Locked)</span>
+                                        </span>
+                                      ) : (
+                                        <SelectDropdown<PermissionScope>
+                                          value={currentScope}
+                                          onChange={(val) => handleScopeChange(perm.id, val)}
+                                          options={allowedScopes.map((scope) => ({
+                                            value: scope,
+                                            label: SCOPE_LABELS[scope] || scope,
+                                            dotColor:
+                                              scope === 'GLOBAL'
+                                                ? 'bg-[#1F3864]'
+                                                : scope === 'DEPARTMENT'
+                                                ? 'bg-[#1E88E5]'
+                                                : scope === 'TEAM'
+                                                ? 'bg-purple-600'
+                                                : 'bg-emerald-600',
+                                          }))}
+                                          size="sm"
+                                          className="w-48"
+                                          triggerClassName="!h-8 !py-1 !px-2.5 !text-xs !font-semibold !rounded-lg !border-gray-200 hover:!border-gray-300 shadow-2xs"
+                                        />
+                                      )}
                                     </div>
                                   </div>
                                 );

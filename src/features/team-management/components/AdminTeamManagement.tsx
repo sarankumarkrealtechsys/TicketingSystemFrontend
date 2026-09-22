@@ -12,7 +12,7 @@ import { CreateTeamModal } from "./CreateTeamModal";
 import { EditTeamModal } from "./EditTeamModal";
 import { TeamRosterDrawer } from "./TeamRosterDrawer";
 import { ReassignDepartmentModal } from "./ReassignDepartmentModal";
-import { SelectDropdown, SelectOption, StatCard } from "@/shared/components";
+import { SelectDropdown, SelectOption, StatCard, Can } from "@/shared/components";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
   { value: "all", label: "All Statuses" },
@@ -224,26 +224,30 @@ export const AdminTeamManagement: React.FC = () => {
 
         {/* Action button */}
         <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsReassignOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-[#D1D5DB] text-gray-700 rounded-lg font-semibold text-xs shadow-sm transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px] text-[#0e61a1]">
-              swap_horiz
-            </span>
-            <span>Department Change</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.99] text-white rounded-lg font-semibold text-xs shadow-sm transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              group_add
-            </span>
-            <span>New Team</span>
-          </button>
+          <Can permission="TEAM_UPDATE">
+            <button
+              type="button"
+              onClick={() => setIsReassignOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 border border-[#D1D5DB] text-gray-700 rounded-lg font-semibold text-xs shadow-sm transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px] text-[#0e61a1]">
+                swap_horiz
+              </span>
+              <span>Department Change</span>
+            </button>
+          </Can>
+          <Can permission="TEAM_CREATE">
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.99] text-white rounded-lg font-semibold text-xs shadow-sm transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                group_add
+              </span>
+              <span>New Team</span>
+            </button>
+          </Can>
         </div>
       </div>
 
@@ -458,70 +462,71 @@ export const AdminTeamManagement: React.FC = () => {
                                 </span>
                               </button>
 
-                              {/* Change Department */}
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTeamForReassign(t)}
-                                title="Change Department"
-                                className="p-1 rounded text-purple-600 hover:bg-purple-50 transition-colors cursor-pointer"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  swap_horiz
-                                </span>
-                              </button>
-
-                              {/* Edit Team */}
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTeamForEdit(t)}
-                                title="Edit Team"
-                                className="p-1 rounded text-gray-600 hover:bg-gray-100 transition-colors"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  edit
-                                </span>
-                              </button>
-
-                              {/* Archive / Restore Team */}
-                              {isActive ? (
+                              {/* Change Department & Edit Team */}
+                              <Can permission="TEAM_UPDATE">
                                 <button
                                   type="button"
-                                  onClick={() => openConfirmModal(t, "archive")}
-                                  title="Archive / Retire Team"
-                                  className="p-1 rounded text-amber-600 hover:bg-amber-50 transition-colors"
+                                  onClick={() => setSelectedTeamForReassign(t)}
+                                  title="Change Department"
+                                  className="p-1 rounded text-purple-600 hover:bg-purple-50 transition-colors cursor-pointer"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">
-                                    archive
+                                    swap_horiz
                                   </span>
                                 </button>
-                              ) : (
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    openConfirmModal(t, "unarchive")
-                                  }
-                                  title="Unarchive / Restore Team"
-                                  className="p-1 rounded text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                  onClick={() => setSelectedTeamForEdit(t)}
+                                  title="Edit Team"
+                                  className="p-1 rounded text-gray-600 hover:bg-gray-100 transition-colors"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">
-                                    unarchive
+                                    edit
                                   </span>
                                 </button>
-                              )}
+                              </Can>
 
-                              {/* Permanently Delete Team (Only visible when archived) */}
-                              {!isActive && (
-                                <button
-                                  type="button"
-                                  onClick={() => openConfirmModal(t, "delete")}
-                                  title="Permanently Delete Team"
-                                  className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                  <span className="material-symbols-outlined text-[18px]">
-                                    delete
-                                  </span>
-                                </button>
-                              )}
+                              {/* Archive / Restore / Delete Team */}
+                              <Can permission="TEAM_DELETE">
+                                {isActive ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openConfirmModal(t, "archive")}
+                                    title="Archive / Retire Team"
+                                    className="p-1 rounded text-amber-600 hover:bg-amber-50 transition-colors"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      archive
+                                    </span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openConfirmModal(t, "unarchive")
+                                    }
+                                    title="Unarchive / Restore Team"
+                                    className="p-1 rounded text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      unarchive
+                                    </span>
+                                  </button>
+                                )}
+
+                                {!isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openConfirmModal(t, "delete")}
+                                    title="Permanently Delete Team"
+                                    className="p-1 rounded text-red-600 hover:bg-red-50 transition-colors"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      delete
+                                    </span>
+                                  </button>
+                                )}
+                              </Can>
                             </div>
                           </td>
                         </tr>
@@ -629,61 +634,65 @@ export const AdminTeamManagement: React.FC = () => {
                           </span>
                           <span>Roster</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedTeamForReassign(t)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">
-                            swap_horiz
-                          </span>
-                          <span>Dept</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedTeamForEdit(t)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">
-                            edit
-                          </span>
-                          <span>Edit</span>
-                        </button>
-                        {isActive ? (
+                        <Can permission="TEAM_UPDATE">
                           <button
                             type="button"
-                            onClick={() => openConfirmModal(t, "archive")}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                            onClick={() => setSelectedTeamForReassign(t)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[15px]">
-                              archive
+                              swap_horiz
                             </span>
-                            <span>Archive</span>
+                            <span>Dept</span>
                           </button>
-                        ) : (
                           <button
                             type="button"
-                            onClick={() => openConfirmModal(t, "unarchive")}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                            onClick={() => setSelectedTeamForEdit(t)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors"
                           >
                             <span className="material-symbols-outlined text-[15px]">
-                              unarchive
+                              edit
                             </span>
-                            <span>Restore</span>
+                            <span>Edit</span>
                           </button>
-                        )}
-                        {!isActive && (
-                          <button
-                            type="button"
-                            onClick={() => openConfirmModal(t, "delete")}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                          >
-                            <span className="material-symbols-outlined text-[15px]">
-                              delete
-                            </span>
-                            <span>Delete</span>
-                          </button>
-                        )}
+                        </Can>
+                        <Can permission="TEAM_DELETE">
+                          {isActive ? (
+                            <button
+                              type="button"
+                              onClick={() => openConfirmModal(t, "archive")}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">
+                                archive
+                              </span>
+                              <span>Archive</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => openConfirmModal(t, "unarchive")}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">
+                                unarchive
+                              </span>
+                              <span>Restore</span>
+                            </button>
+                          )}
+                          {!isActive && (
+                            <button
+                              type="button"
+                              onClick={() => openConfirmModal(t, "delete")}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">
+                                delete
+                              </span>
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </Can>
                       </div>
                     </div>
                   );

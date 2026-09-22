@@ -4,7 +4,7 @@ import { useUsersListQuery } from "../api";
 import { UserListItem } from "../types";
 import { useDepartmentsQuery } from "@/features/department-management";
 import { useRolesQuery } from "@/features/roles-permissions";
-import { StatCard, SelectDropdown, SelectOption } from "@/shared/components";
+import { StatCard, SelectDropdown, SelectOption, Can } from "@/shared/components";
 import { CreateUserModal } from "./CreateUserModal";
 import { EditUserModal } from "./EditUserModal";
 import { ManageUserTeamsModal } from "./ManageUserTeamsModal";
@@ -183,16 +183,18 @@ export const AdminUserManagement: React.FC = () => {
           </h1>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer"
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            person_add
-          </span>
-          <span>Create User</span>
-        </button>
+        <Can permission="USER_CREATE">
+          <button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              person_add
+            </span>
+            <span>Create User</span>
+          </button>
+        </Can>
       </div>
 
       {/* 4 Quick KPI Stat Cards */}
@@ -495,68 +497,74 @@ export const AdminUserManagement: React.FC = () => {
                         {/* Actions */}
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedUserForEdit(u);
-                              }}
-                              className="p-1.5 text-gray-500 hover:text-[#1F3864] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                              title="Edit user details"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">
-                                edit
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedUserForTeams(u);
-                              }}
-                              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
-                              title="Manage team memberships"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">
-                                groups
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedUserForDeactivate(u);
-                              }}
-                              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                isActive
-                                  ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                                  : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                              }`}
-                              title={
-                                isActive
-                                  ? "Deactivate user account"
-                                  : "Reactivate user account"
-                              }
-                            >
-                              <span className="material-symbols-outlined text-[18px]">
-                                {isActive ? "person_off" : "person_check"}
-                              </span>
-                            </button>
-                            {!isActive && (
+                            <Can permission="USER_UPDATE">
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedUserForDelete(u);
+                                  setSelectedUserForEdit(u);
                                 }}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
-                                title="Delete user permanently"
+                                className="p-1.5 text-gray-500 hover:text-[#1F3864] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                title="Edit user details"
                               >
                                 <span className="material-symbols-outlined text-[18px]">
-                                  delete
+                                  edit
                                 </span>
                               </button>
-                            )}
+                            </Can>
+                            <Can permission="TEAM_MEMBERSHIP_MANAGE">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedUserForTeams(u);
+                                }}
+                                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition-colors cursor-pointer"
+                                title="Manage team memberships"
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  groups
+                                </span>
+                              </button>
+                            </Can>
+                            <Can permission="USER_DELETE">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedUserForDeactivate(u);
+                                }}
+                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                  isActive
+                                    ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                    : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                }`}
+                                title={
+                                  isActive
+                                    ? "Deactivate user account"
+                                    : "Reactivate user account"
+                                }
+                              >
+                                <span className="material-symbols-outlined text-[18px]">
+                                  {isActive ? "person_off" : "person_check"}
+                                </span>
+                              </button>
+                              {!isActive && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedUserForDelete(u);
+                                  }}
+                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors cursor-pointer"
+                                  title="Delete user permanently"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    delete
+                                  </span>
+                                </button>
+                              )}
+                            </Can>
                           </div>
                         </td>
                       </tr>
@@ -643,64 +651,70 @@ export const AdminUserManagement: React.FC = () => {
                     </div>
 
                     <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-200 dark:border-slate-700">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedUserForEdit(u);
-                        }}
-                        className="px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">
-                          edit
-                        </span>
-                        <span>Edit</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedUserForTeams(u);
-                        }}
-                        className="px-2.5 py-1 text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-lg hover:bg-blue-100 flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">
-                          groups
-                        </span>
-                        <span>Teams</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedUserForDeactivate(u);
-                        }}
-                        className={`px-2.5 py-1 text-xs rounded-lg border flex items-center gap-1 ${
-                          isActive
-                            ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 hover:bg-amber-100"
-                            : "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 hover:bg-emerald-100"
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-[14px]">
-                          {isActive ? "person_off" : "person_check"}
-                        </span>
-                        <span>{isActive ? "Deactivate" : "Activate"}</span>
-                      </button>
-                      {!isActive && (
+                      <Can permission="USER_UPDATE">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedUserForDelete(u);
+                            setSelectedUserForEdit(u);
                           }}
-                          className="px-2.5 py-1 text-xs rounded-lg border flex items-center gap-1 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 hover:bg-red-100"
+                          className="px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 flex items-center gap-1"
                         >
                           <span className="material-symbols-outlined text-[14px]">
-                            delete
+                            edit
                           </span>
-                          <span>Delete</span>
+                          <span>Edit</span>
                         </button>
-                      )}
+                      </Can>
+                      <Can permission="TEAM_MEMBERSHIP_MANAGE">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedUserForTeams(u);
+                          }}
+                          className="px-2.5 py-1 text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-lg hover:bg-blue-100 flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">
+                            groups
+                          </span>
+                          <span>Teams</span>
+                        </button>
+                      </Can>
+                      <Can permission="USER_DELETE">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedUserForDeactivate(u);
+                          }}
+                          className={`px-2.5 py-1 text-xs rounded-lg border flex items-center gap-1 ${
+                            isActive
+                              ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 hover:bg-amber-100"
+                              : "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 hover:bg-emerald-100"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[14px]">
+                            {isActive ? "person_off" : "person_check"}
+                          </span>
+                          <span>{isActive ? "Deactivate" : "Activate"}</span>
+                        </button>
+                        {!isActive && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedUserForDelete(u);
+                            }}
+                            className="px-2.5 py-1 text-xs rounded-lg border flex items-center gap-1 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 hover:bg-red-100"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">
+                              delete
+                            </span>
+                            <span>Delete</span>
+                          </button>
+                        )}
+                      </Can>
                     </div>
                   </div>
                 );

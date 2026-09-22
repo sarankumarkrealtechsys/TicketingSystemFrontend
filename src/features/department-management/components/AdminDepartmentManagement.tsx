@@ -12,7 +12,7 @@ import { CreateDepartmentModal } from "./CreateDepartmentModal";
 import { EditDepartmentModal } from "./EditDepartmentModal";
 import { ViewDepartmentModal } from "./ViewDepartmentModal";
 import { DepartmentDonutChart } from "./DepartmentDonutChart";
-import { SelectDropdown, SelectOption, StatCard } from "@/shared/components";
+import { SelectDropdown, SelectOption, StatCard, Can } from "@/shared/components";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
   { value: "all", label: "All Departments" },
@@ -179,16 +179,18 @@ export const AdminDepartmentManagement: React.FC = () => {
             </h1>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsCreateOpen(true)}
-            className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 active:scale-[0.98]"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              corporate_fare
-            </span>
-            <span>New Department</span>
-          </button>
+          <Can permission="DEPARTMENT_CREATE">
+            <button
+              type="button"
+              onClick={() => setIsCreateOpen(true)}
+              className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 active:scale-[0.98]"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                corporate_fare
+              </span>
+              <span>New Department</span>
+            </button>
+          </Can>
         </div>
 
         {/* TOP ROW: 4 Overview KPI Cards */}
@@ -394,40 +396,44 @@ export const AdminDepartmentManagement: React.FC = () => {
                                   visibility
                                 </span>
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setSelectedDeptForEdit(d)}
-                                className="p-1.5 text-gray-500 hover:text-[#1F3864] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                                title="Edit department"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  edit
-                                </span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                  isActive
-                                    ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                                    : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                                }`}
-                                title={isActive ? "Archive department" : "Unarchive department"}
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  {isActive ? "archive" : "unarchive"}
-                                </span>
-                              </button>
-                              {!isActive && (
+                              <Can permission="DEPARTMENT_UPDATE">
                                 <button
                                   type="button"
-                                  onClick={() => openConfirmModal(d, "delete")}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
-                                  title="Permanently Delete department"
+                                  onClick={() => setSelectedDeptForEdit(d)}
+                                  className="p-1.5 text-gray-500 hover:text-[#1F3864] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                                  title="Edit department"
                                 >
-                                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    edit
+                                  </span>
                                 </button>
-                              )}
+                              </Can>
+                              <Can permission="DEPARTMENT_DELETE">
+                                <button
+                                  type="button"
+                                  onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    isActive
+                                      ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                      : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                  }`}
+                                  title={isActive ? "Archive department" : "Unarchive department"}
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    {isActive ? "archive" : "unarchive"}
+                                  </span>
+                                </button>
+                                {!isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openConfirmModal(d, "delete")}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
+                                    title="Permanently Delete department"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                  </button>
+                                )}
+                              </Can>
                             </div>
                           </td>
                         </tr>
@@ -511,38 +517,42 @@ export const AdminDepartmentManagement: React.FC = () => {
                           <span className="material-symbols-outlined text-[16px]">visibility</span>
                           <span>View</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedDeptForEdit(d)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">edit</span>
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
-                            isActive
-                              ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40"
-                              : "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[16px]">
-                            {isActive ? "archive" : "unarchive"}
-                          </span>
-                          <span>{isActive ? "Archive" : "Restore"}</span>
-                        </button>
-                        {!isActive && (
+                        <Can permission="DEPARTMENT_UPDATE">
                           <button
                             type="button"
-                            onClick={() => openConfirmModal(d, "delete")}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 flex items-center gap-1"
+                            onClick={() => setSelectedDeptForEdit(d)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 flex items-center gap-1"
                           >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                            <span>Delete</span>
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                            <span>Edit</span>
                           </button>
-                        )}
+                        </Can>
+                        <Can permission="DEPARTMENT_DELETE">
+                          <button
+                            type="button"
+                            onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
+                              isActive
+                                ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40"
+                                : "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              {isActive ? "archive" : "unarchive"}
+                            </span>
+                            <span>{isActive ? "Archive" : "Restore"}</span>
+                          </button>
+                          {!isActive && (
+                            <button
+                              type="button"
+                              onClick={() => openConfirmModal(d, "delete")}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </Can>
                       </div>
                     </div>
                   );

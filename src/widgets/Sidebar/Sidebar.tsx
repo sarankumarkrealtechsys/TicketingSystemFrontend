@@ -570,12 +570,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 )}
 
-                {/* ── My Permissions (always visible for authenticated users) ── */}
-                <SidebarLink
-                  to="/my-permissions"
-                  icon="verified_user"
-                  label="My Permissions"
-                />
+                {/* ── My Permissions (shown to non-admin users without Roles & Permissions management) ── */}
+                {!hasRoleManage && (
+                  <SidebarLink
+                    to="/my-permissions"
+                    icon="verified_user"
+                    label="My Permissions"
+                  />
+                )}
               </>
             )}
           </nav>

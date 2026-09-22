@@ -12,3 +12,7 @@ export * from "./feedback";
 
 // ── Form Inputs ──
 export * from "./SelectDropdown";
+
+// ── RBAC / Authorization ──
+export * from "./Can";
+

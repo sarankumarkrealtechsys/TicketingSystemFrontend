@@ -225,7 +225,10 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.USER_PERFORMANCE}
             element={
               <ProtectedRoute
-                requiredPermission={PERMISSIONS.USER_VIEW}
+                requiredPermission={[
+                  PERMISSIONS.USER_PERFORMANCE_VIEW,
+                  PERMISSIONS.USER_VIEW,
+                ]}
                 resolveScope={(user, params, scopes) => {
                   // GLOBAL scope: Admin can view any user's performance profile
                   if (scopes.includes("GLOBAL")) return true;

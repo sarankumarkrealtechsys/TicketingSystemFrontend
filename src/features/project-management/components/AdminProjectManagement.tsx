@@ -5,7 +5,7 @@ import { useProjectsQuery, useUpdateProjectMutation, useRetireProjectMutation, u
 import { ProjectItem } from '../types';
 import CreateProjectModal from './CreateProjectModal';
 import EditProjectModal from './EditProjectModal';
-import { StatCard } from '@/shared/components';
+import { StatCard, Can } from '@/shared/components';
 
 export const AdminProjectManagement: React.FC = () => {
   const { data: projects = [], isLoading, isError, refetch, isFetching } = useProjectsQuery({ includeInactive: true });
@@ -142,16 +142,18 @@ export const AdminProjectManagement: React.FC = () => {
             </h1>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              add
-            </span>
-            <span>New Project</span>
-          </button>
+          <Can permission="PROJECT_CREATE">
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                add
+              </span>
+              <span>New Project</span>
+            </button>
+          </Can>
         </div>
 
         {/* TOP ROW: 3 Quick KPI Stat Cards */}
@@ -361,38 +363,42 @@ export const AdminProjectManagement: React.FC = () => {
                           {/* Actions */}
                           <td className="py-3.5 px-4 sm:px-6 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <button
-                                type="button"
-                                onClick={() => setEditingProject(project)}
-                                className="p-1.5 text-gray-500 hover:text-[#1F3864] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                                title="Edit project"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">edit</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => openConfirmModal(project, isActive ? 'archive' : 'unarchive')}
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                  isActive
-                                    ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
-                                    : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                                }`}
-                                title={isActive ? "Archive project" : "Restore project"}
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  {isActive ? "archive" : "unarchive"}
-                                </span>
-                              </button>
-                              {!isActive && (
+                              <Can permission="PROJECT_UPDATE">
                                 <button
                                   type="button"
-                                  onClick={() => openConfirmModal(project, 'delete')}
-                                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
-                                  title="Permanently Delete project"
+                                  onClick={() => setEditingProject(project)}
+                                  className="p-1.5 text-gray-500 hover:text-[#1F3864] dark:hover:text-white hover:bg-gray-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                                  title="Edit project"
                                 >
-                                  <span className="material-symbols-outlined text-[18px]">delete</span>
+                                  <span className="material-symbols-outlined text-[18px]">edit</span>
                                 </button>
-                              )}
+                              </Can>
+                              <Can permission="PROJECT_DELETE">
+                                <button
+                                  type="button"
+                                  onClick={() => openConfirmModal(project, isActive ? 'archive' : 'unarchive')}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    isActive
+                                      ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                                      : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                  }`}
+                                  title={isActive ? "Archive project" : "Restore project"}
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    {isActive ? "archive" : "unarchive"}
+                                  </span>
+                                </button>
+                                {!isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openConfirmModal(project, 'delete')}
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
+                                    title="Permanently Delete project"
+                                  >
+                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                  </button>
+                                )}
+                              </Can>
                             </div>
                           </td>
                         </tr>
@@ -464,40 +470,44 @@ export const AdminProjectManagement: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Action Buttons Footer */}
+                      {/* Card Actions Footer */}
                       <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100 dark:border-slate-800">
-                        <button
-                          type="button"
-                          onClick={() => setEditingProject(project)}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">edit</span>
-                          <span>Edit</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openConfirmModal(project, isActive ? 'archive' : 'unarchive')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
-                            isActive
-                              ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40"
-                              : "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[16px]">
-                            {isActive ? "archive" : "unarchive"}
-                          </span>
-                          <span>{isActive ? "Archive" : "Restore"}</span>
-                        </button>
-                        {!isActive && (
+                        <Can permission="PROJECT_UPDATE">
                           <button
                             type="button"
-                            onClick={() => openConfirmModal(project, 'delete')}
-                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 flex items-center gap-1"
+                            onClick={() => setEditingProject(project)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center gap-1"
                           >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                            <span>Delete</span>
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                            <span>Edit</span>
                           </button>
-                        )}
+                        </Can>
+                        <Can permission="PROJECT_DELETE">
+                          <button
+                            type="button"
+                            onClick={() => openConfirmModal(project, isActive ? 'archive' : 'unarchive')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
+                              isActive
+                                ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40"
+                                : "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40"
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">
+                              {isActive ? "archive" : "unarchive"}
+                            </span>
+                            <span>{isActive ? "Archive" : "Restore"}</span>
+                          </button>
+                          {!isActive && (
+                            <button
+                              type="button"
+                              onClick={() => openConfirmModal(project, 'delete')}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </Can>
                       </div>
                     </div>
                   );
