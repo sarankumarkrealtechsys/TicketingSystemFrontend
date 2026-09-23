@@ -167,6 +167,9 @@ export function setPriorityColor(priorityId: number, hex: string, label?: string
     map[`label_${label.toLowerCase().trim()}`] = hex;
   }
   setStoredMap(STORAGE_KEY_PRIORITY_COLORS, map);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rts_colors_updated'));
+  }
 }
 
 /**
@@ -226,6 +229,45 @@ export function setStatusColor(statusId: number, hex: string, label?: string): v
     map[`label_${label.toLowerCase().trim()}`] = hex;
   }
   setStoredMap(STORAGE_KEY_STATUS_COLORS, map);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rts_colors_updated'));
+  }
+}
+
+/**
+ * Resolves Tailwind badge classes matching preset or fallback colors for Priority
+ */
+export function getPriorityBadgeClasses(priorityId?: number | null, label?: string): string {
+  const hex = getPriorityColor(priorityId, label);
+  const preset = PRESET_COLORS.find((p) => p.hex.toLowerCase() === hex.toLowerCase());
+  if (preset) {
+    return `${preset.bgClass} ${preset.textClass} ${preset.borderClass}`;
+  }
+  if (
+    hex.toLowerCase() === '#000000' ||
+    hex.toLowerCase() === '#000' ||
+    hex.toLowerCase() === '#111827' ||
+    hex.toLowerCase() === '#1e293b'
+  ) {
+    return 'bg-zinc-900 text-white border-zinc-700';
+  }
+  return 'bg-blue-50 text-blue-700 border-blue-200';
+}
+
+/**
+ * Resolves Tailwind badge classes matching preset or fallback colors for Status
+ */
+export function getStatusBadgeClasses(
+  statusId?: number | null,
+  behavior?: string,
+  label?: string
+): string {
+  const hex = getStatusColor(statusId, behavior, label);
+  const preset = PRESET_COLORS.find((p) => p.hex.toLowerCase() === hex.toLowerCase());
+  if (preset) {
+    return `${preset.bgClass} ${preset.textClass} ${preset.borderClass}`;
+  }
+  return 'bg-blue-50 text-blue-700 border-blue-200';
 }
 
 /**

@@ -24,6 +24,17 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   const isSmall = size === 'sm';
 
+  const [, setTick] = React.useState(0);
+  React.useEffect(() => {
+    const handleUpdate = () => setTick((v) => v + 1);
+    window.addEventListener('rts_colors_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('rts_colors_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 font-bold tracking-tight rounded-full border transition-all duration-150 select-none shadow-2xs ${

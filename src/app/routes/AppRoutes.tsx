@@ -30,6 +30,7 @@ import {
   NotFoundPage,
   AuditReportsPage,
   MyTicketReportsPage,
+  SettingsPage,
 } from "@/pages";
 
 /**
@@ -37,13 +38,13 @@ import {
  * GLOBAL → Admin operational hub, otherwise → User personal workspace.
  */
 const RootRedirect: React.FC = () => {
-  const { status, permissions } = useAppSelector((state) => state.auth);
+  const { status, permissions, user } = useAppSelector((state) => state.auth);
 
-  if (status === "loading") {
+  if (status === "loading" && !user) {
     return <LoadingSpinner message="Checking authentication..." />;
   }
 
-  if (status === "authenticated") {
+  if (status === "authenticated" || user) {
     const dashboardScopes = permissions?.DASHBOARD_VIEW;
     const hasGlobalDashboard =
       Array.isArray(dashboardScopes) && dashboardScopes.includes("GLOBAL");
@@ -60,6 +61,7 @@ const RootRedirect: React.FC = () => {
 /**
  * Session Bootstrap Wrapper
  * Restores user session from /api/auth/me on initial page load.
+ * Renders immediately when a cached session is hydrated, avoiding full-screen flicker.
  */
 const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -72,11 +74,18 @@ const SessionBootstrap: React.FC<{ children: React.ReactNode }> = ({
     if (data?.data) {
       dispatch(setSession(data.data));
     } else if (error) {
-      dispatch(clearSession());
+      // ONLY clear session if HTTP 401 Unauthorized
+      // Do not destroy session on temporary network timeouts, 429 rate limits, or 500 errors
+      const errStatus = (error as any)?.response?.status;
+      if (errStatus === 401) {
+        dispatch(clearSession());
+      }
     }
   }, [data, error, dispatch]);
 
-  if (isLoading || status === "loading" || (data?.data && !user)) {
+  // If user session is already present (hydrated from localStorage), render immediately!
+  // Only show the loading spinner if there is no user AND the query is actively loading for the first time
+  if (!user && (isLoading || status === "loading")) {
     return <LoadingSpinner message="Loading session..." />;
   }
 
@@ -300,7 +309,23 @@ export const AppRoutes: React.FC = () => {
           />
 
           {/* ============================================================= */}
-          {/* 6. CATCH-ALL 404 FALLBACK                                     */}
+          {/* 6. SYSTEM SETTINGS ROUTE                                      */}
+          {/* Requires SYSTEM_SETTINGS_MANAGE at GLOBAL scope               */}
+          {/* ============================================================= */}
+          <Route
+            path={ROUTES.SETTINGS}
+            element={
+              <ProtectedRoute
+                requiredPermission={PERMISSIONS.SYSTEM_SETTINGS_MANAGE}
+                requiredScope="GLOBAL"
+              >
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* ============================================================= */}
+          {/* 7. CATCH-ALL 404 FALLBACK                                     */}
           {/* ============================================================= */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

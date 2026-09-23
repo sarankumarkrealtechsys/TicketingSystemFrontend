@@ -78,12 +78,12 @@
   }
   /* Global Text Selection Highlight */
   ::selection {
-    background-color: #bbf7d0;
-    color: #052e16;
+    background-color: #d8e2ff;
+    color: #1F3864;
   }
   ::-moz-selection {
-    background-color: #bbf7d0;
-    color: #052e16;
+    background-color: #d8e2ff;
+    color: #1F3864;
   }
 }
 

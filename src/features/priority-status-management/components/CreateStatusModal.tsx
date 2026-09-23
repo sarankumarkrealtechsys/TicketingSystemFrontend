@@ -12,6 +12,7 @@ interface CreateStatusModalProps {
   onClose: () => void;
   onSuccess?: (msg: string) => void;
   existingCount?: number;
+  defaultTeamId?: string;
 }
 
 const LIFECYCLE_STAGES: {
@@ -57,13 +58,16 @@ export const CreateStatusModal: React.FC<CreateStatusModalProps> = ({
   onClose,
   onSuccess,
   existingCount = 0,
+  defaultTeamId = 'global',
 }) => {
   const [label, setLabel] = useState('');
   const [behavior, setBehavior] = useState<TicketStatusBehavior>('IN_PROGRESS');
   const [color, setColor] = useState<string>('#F59E0B');
   const [description, setDescription] = useState('');
   const [sortOrder, setSortOrder] = useState<number>(existingCount + 1);
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('global');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(
+    defaultTeamId && defaultTeamId !== 'ALL' ? String(defaultTeamId) : 'global'
+  );
   const [status, setStatus] = useState<MasterDataStatus>('ACTIVE');
   const [errorMessage, setErrorMessage] = useState('');
 

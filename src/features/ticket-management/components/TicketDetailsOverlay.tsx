@@ -53,7 +53,12 @@ import { formatDistanceToNow, format } from "date-fns";
 import { TicketStatusItem, PriorityItem, TicketHistoryItem, SubTicketItem } from "../types";
 import { TeamItem } from "@/features/team-management/types";
 import { PriorityBadge, StatusBadge } from "@/shared/components";
-import { getPriorityColor } from "@/features/priority-status-management/colorRegistry";
+import {
+  getPriorityColor,
+  getStatusColor,
+  getPriorityBadgeClasses,
+  getStatusBadgeClasses,
+} from "@/features/priority-status-management/colorRegistry";
 import {
   DynamicCustomFieldsRenderer,
   AddFieldModal,
@@ -247,6 +252,18 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null);
 
+  // Real-time sync for priority & status colors
+  const [, setColorUpdateTick] = useState(0);
+  useEffect(() => {
+    const handleColorsChanged = () => setColorUpdateTick((v) => v + 1);
+    window.addEventListener("rts_colors_updated", handleColorsChanged);
+    window.addEventListener("storage", handleColorsChanged);
+    return () => {
+      window.removeEventListener("rts_colors_updated", handleColorsChanged);
+      window.removeEventListener("storage", handleColorsChanged);
+    };
+  }, []);
+
   // Form states for Sub-Ticket Modal (Create)
   const [subTicketTeamId, setSubTicketTeamId] = useState<number | "">("");
   const [subTicketSummary, setSubTicketSummary] = useState("");
@@ -316,7 +333,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
   const { data: teamStatuses = [] } = useTeamStatusesQuery(ticket?.teamId);
   const { data: globalStatuses = [] } = useGlobalStatusesQuery();
-  const { data: priorities = [] } = usePrioritiesQuery();
+  const { data: priorities = [], refetch: refetchPriorities } = usePrioritiesQuery();
   const { data: allTeams = [] } = useActiveTeamsQuery();
   const { data: selectedTeamDetail } = useSelectedTeamDetailQuery(
     typeof reassignTeamId === "number" ? reassignTeamId : null
@@ -325,12 +342,25 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
     typeof subTicketTeamId === "number" ? subTicketTeamId : null
   );
 
-  // Resolved list of available statuses for ticket
+  // Resolved list of available statuses for ticket, sorted by sortOrder
   const availableStatuses = useMemo(() => {
-    if (teamStatuses && teamStatuses.length > 0) return teamStatuses;
-    if (globalStatuses && globalStatuses.length > 0) return globalStatuses;
-    return [];
+    const raw =
+      teamStatuses && teamStatuses.length > 0
+        ? teamStatuses
+        : globalStatuses && globalStatuses.length > 0
+        ? globalStatuses
+        : [];
+    return [...raw].sort(
+      (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id
+    );
   }, [teamStatuses, globalStatuses]);
+
+  // Explicitly sort priorities by configured sortOrder
+  const sortedPriorities = useMemo(() => {
+    return [...priorities].sort(
+      (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id
+    );
+  }, [priorities]);
 
   // Mutations
   const changeStatusMutation = useChangeStatusMutation(ticketId || 0);
@@ -411,6 +441,18 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
     setActionErrorMsg(null);
     setActiveModal(null);
   }, [ticketId]);
+
+  // Listen for master data updates across components
+  useEffect(() => {
+    const handleMasterDataUpdate = () => {
+      handleRefresh();
+      refetchPriorities();
+    };
+    window.addEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+    return () => {
+      window.removeEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+    };
+  }, []);
 
   if (!isOpen) return null;
 
@@ -800,51 +842,13 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   };
 
   // Status color styling
-  const getStatusBadge = (statusName?: string, behavior?: string) => {
-    const b = (behavior || statusName || "").toUpperCase();
-    if (b.includes("OPEN")) {
-      return "bg-blue-100 text-blue-900 border-blue-300";
-    }
-    if (b.includes("IN_PROGRESS") || b.includes("PROGRESS")) {
-      return "bg-amber-100 text-amber-900 border-amber-300";
-    }
-    if (b.includes("ON_HOLD") || b.includes("HOLD")) {
-      return "bg-purple-100 text-purple-900 border-purple-300";
-    }
-    if (b.includes("RESOLVED")) {
-      return "bg-emerald-100 text-emerald-900 border-emerald-300";
-    }
-    if (b.includes("CLOSED")) {
-      return "bg-gray-200 text-gray-900 border-gray-400";
-    }
-    return "bg-slate-100 text-slate-900 border-slate-300";
+  const getStatusBadge = (statusName?: string, behavior?: string, statusId?: number | null) => {
+    return getStatusBadgeClasses(statusId, behavior, statusName);
   };
 
   // Priority color styling
-  const getPriorityBadge = (priorityName?: string) => {
-    const hex = getPriorityColor(null, priorityName);
-    if (
-      hex.toLowerCase() === '#000000' ||
-      hex.toLowerCase() === '#000' ||
-      hex.toLowerCase() === '#111827' ||
-      hex.toLowerCase() === '#1e293b'
-    ) {
-      return "bg-zinc-900 text-white border-zinc-700";
-    }
-    const p = (priorityName || "").toUpperCase();
-    if (p.includes("URGENT") || p.includes("CRITICAL") || p.includes("BLOCK")) {
-      return "bg-red-100 text-red-900 border-red-300";
-    }
-    if (p.includes("HIGH")) {
-      return "bg-orange-100 text-orange-900 border-orange-300";
-    }
-    if (p.includes("MEDIUM")) {
-      return "bg-amber-100 text-amber-900 border-amber-300";
-    }
-    if (p.includes("LOW")) {
-      return "bg-emerald-100 text-emerald-900 border-emerald-300";
-    }
-    return "bg-blue-100 text-blue-900 border-blue-300";
+  const getPriorityBadge = (priorityName?: string, priorityId?: number | null) => {
+    return getPriorityBadgeClasses(priorityId, priorityName);
   };
 
   const getInitials = (name?: string) => {
@@ -877,8 +881,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   );
 
   // Selected Priority Object
-  const currentPriorityObj = priorities.find((p) => p.id === selectedPriorityId);
-  const filteredPriorities = priorities.filter((p) =>
+  const currentPriorityObj = sortedPriorities.find((p) => p.id === selectedPriorityId);
+  const filteredPriorities = sortedPriorities.filter((p) =>
     (p.label || p.name || "").toLowerCase().includes(prioritySearch.toLowerCase())
   );
 
@@ -930,25 +934,19 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-gray-700">Changed status from</span>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${getStatusBadge(
-                  h.previousStatus?.label,
-                  h.previousBehavior || h.previousStatus?.behavior
-                )}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                <span>{prevLabel}</span>
-              </span>
+              <StatusBadge
+                status={prevLabel}
+                statusId={h.previousStatusId || h.previousStatus?.id}
+                behavior={h.previousBehavior || h.previousStatus?.behavior}
+                size="sm"
+              />
               <span className="text-gray-700">to</span>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${getStatusBadge(
-                  h.newStatus?.label,
-                  h.newBehavior || h.newStatus?.behavior
-                )}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                <span>{newLabel}</span>
-              </span>
+              <StatusBadge
+                status={newLabel}
+                statusId={h.newStatusId || h.newStatus?.id}
+                behavior={h.newBehavior || h.newStatus?.behavior}
+                size="sm"
+              />
             </div>
             {h.remarks && (
               <div className="mt-1 text-xs text-gray-700 bg-white border border-slate-200 rounded-md px-3 py-1.5 italic font-medium">
@@ -970,23 +968,17 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5 flex-wrap">
               <span className="text-gray-700">Changed priority from</span>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${getPriorityBadge(
-                  h.previousPriority?.label
-                )}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                <span>{prevLabel}</span>
-              </span>
+              <PriorityBadge
+                priority={prevLabel}
+                priorityId={h.previousPriorityId || h.previousPriority?.id}
+                size="sm"
+              />
               <span className="text-gray-700">to</span>
-              <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${getPriorityBadge(
-                  h.newPriority?.label
-                )}`}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                <span>{newLabel}</span>
-              </span>
+              <PriorityBadge
+                priority={newLabel}
+                priorityId={h.newPriorityId || h.newPriority?.id}
+                size="sm"
+              />
             </div>
             {h.remarks && (
               <div className="mt-1 text-xs text-gray-700 bg-white border border-slate-200 rounded-md px-3 py-1.5 italic font-medium">
@@ -1721,22 +1713,18 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
                               <div className="flex items-center gap-1.5 shrink-0">
                                 {priorityLabel && (
-                                  <span
-                                    className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getPriorityBadge(
-                                      priorityLabel
-                                    )}`}
-                                  >
-                                    {priorityLabel}
-                                  </span>
+                                  <PriorityBadge
+                                    priority={priorityLabel}
+                                    priorityId={st.priority?.id}
+                                    size="sm"
+                                  />
                                 )}
-                                <span
-                                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getStatusBadge(
-                                    statusLabel,
-                                    st.status?.behavior
-                                  )}`}
-                                >
-                                  {statusLabel}
-                                </span>
+                                <StatusBadge
+                                  status={statusLabel}
+                                  statusId={st.status?.id}
+                                  behavior={st.status?.behavior}
+                                  size="sm"
+                                />
                               </div>
                             </div>
 
@@ -2091,15 +2079,12 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                     className="w-full min-h-[42px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
                   >
                     {currentStatusObj ? (
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${getStatusBadge(
-                          currentStatusObj.label || currentStatusObj.name,
-                          currentStatusObj.behavior
-                        )}`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        <span>{currentStatusObj.label || currentStatusObj.name || currentStatusObj.behavior}</span>
-                      </span>
+                      <StatusBadge
+                        status={currentStatusObj.label || currentStatusObj.name || currentStatusObj.behavior}
+                        statusId={currentStatusObj.id}
+                        behavior={currentStatusObj.behavior}
+                        size="sm"
+                      />
                     ) : (
                       <span className="text-gray-400 font-medium">Select status...</span>
                     )}
@@ -2141,15 +2126,12 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                                     : "hover:bg-gray-50 text-gray-800"
                                 }`}
                               >
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadge(
-                                    s.label || s.name,
-                                    s.behavior
-                                  )}`}
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                  <span>{label}</span>
-                                </span>
+                                <StatusBadge
+                                  status={label}
+                                  statusId={s.id}
+                                  behavior={s.behavior}
+                                  size="sm"
+                                />
 
                                 {isSelected && (
                                   <Check className="w-4 h-4 text-[#1F3864]" />
@@ -2231,14 +2213,11 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                     className="w-full min-h-[42px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
                   >
                     {currentPriorityObj ? (
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${getPriorityBadge(
-                          currentPriorityObj.label || currentPriorityObj.name
-                        )}`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        <span>{currentPriorityObj.label || currentPriorityObj.name}</span>
-                      </span>
+                      <PriorityBadge
+                        priority={currentPriorityObj.label || currentPriorityObj.name}
+                        priorityId={currentPriorityObj.id}
+                        size="sm"
+                      />
                     ) : (
                       <span className="text-gray-400 font-medium">Select priority...</span>
                     )}
@@ -2276,21 +2255,18 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                                 }}
                                 className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
                                   isSelected
-                                    ? "bg-amber-50 text-amber-900 font-bold"
+                                    ? "bg-blue-50/70 text-[#1F3864] font-bold"
                                     : "hover:bg-gray-50 text-gray-800"
                                 }`}
                               >
-                                <span
-                                  className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getPriorityBadge(
-                                    p.label || p.name
-                                  )}`}
-                                >
-                                  <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                  <span>{label}</span>
-                                </span>
+                                <PriorityBadge
+                                  priority={label}
+                                  priorityId={p.id}
+                                  size="sm"
+                                />
 
                                 {isSelected && (
-                                  <Check className="w-4 h-4 text-amber-700" />
+                                  <Check className="w-4 h-4 text-[#1F3864]" />
                                 )}
                               </div>
                             );
@@ -2927,15 +2903,12 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                     onClick={() => setIsSubTicketPriorityDropdownOpen((prev) => !prev)}
                     className="w-full min-h-[38px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] cursor-pointer"
                   >
-                    {priorities.find((p) => p.id === subTicketPriorityId) ? (
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${getPriorityBadge(
-                          priorities.find((p) => p.id === subTicketPriorityId)?.label
-                        )}`}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        <span>{priorities.find((p) => p.id === subTicketPriorityId)?.label}</span>
-                      </span>
+                    {sortedPriorities.find((p) => p.id === subTicketPriorityId) ? (
+                      <PriorityBadge
+                        priority={sortedPriorities.find((p) => p.id === subTicketPriorityId)?.label}
+                        priorityId={subTicketPriorityId ? Number(subTicketPriorityId) : undefined}
+                        size="sm"
+                      />
                     ) : (
                       <span className="text-gray-400 font-medium">Select priority...</span>
                     )}
@@ -2944,7 +2917,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
                   {isSubTicketPriorityDropdownOpen && (
                     <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 space-y-1">
-                      {priorities.map((p) => {
+                      {sortedPriorities.map((p) => {
                         const isSelected = subTicketPriorityId === p.id;
                         return (
                           <div
@@ -2957,14 +2930,11 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                               isSelected ? "bg-blue-50 text-[#1F3864] font-bold" : "hover:bg-gray-50 text-gray-800"
                             }`}
                           >
-                            <span
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${getPriorityBadge(
-                                p.label || p.name
-                              )}`}
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                              <span>{p.label || p.name}</span>
-                            </span>
+                            <PriorityBadge
+                              priority={p.label || p.name}
+                              priorityId={p.id}
+                              size="sm"
+                            />
                             {isSelected && <Check className="w-4 h-4 text-[#1F3864]" />}
                           </div>
                         );
@@ -3319,7 +3289,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                     onChange={(e) => setEditSubPriorityId(e.target.value ? Number(e.target.value) : "")}
                     className="w-full h-9 px-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs font-medium text-gray-900 focus:outline-none focus:border-[#1F3864]"
                   >
-                    {priorities.map((p) => (
+                    {sortedPriorities.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.label || p.name}
                       </option>

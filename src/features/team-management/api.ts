@@ -346,3 +346,21 @@ export const useRetireTeamStatusMutation = () => {
   });
 };
 
+// DELETE /api/ticket-statuses/:id/permanent
+export const useDeleteTeamStatusPermanentlyMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: number; teamId?: number | null }) => {
+      const res = await apiClient.delete<any>(`/ticket-statuses/${id}/permanent`);
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: teamManagementKeys.statuses(variables.teamId),
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-statuses"] });
+    },
+  });
+};

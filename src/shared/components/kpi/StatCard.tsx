@@ -49,7 +49,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
   return (
     <div
-      className="bg-white rounded-[10px] p-2 sm:p-3.5 shadow-sm border border-[#EEEEEE] flex flex-col justify-between hover:shadow-md transition-shadow min-w-0"
+      className="bg-white rounded-[10px] p-2 sm:p-3.5 shadow-sm border border-[#EEEEEE] flex flex-col justify-between hover:shadow-md transition-shadow min-w-0 w-full h-full"
       style={{ borderTop: `2px solid ${accentColor}` }}
     >
       <div className="flex items-center justify-between gap-1">

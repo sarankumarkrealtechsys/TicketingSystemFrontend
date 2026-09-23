@@ -44,6 +44,15 @@ export interface CreateTicketFieldPayload {
   options?: FieldOption[] | null;
 }
 
+export interface UpdateTicketFieldPayload {
+  id: number;
+  name?: string;
+  description?: string;
+  isRequired?: boolean;
+  options?: FieldOption[] | null;
+  status?: "ACTIVE" | "INACTIVE";
+}
+
 export const TICKET_FIELD_TYPE_CONFIG: Record<
   TicketFieldType,
   {

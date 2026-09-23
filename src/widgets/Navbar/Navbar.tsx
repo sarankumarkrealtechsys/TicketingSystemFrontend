@@ -110,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         collapsed ? "lg:left-[68px]" : "lg:left-[260px]"
       } right-0 h-16 bg-white z-30 border-b border-[#EEEEEE] px-3 sm:px-6 flex items-center transition-all duration-300 ease-in-out ${className}`}
     >
-      <div className="max-w-[1440px] mx-auto w-full flex items-center justify-between">
+      <div className="w-full flex items-center justify-between">
         <div className="flex items-center gap-2 sm:gap-4 min-w-0">
           {/* Mobile Hamburger Button */}
           {onToggleMobileMenu && (

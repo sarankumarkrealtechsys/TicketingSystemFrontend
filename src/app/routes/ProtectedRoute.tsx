@@ -64,7 +64,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     return true;
   }, [requiredPermission, requiredScope, resolveScope, permissions, user, params]);
 
-  if (status === "loading") {
+  if (status === "loading" && !user) {
     return <LoadingSpinner message="Verifying authentication & access..." />;
   }
 

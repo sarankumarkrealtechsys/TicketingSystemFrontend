@@ -193,8 +193,8 @@ export const AdminDepartmentManagement: React.FC = () => {
           </Can>
         </div>
 
-        {/* TOP ROW: 4 Overview KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+        {/* TOP ROW: 4 Overview KPI Cards (fluid responsive grid scaling) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 2xl:gap-6 w-full">
           <StatCard
             title="Active Departments"
             count={stats.activeCount}

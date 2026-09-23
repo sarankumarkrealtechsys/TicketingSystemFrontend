@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { MasterDataItem, UserTicketQueryParams, UserTicketScope } from "../types";
 import { SelectDropdown } from "@/shared/components";
 
@@ -28,8 +28,20 @@ export const UserFilterToolbar: React.FC<UserFilterToolbarProps> = ({
   onToggleDateFilter,
 }) => {
   const safeProjects = Array.isArray(projects) ? projects : [];
-  const safePriorities = Array.isArray(priorities) ? priorities : [];
-  const safeStatuses = Array.isArray(statuses) ? statuses : [];
+
+  const safePriorities = useMemo(() => {
+    const list = Array.isArray(priorities) ? priorities : [];
+    return [...list].sort(
+      (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id
+    );
+  }, [priorities]);
+
+  const safeStatuses = useMemo(() => {
+    const list = Array.isArray(statuses) ? statuses : [];
+    return [...list].sort(
+      (a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || a.id - b.id
+    );
+  }, [statuses]);
 
   return (
     <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-[#EEEEEE] space-y-3">

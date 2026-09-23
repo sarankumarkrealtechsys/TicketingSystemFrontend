@@ -1,12 +1,17 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getPriorityColor } from "@/features/priority-status-management/colorRegistry";
+
+export interface PriorityItem {
+  priorityId: number;
+  label: string;
+  count: number;
+  sortOrder?: number;
+  color?: string;
+}
 
 export interface PriorityBarChartProps {
   total: number;
-  byPriority?: Array<{
-    priorityId: number;
-    label: string;
-    count: number;
-  }>;
+  byPriority?: PriorityItem[];
   title?: string;
   subtitle?: string;
   averageSlaText?: string;
@@ -19,17 +24,24 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
   title = "Tickets by Priority",
   subtitle,
 }) => {
-  const highItem = byPriority.find((p) => p.label?.toUpperCase().includes("HIGH"));
-  const medItem = byPriority.find((p) => p.label?.toUpperCase().includes("MED"));
-  const lowItem = byPriority.find((p) => p.label?.toUpperCase().includes("LOW"));
+  // Listen to color changes from colorRegistry to dynamically update live
+  const [, setColorTick] = useState(0);
 
-  const highCount = highItem ? highItem.count : 0;
-  const medCount = medItem ? medItem.count : 0;
-  const lowCount = lowItem ? lowItem.count : 0;
+  useEffect(() => {
+    const handleColorsUpdated = () => setColorTick((t) => t + 1);
+    window.addEventListener("rts_colors_updated", handleColorsUpdated);
+    return () => {
+      window.removeEventListener("rts_colors_updated", handleColorsUpdated);
+    };
+  }, []);
 
-  const highPct = total > 0 ? ((highCount / total) * 100).toFixed(1) : "0.0";
-  const medPct = total > 0 ? ((medCount / total) * 100).toFixed(1) : "0.0";
-  const lowPct = total > 0 ? ((lowCount / total) * 100).toFixed(1) : "0.0";
+  // Sort priorities by sortOrder ascending, falling back to priorityId
+  const sortedPriorities = [...byPriority].sort((a, b) => {
+    const orderA = a.sortOrder !== undefined ? a.sortOrder : 999;
+    const orderB = b.sortOrder !== undefined ? b.sortOrder : 999;
+    if (orderA !== orderB) return orderA - orderB;
+    return (a.priorityId || 0) - (b.priorityId || 0);
+  });
 
   return (
     <div className="bg-white rounded-[10px] p-5 shadow-sm border border-[#EEEEEE] flex flex-col justify-between">
@@ -53,67 +65,55 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
           </p>
         )}
 
-        <div className="space-y-4">
-          {/* High Priority */}
-          <div>
-            <div className="flex items-center justify-between text-[13px] mb-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#E53935]" />
-                <span className="font-semibold text-[#1A1A1A]">High Priority</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-[#E53935]">{highCount}</span>
-                <span className="text-[11px] text-[#5F6368]">({highPct}%)</span>
-              </div>
-            </div>
-            <div className="w-full bg-[#F0EDED] h-2.5 rounded-full overflow-hidden">
-              <div
-                className="bg-[#E53935] h-full rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${highPct}%` }}
-              />
-            </div>
+        {sortedPriorities.length === 0 ? (
+          <div className="py-8 text-center text-xs text-gray-400">
+            No priority data available
           </div>
+        ) : (
+          <div className="space-y-4 max-h-[340px] overflow-y-auto pr-1">
+            {sortedPriorities.map((item) => {
+              const count = item.count || 0;
+              const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+              const color = item.color || getPriorityColor(item.priorityId, item.label);
 
-          {/* Medium Priority */}
-          <div>
-            <div className="flex items-center justify-between text-[13px] mb-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FB8C00]" />
-                <span className="font-semibold text-[#1A1A1A]">Medium Priority</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-[#FB8C00]">{medCount}</span>
-                <span className="text-[11px] text-[#5F6368]">({medPct}%)</span>
-              </div>
-            </div>
-            <div className="w-full bg-[#F0EDED] h-2.5 rounded-full overflow-hidden">
-              <div
-                className="bg-[#FB8C00] h-full rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${medPct}%` }}
-              />
-            </div>
+              return (
+                <div key={item.priorityId || item.label} className="group">
+                  <div className="flex items-center justify-between text-[13px] mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0 transition-transform group-hover:scale-125"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="font-semibold text-[#1A1A1A]">
+                        {item.label}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono">
+                      <span
+                        className="font-bold"
+                        style={{ color }}
+                      >
+                        {count}
+                      </span>
+                      <span className="text-[11px] text-[#5F6368]">
+                        ({pct}%)
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-[#F0EDED] h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: `${Math.min(100, Math.max(0, Number(pct)))}%`,
+                        backgroundColor: color,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
-
-          {/* Low Priority */}
-          <div>
-            <div className="flex items-center justify-between text-[13px] mb-1.5">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#43A047]" />
-                <span className="font-semibold text-[#1A1A1A]">Low Priority</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-[#43A047]">{lowCount}</span>
-                <span className="text-[11px] text-[#5F6368]">({lowPct}%)</span>
-              </div>
-            </div>
-            <div className="w-full bg-[#F0EDED] h-2.5 rounded-full overflow-hidden">
-              <div
-                className="bg-[#43A047] h-full rounded-full transition-all duration-1000 ease-out"
-                style={{ width: `${lowPct}%` }}
-              />
-            </div>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

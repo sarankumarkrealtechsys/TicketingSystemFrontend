@@ -156,8 +156,8 @@ export const AdminProjectManagement: React.FC = () => {
           </Can>
         </div>
 
-        {/* TOP ROW: 3 Quick KPI Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4">
+        {/* TOP ROW: 3 Quick KPI Stat Cards (fluid responsive grid scaling) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 2xl:gap-6 w-full">
           <StatCard
             title="Active Projects"
             count={activeProjects}

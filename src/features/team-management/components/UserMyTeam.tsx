@@ -5,6 +5,7 @@ import {
   useTeamStatusesQuery,
   useUpdateTeamStatusMutation,
   useRetireTeamStatusMutation,
+  useDeleteTeamStatusPermanentlyMutation,
 } from "../api";
 import { TeamStatusItem } from "../types";
 import { CreateStatusModal } from "./CreateStatusModal";
@@ -21,11 +22,14 @@ export const UserMyTeam: React.FC = () => {
   const [isRetireModalOpen, setIsRetireModalOpen] = useState(false);
   const [restoringStatus, setRestoringStatus] = useState<TeamStatusItem | null>(null);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [deletingStatus, setDeletingStatus] = useState<TeamStatusItem | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"ACTIVE" | "ARCHIVED" | "ALL">("ACTIVE");
   const [successToast, setSuccessToast] = useState<string | null>(null);
 
   const updateStatusMutation = useUpdateTeamStatusMutation();
   const retireStatusMutation = useRetireTeamStatusMutation();
+  const deleteTeamStatusMutation = useDeleteTeamStatusPermanentlyMutation();
 
   // User query: backend automatically scopes GET /api/teams to caller's active teams
   const { data: myTeams = [], isLoading: isTeamsLoading } = useTeamsQuery();
@@ -497,17 +501,30 @@ export const UserMyTeam: React.FC = () => {
                                 <span className="material-symbols-outlined text-[17px]">edit</span>
                               </button>
                               {isArchived ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setRestoringStatus(s);
-                                    setIsRestoreModalOpen(true);
-                                  }}
-                                  className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
-                                  title="Restore Workflow Status"
-                                >
-                                  <span className="material-symbols-outlined text-[17px]">unarchive</span>
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setRestoringStatus(s);
+                                      setIsRestoreModalOpen(true);
+                                    }}
+                                    className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
+                                    title="Restore Workflow Status"
+                                  >
+                                    <span className="material-symbols-outlined text-[17px]">unarchive</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDeletingStatus(s);
+                                      setIsDeleteModalOpen(true);
+                                    }}
+                                    className="p-1.5 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition-all cursor-pointer"
+                                    title="Permanently Delete Workflow Status"
+                                  >
+                                    <span className="material-symbols-outlined text-[17px]">delete_forever</span>
+                                  </button>
+                                </div>
                               ) : (
                                 <button
                                   type="button"
@@ -618,6 +635,34 @@ export const UserMyTeam: React.FC = () => {
         onClose={() => {
           setIsRestoreModalOpen(false);
           setRestoringStatus(null);
+        }}
+      />
+
+      {/* Delete Status Permanently Modal */}
+      <ConfirmActionModal
+        isOpen={isDeleteModalOpen}
+        title="Permanently Delete Workflow Status"
+        message={`Are you sure you want to permanently delete workflow status "${deletingStatus?.label}"? This action cannot be undone.`}
+        confirmLabel="Delete Permanently"
+        confirmVariant="danger"
+        isLoading={deleteTeamStatusMutation.isPending}
+        onConfirm={async () => {
+          if (!deletingStatus) return;
+          try {
+            await deleteTeamStatusMutation.mutateAsync({
+              id: deletingStatus.id,
+              teamId: currentTeam?.id,
+            });
+            showToast(`Workflow status "${deletingStatus.label}" permanently deleted.`);
+            setIsDeleteModalOpen(false);
+            setDeletingStatus(null);
+          } catch (err: any) {
+            showToast(err?.response?.data?.message || "Failed to delete status");
+          }
+        }}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setDeletingStatus(null);
         }}
       />
     </div>

@@ -127,8 +127,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         <Navbar {...navbarProps} />
 
         {/* Main Content Area */}
-        <main className="pt-20 px-3 sm:px-6 pb-8 flex-1">
-          <div className="max-w-[1440px] mx-auto">{children || <Outlet />}</div>
+        <main className="pt-20 px-3 sm:px-5 lg:px-6 2xl:px-8 pb-8 flex-1 w-full min-h-[calc(100vh-76px)]">
+          <div className="w-full">{children || <Outlet />}</div>
         </main>
 
         {/* Footer */}

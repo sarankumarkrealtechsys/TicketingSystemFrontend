@@ -201,8 +201,8 @@ export const AdminUserManagement: React.FC = () => {
         </Can>
       </div>
 
-      {/* 4 Quick KPI Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      {/* 4 Quick KPI Stat Cards (fluid responsive grid scaling) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 2xl:gap-6 w-full">
         <StatCard
           title="Active Users"
           count={activeUsers}

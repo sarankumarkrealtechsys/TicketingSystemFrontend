@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
 import { AppLayout } from "@/layout/AppLayout";
@@ -60,7 +60,7 @@ export const UserDashboard: React.FC = () => {
   const [isDateActive, setIsDateActive] = useState(false);
 
   // Queries strictly scoped to active user
-  const { data: statsData } = useUserTicketStatsQuery(currentUser?.id, "personal");
+  const { data: statsData, refetch: refetchStats } = useUserTicketStatsQuery(currentUser?.id, "personal");
   const {
     data: ticketsData,
     isLoading: isTicketsLoading,
@@ -68,8 +68,21 @@ export const UserDashboard: React.FC = () => {
     refetch: refetchTickets,
   } = useUserTicketsTableQuery(currentUser?.id, filters);
   const { data: projects = [] } = useProjectsQuery();
-  const { data: priorities = [] } = usePrioritiesQuery();
-  const { data: statuses = [] } = useStatusesQuery();
+  const { data: priorities = [], refetch: refetchPriorities } = usePrioritiesQuery();
+  const { data: statuses = [], refetch: refetchStatuses } = useStatusesQuery();
+
+  useEffect(() => {
+    const handleMasterDataUpdate = () => {
+      refetchPriorities();
+      refetchStatuses();
+      refetchTickets();
+      refetchStats();
+    };
+    window.addEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+    return () => {
+      window.removeEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+    };
+  }, [refetchPriorities, refetchStatuses, refetchTickets, refetchStats]);
 
   const handleFilterChange = (newFilters: Partial<UserTicketQueryParams>) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
@@ -153,8 +166,8 @@ export const UserDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* TOP ROW: 6 Stat Cards (2 per row on mobile, 3 on tablet, 6 on desktop) */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4">
+        {/* TOP ROW: 6 Stat Cards (fluid responsive grid scaling) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-4 2xl:gap-5 w-full">
           <StatCard
             title="Total Tickets"
             count={total}
@@ -198,7 +211,7 @@ export const UserDashboard: React.FC = () => {
         </div>
 
         {/* TWO-COLUMN CHART ROW (Priority Bar Chart & Status Donut Chart) */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 2xl:gap-6 w-full">
           <PriorityBarChart
             total={total}
             byPriority={statsData?.byPriority || []}
@@ -206,6 +219,7 @@ export const UserDashboard: React.FC = () => {
           />
           <StatusDonutChart
             total={total}
+            byStatus={statsData?.byStatus || []}
             byStatusBehavior={statusBehaviors}
             title="Tickets by Status"
           />

@@ -4,9 +4,11 @@ import {
   usePrioritiesQuery,
   useUpdatePriorityMutation,
   useRetirePriorityMutation,
+  useDeletePriorityPermanentlyMutation,
   useTicketStatusesQuery,
   useUpdateTicketStatusMutation,
   useRetireTicketStatusMutation,
+  useDeleteTicketStatusPermanentlyMutation,
 } from '../api';
 import { PriorityLevelItem, TicketStatusItem, TicketStatusBehavior } from '../types';
 import { CreatePriorityModal } from './CreatePriorityModal';
@@ -21,6 +23,7 @@ import {
 } from '../colorRegistry';
 import { Can } from '@/shared/components';
 import { PERMISSIONS } from '@/features/auth';
+import { useTeamsQuery } from '@/features/team-management';
 
 const BEHAVIOR_BADGES: Record<
   TicketStatusBehavior,
@@ -83,13 +86,17 @@ export const AdminPriorityStatusManagement: React.FC = () => {
   // Mutations
   const updatePriorityMutation = useUpdatePriorityMutation();
   const retirePriorityMutation = useRetirePriorityMutation();
+  const deletePriorityPermanentlyMutation = useDeletePriorityPermanentlyMutation();
   const updateStatusMutation = useUpdateTicketStatusMutation();
   const retireStatusMutation = useRetireTicketStatusMutation();
+  const deleteStatusPermanentlyMutation = useDeleteTicketStatusPermanentlyMutation();
 
   // Search & Filter state
   const [prioritySearch, setPrioritySearch] = useState('');
   const [statusSearch, setStatusSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+  const [statusScopeFilter, setStatusScopeFilter] = useState<string>('GLOBAL'); // 'GLOBAL' | 'ALL' | teamId string
+  const { data: teams = [] } = useTeamsQuery({ includeInactive: false });
 
   // Modals state
   const [isCreatePriorityOpen, setIsCreatePriorityOpen] = useState(false);
@@ -100,7 +107,13 @@ export const AdminPriorityStatusManagement: React.FC = () => {
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    type: 'archive-priority' | 'restore-priority' | 'archive-status' | 'restore-status';
+    type:
+      | 'archive-priority'
+      | 'restore-priority'
+      | 'archive-status'
+      | 'restore-status'
+      | 'delete-priority'
+      | 'delete-status';
     priority?: PriorityLevelItem | null;
     statusItem?: TicketStatusItem | null;
     isLoading: boolean;
@@ -145,6 +158,15 @@ export const AdminPriorityStatusManagement: React.FC = () => {
     return (statuses as TicketStatusItem[])
       .filter((s: TicketStatusItem) => {
         if (activeFilter !== 'ALL' && s.status !== activeFilter) return false;
+
+        // Strict Scope Filter: GLOBAL (default), ALL, or specific teamId
+        if (statusScopeFilter === 'GLOBAL') {
+          if (s.teamId !== null && s.teamId !== undefined) return false;
+        } else if (statusScopeFilter !== 'ALL') {
+          const targetTeamId = Number(statusScopeFilter);
+          if (s.teamId !== targetTeamId) return false;
+        }
+
         if (!statusSearch.trim()) return true;
         const q = statusSearch.toLowerCase();
         return (
@@ -155,20 +177,50 @@ export const AdminPriorityStatusManagement: React.FC = () => {
         );
       })
       .sort((a: TicketStatusItem, b: TicketStatusItem) => a.sortOrder - b.sortOrder || a.id - b.id);
-  }, [statuses, activeFilter, statusSearch]);
+  }, [statuses, activeFilter, statusScopeFilter, statusSearch]);
 
-  // Sync local lists with query results when not actively dragging
+  const [dragOverPriorityId, setDragOverPriorityId] = useState<number | null>(null);
+  const [dragOverStatusId, setDragOverStatusId] = useState<number | null>(null);
+
+  // Sync local lists with query results when not actively dragging or saving
   useEffect(() => {
-    if (draggedPriorityId === null) {
+    if (draggedPriorityId === null && !isReorderingPriority) {
       setLocalPriorities(filteredPriorities);
     }
-  }, [filteredPriorities, draggedPriorityId]);
+  }, [filteredPriorities, draggedPriorityId, isReorderingPriority]);
 
   useEffect(() => {
-    if (draggedStatusId === null) {
+    if (draggedStatusId === null && !isReorderingStatus) {
       setLocalStatuses(filteredStatuses);
     }
-  }, [filteredStatuses, draggedStatusId]);
+  }, [filteredStatuses, draggedStatusId, isReorderingStatus]);
+
+  // Save Priority Order helper
+  const savePriorityOrder = async (updatedList: PriorityLevelItem[]) => {
+    const originalMap = new Map((priorities as PriorityLevelItem[]).map((p) => [p.id, p.sortOrder]));
+    const updates = updatedList
+      .map((p, idx) => ({ id: p.id, newSortOrder: idx + 1, oldSortOrder: originalMap.get(p.id) ?? p.sortOrder }))
+      .filter((u) => u.newSortOrder !== u.oldSortOrder);
+
+    if (updates.length > 0) {
+      setIsReorderingPriority(true);
+      try {
+        for (const u of updates) {
+          await updatePriorityMutation.mutateAsync({
+            id: u.id,
+            data: { sortOrder: u.newSortOrder },
+          });
+        }
+        await refetchPriorities();
+        showToast('Priority sort order updated.');
+      } catch (err: any) {
+        showToast(err?.response?.data?.message || err?.message || 'Failed to update priority order.');
+        refetchPriorities();
+      } finally {
+        setIsReorderingPriority(false);
+      }
+    }
+  };
 
   // Real-Time Priority Drag Handlers
   const handlePriorityDragStart = (e: React.DragEvent, id: number) => {
@@ -180,49 +232,75 @@ export const AdminPriorityStatusManagement: React.FC = () => {
   const handlePriorityDragOver = (e: React.DragEvent, hoverId: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-
-    if (!draggedPriorityId || draggedPriorityId === hoverId) return;
-
-    setLocalPriorities((prev) => {
-      const fromIndex = prev.findIndex((p) => p.id === draggedPriorityId);
-      const toIndex = prev.findIndex((p) => p.id === hoverId);
-
-      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev;
-
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
+    if (dragOverPriorityId !== hoverId) {
+      setDragOverPriorityId(hoverId);
+    }
   };
 
-  const handlePriorityDragEnd = async () => {
-    if (!draggedPriorityId) return;
+  const handlePriorityDrop = async (e: React.DragEvent, targetId: number) => {
+    e.preventDefault();
+    const sourceId = draggedPriorityId ?? Number(e.dataTransfer.getData('text/plain'));
     setDraggedPriorityId(null);
+    setDragOverPriorityId(null);
 
-    const originalMap = new Map((priorities as PriorityLevelItem[]).map((p) => [p.id, p.sortOrder]));
-    const updates = localPriorities
-      .map((p, idx) => ({ id: p.id, newSortOrder: idx + 1, oldSortOrder: originalMap.get(p.id) ?? p.sortOrder }))
+    if (!sourceId || sourceId === targetId) return;
+
+    const fromIndex = localPriorities.findIndex((p) => p.id === sourceId);
+    const toIndex = localPriorities.findIndex((p) => p.id === targetId);
+
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    const next = [...localPriorities];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setLocalPriorities(next);
+
+    await savePriorityOrder(next);
+  };
+
+  const handlePriorityDragEnd = () => {
+    setDraggedPriorityId(null);
+    setDragOverPriorityId(null);
+  };
+
+  const handleMovePriority = async (id: number, direction: 'up' | 'down') => {
+    const fromIndex = localPriorities.findIndex((p) => p.id === id);
+    if (fromIndex === -1) return;
+    if (direction === 'up' && fromIndex === 0) return;
+    if (direction === 'down' && fromIndex === localPriorities.length - 1) return;
+
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    const next = [...localPriorities];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setLocalPriorities(next);
+
+    await savePriorityOrder(next);
+  };
+
+  // Save Status Order helper
+  const saveStatusOrder = async (updatedList: TicketStatusItem[]) => {
+    const originalMap = new Map((statuses as TicketStatusItem[]).map((s) => [s.id, s.sortOrder]));
+    const updates = updatedList
+      .map((s, idx) => ({ id: s.id, newSortOrder: idx + 1, oldSortOrder: originalMap.get(s.id) ?? s.sortOrder }))
       .filter((u) => u.newSortOrder !== u.oldSortOrder);
 
     if (updates.length > 0) {
-      setIsReorderingPriority(true);
+      setIsReorderingStatus(true);
       try {
-        await Promise.all(
-          updates.map((u) =>
-            updatePriorityMutation.mutateAsync({
-              id: u.id,
-              data: { sortOrder: u.newSortOrder },
-            })
-          )
-        );
-        await refetchPriorities();
-        showToast('Priority sort order updated.');
+        for (const u of updates) {
+          await updateStatusMutation.mutateAsync({
+            id: u.id,
+            data: { sortOrder: u.newSortOrder },
+          });
+        }
+        await refetchStatuses();
+        showToast('Workflow status sort order updated.');
       } catch (err: any) {
-        showToast(err?.response?.data?.message || err?.message || 'Failed to update priority order.');
-        refetchPriorities();
+        showToast(err?.response?.data?.message || err?.message || 'Failed to update status order.');
+        refetchStatuses();
       } finally {
-        setIsReorderingPriority(false);
+        setIsReorderingStatus(false);
       }
     }
   };
@@ -237,51 +315,50 @@ export const AdminPriorityStatusManagement: React.FC = () => {
   const handleStatusDragOver = (e: React.DragEvent, hoverId: number) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-
-    if (!draggedStatusId || draggedStatusId === hoverId) return;
-
-    setLocalStatuses((prev) => {
-      const fromIndex = prev.findIndex((s) => s.id === draggedStatusId);
-      const toIndex = prev.findIndex((s) => s.id === hoverId);
-
-      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return prev;
-
-      const next = [...prev];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved);
-      return next;
-    });
+    if (dragOverStatusId !== hoverId) {
+      setDragOverStatusId(hoverId);
+    }
   };
 
-  const handleStatusDragEnd = async () => {
-    if (!draggedStatusId) return;
+  const handleStatusDrop = async (e: React.DragEvent, targetId: number) => {
+    e.preventDefault();
+    const sourceId = draggedStatusId ?? Number(e.dataTransfer.getData('text/plain'));
     setDraggedStatusId(null);
+    setDragOverStatusId(null);
 
-    const originalMap = new Map((statuses as TicketStatusItem[]).map((s) => [s.id, s.sortOrder]));
-    const updates = localStatuses
-      .map((s, idx) => ({ id: s.id, newSortOrder: idx + 1, oldSortOrder: originalMap.get(s.id) ?? s.sortOrder }))
-      .filter((u) => u.newSortOrder !== u.oldSortOrder);
+    if (!sourceId || sourceId === targetId) return;
 
-    if (updates.length > 0) {
-      setIsReorderingStatus(true);
-      try {
-        await Promise.all(
-          updates.map((u) =>
-            updateStatusMutation.mutateAsync({
-              id: u.id,
-              data: { sortOrder: u.newSortOrder },
-            })
-          )
-        );
-        await refetchStatuses();
-        showToast('Workflow status sort order updated.');
-      } catch (err: any) {
-        showToast(err?.response?.data?.message || err?.message || 'Failed to update status order.');
-        refetchStatuses();
-      } finally {
-        setIsReorderingStatus(false);
-      }
-    }
+    const fromIndex = localStatuses.findIndex((s) => s.id === sourceId);
+    const toIndex = localStatuses.findIndex((s) => s.id === targetId);
+
+    if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) return;
+
+    const next = [...localStatuses];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setLocalStatuses(next);
+
+    await saveStatusOrder(next);
+  };
+
+  const handleStatusDragEnd = () => {
+    setDraggedStatusId(null);
+    setDragOverStatusId(null);
+  };
+
+  const handleMoveStatus = async (id: number, direction: 'up' | 'down') => {
+    const fromIndex = localStatuses.findIndex((s) => s.id === id);
+    if (fromIndex === -1) return;
+    if (direction === 'up' && fromIndex === 0) return;
+    if (direction === 'down' && fromIndex === localStatuses.length - 1) return;
+
+    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+    const next = [...localStatuses];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    setLocalStatuses(next);
+
+    await saveStatusOrder(next);
   };
 
   // Stats calculation
@@ -315,19 +392,25 @@ export const AdminPriorityStatusManagement: React.FC = () => {
         showToast(`Priority level "${confirmModal.priority.label}" archived successfully.`);
       } else if (confirmModal.type === 'restore-priority' && confirmModal.priority) {
         await updatePriorityMutation.mutateAsync({
-          id: confirmModal.priority.id,
-          data: { status: 'ACTIVE' },
-        });
+           id: confirmModal.priority.id,
+           data: { status: 'ACTIVE' },
+         });
         showToast(`Priority level "${confirmModal.priority.label}" restored successfully.`);
+      } else if (confirmModal.type === 'delete-priority' && confirmModal.priority) {
+        await deletePriorityPermanentlyMutation.mutateAsync(confirmModal.priority.id);
+        showToast(`Priority level "${confirmModal.priority.label}" permanently deleted.`);
       } else if (confirmModal.type === 'archive-status' && confirmModal.statusItem) {
         await retireStatusMutation.mutateAsync(confirmModal.statusItem.id);
         showToast(`Workflow status "${confirmModal.statusItem.label}" archived successfully.`);
       } else if (confirmModal.type === 'restore-status' && confirmModal.statusItem) {
         await updateStatusMutation.mutateAsync({
-          id: confirmModal.statusItem.id,
-          data: { status: 'ACTIVE' },
-        });
+           id: confirmModal.statusItem.id,
+           data: { status: 'ACTIVE' },
+         });
         showToast(`Workflow status "${confirmModal.statusItem.label}" restored successfully.`);
+      } else if (confirmModal.type === 'delete-status' && confirmModal.statusItem) {
+        await deleteStatusPermanentlyMutation.mutateAsync(confirmModal.statusItem.id);
+        showToast(`Workflow status "${confirmModal.statusItem.label}" permanently deleted.`);
       }
 
       setConfirmModal({
@@ -468,7 +551,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
         {/* ========================================================================= */}
         {/* VERTICAL SPLIT: TWO EQUAL HALVES */}
         {/* ========================================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 2xl:gap-6 items-start w-full">
           {/* ──────────────────────────────────────────────────────────────────────── */}
           {/* LEFT HALF: PRIORITY LEVELS MANAGEMENT */}
           {/* ──────────────────────────────────────────────────────────────────────── */}
@@ -533,26 +616,56 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                   const isArchived = priority.status === 'INACTIVE';
                   const pColor = getPriorityColor(priority.id, priority.label);
                   const isBeingDragged = priority.id === draggedPriorityId;
+                  const isDropTarget = dragOverPriorityId === priority.id && draggedPriorityId !== priority.id;
 
                   return (
                     <div
                       key={priority.id}
-                      draggable={true}
+                      draggable={!isReorderingPriority}
                       onDragStart={(e) => handlePriorityDragStart(e, priority.id)}
                       onDragOver={(e) => handlePriorityDragOver(e, priority.id)}
+                      onDrop={(e) => handlePriorityDrop(e, priority.id)}
                       onDragEnd={handlePriorityDragEnd}
-                      className={`grid grid-cols-12 px-4 py-3 items-center transition-all duration-200 select-none cursor-grab active:cursor-grabbing ${
+                      className={`grid grid-cols-12 px-4 py-3 items-center transition-all duration-150 select-none ${
                         isBeingDragged
-                          ? 'bg-blue-50/90 border-2 border-dashed border-[#1F3864] shadow-lg ring-2 ring-[#1F3864]/20 scale-[1.01] z-20'
+                          ? 'opacity-40 bg-blue-50/50 border-2 border-dashed border-[#1F3864]'
+                          : isDropTarget
+                          ? 'bg-blue-50/80 border-t-4 border-[#1F3864] shadow-md'
                           : isArchived
                           ? 'bg-amber-50/30 hover:bg-amber-50/50'
                           : 'bg-white hover:bg-[#F8FAFC]'
                       }`}
                     >
-                      {/* Sort Order Rank Pill with Drag Handle & Live Rank */}
-                      <div className="col-span-3 flex items-center gap-2">
+                      {/* Sort Order Rank Pill with Move Buttons & Drag Handle */}
+                      <div className="col-span-3 flex items-center gap-1.5">
+                        <div className="flex flex-col items-center justify-center -space-y-1">
+                          <button
+                            type="button"
+                            disabled={index === 0 || isReorderingPriority}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMovePriority(priority.id, 'up');
+                            }}
+                            className="p-0.5 text-gray-400 hover:text-[#1F3864] disabled:opacity-20 disabled:hover:text-gray-400 cursor-pointer disabled:cursor-not-allowed transition-colors"
+                            title="Move Up"
+                          >
+                            <span className="material-symbols-outlined text-[15px] leading-none block">keyboard_arrow_up</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === localPriorities.length - 1 || isReorderingPriority}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMovePriority(priority.id, 'down');
+                            }}
+                            className="p-0.5 text-gray-400 hover:text-[#1F3864] disabled:opacity-20 disabled:hover:text-gray-400 cursor-pointer disabled:cursor-not-allowed transition-colors"
+                            title="Move Down"
+                          >
+                            <span className="material-symbols-outlined text-[15px] leading-none block">keyboard_arrow_down</span>
+                          </button>
+                        </div>
                         <span
-                          className={`material-symbols-outlined text-[18px] transition-colors shrink-0 ${
+                          className={`material-symbols-outlined text-[18px] cursor-grab active:cursor-grabbing transition-colors shrink-0 ${
                             isBeingDragged ? 'text-[#1F3864] font-bold' : 'text-gray-400 hover:text-[#1F3864]'
                           }`}
                           title="Drag up or down to reorder"
@@ -565,9 +678,9 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                         >
                           {index + 1}
                         </span>
-                        {isBeingDragged && (
-                          <span className="text-[10px] font-extrabold text-[#1F3864] bg-white px-2 py-0.5 rounded-full border border-blue-200 shadow-2xs animate-pulse">
-                            Drop #{index + 1}
+                        {isDropTarget && (
+                          <span className="text-[10px] font-extrabold text-[#1F3864] bg-blue-100 px-2 py-0.5 rounded-full border border-blue-300 shadow-2xs">
+                            Place here
                           </span>
                         )}
                       </div>
@@ -616,22 +729,40 @@ export const AdminPriorityStatusManagement: React.FC = () => {
 
                         <Can permission={PERMISSIONS.PRIORITY_RETIRE}>
                           {isArchived ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setConfirmModal({
-                                  isOpen: true,
-                                  type: 'restore-priority',
-                                  priority,
-                                  statusItem: null,
-                                  isLoading: false,
-                                })
-                              }
-                              className="p-1 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
-                              title="Restore Priority"
-                            >
-                              <span className="material-symbols-outlined text-[17px]">unarchive</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirmModal({
+                                    isOpen: true,
+                                    type: 'restore-priority',
+                                    priority,
+                                    statusItem: null,
+                                    isLoading: false,
+                                  })
+                                }
+                                className="p-1 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
+                                title="Restore Priority"
+                              >
+                                <span className="material-symbols-outlined text-[17px]">unarchive</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirmModal({
+                                    isOpen: true,
+                                    type: 'delete-priority',
+                                    priority,
+                                    statusItem: null,
+                                    isLoading: false,
+                                  })
+                                }
+                                className="p-1 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition-all cursor-pointer"
+                                title="Permanently Delete Priority"
+                              >
+                                <span className="material-symbols-outlined text-[17px]">delete_forever</span>
+                              </button>
+                            </div>
                           ) : (
                             <button
                               type="button"
@@ -664,33 +795,91 @@ export const AdminPriorityStatusManagement: React.FC = () => {
           {/* ──────────────────────────────────────────────────────────────────────── */}
           <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] overflow-hidden flex flex-col">
             {/* Column Header */}
-            <div className="p-4 bg-gradient-to-r from-[#F8FAFC] to-[#F1F5F9] border-b border-[#E2E8F0] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[18px]">checklist</span>
+            <div className="p-4 bg-gradient-to-r from-[#F8FAFC] to-[#F1F5F9] border-b border-[#E2E8F0] flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-700 text-white flex items-center justify-center shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">checklist</span>
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-[#0F172A]">
+                      Workflow Statuses
+                    </h2>
+                    <p className="text-[11px] text-gray-500">
+                      Lifecycle states with semantic behavior
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-sm font-bold text-[#0F172A]">
-                    Workflow Statuses
-                  </h2>
-                  <p className="text-[11px] text-gray-500">
-                    Lifecycle states with semantic behavior
-                  </p>
+
+                {/* Search Bar for Statuses */}
+                <div className="relative w-full sm:w-44">
+                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[15px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    value={statusSearch}
+                    onChange={(e) => setStatusSearch(e.target.value)}
+                    placeholder="Search statuses..."
+                    className="w-full h-7.5 pl-8 pr-2.5 bg-white border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all"
+                  />
                 </div>
               </div>
 
-              {/* Search Bar for Statuses */}
-              <div className="relative w-full sm:w-44">
-                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[15px]">
-                  search
-                </span>
-                <input
-                  type="text"
-                  value={statusSearch}
-                  onChange={(e) => setStatusSearch(e.target.value)}
-                  placeholder="Search statuses..."
-                  className="w-full h-7.5 pl-8 pr-2.5 bg-white border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all"
-                />
+              {/* Scope Selector: Global vs Team-Specific */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E2E8F0]/70">
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Scope:</span>
+                  <div className="inline-flex p-0.5 bg-[#EEF2F6] rounded-lg border border-[#E2E8F0] text-[11px]">
+                    <button
+                      type="button"
+                      onClick={() => setStatusScopeFilter('GLOBAL')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold ${
+                        statusScopeFilter === 'GLOBAL'
+                          ? 'bg-white text-[#1F3864] shadow-xs'
+                          : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      Global Only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStatusScopeFilter('ALL')}
+                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer font-bold ${
+                        statusScopeFilter === 'ALL'
+                          ? 'bg-white text-[#1F3864] shadow-xs'
+                          : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      All (Global + Teams)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Team Filter Dropdown */}
+                {teams.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-gray-400">Team:</span>
+                    <select
+                      value={['GLOBAL', 'ALL'].includes(statusScopeFilter) ? '' : statusScopeFilter}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setStatusScopeFilter(e.target.value);
+                        } else {
+                          setStatusScopeFilter('GLOBAL');
+                        }
+                      }}
+                      className="h-7 text-xs bg-white border border-[#E2E8F0] rounded-lg px-2 text-[#0F172A] font-medium focus:outline-none focus:border-[#1F3864] cursor-pointer"
+                    >
+                      <option value="">-- Filter by Team --</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={String(t.id)}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -725,26 +914,56 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                   const sColor = getStatusColor(statusItem.id, statusItem.behavior, statusItem.label);
                   const sBadgeStyle = getColorBadgeStyles(sColor);
                   const isBeingDragged = statusItem.id === draggedStatusId;
+                  const isDropTarget = dragOverStatusId === statusItem.id && draggedStatusId !== statusItem.id;
 
                   return (
                     <div
                       key={statusItem.id}
-                      draggable={true}
+                      draggable={!isReorderingStatus}
                       onDragStart={(e) => handleStatusDragStart(e, statusItem.id)}
                       onDragOver={(e) => handleStatusDragOver(e, statusItem.id)}
+                      onDrop={(e) => handleStatusDrop(e, statusItem.id)}
                       onDragEnd={handleStatusDragEnd}
-                      className={`grid grid-cols-12 px-4 py-3 items-center transition-all duration-200 select-none cursor-grab active:cursor-grabbing ${
+                      className={`grid grid-cols-12 px-4 py-3 items-center transition-all duration-150 select-none ${
                         isBeingDragged
-                          ? 'bg-emerald-50/90 border-2 border-dashed border-emerald-700 shadow-lg ring-2 ring-emerald-700/20 scale-[1.01] z-20'
+                          ? 'opacity-40 bg-emerald-50/50 border-2 border-dashed border-emerald-600'
+                          : isDropTarget
+                          ? 'bg-emerald-50/80 border-t-4 border-emerald-600 shadow-md'
                           : isArchived
                           ? 'bg-amber-50/30 hover:bg-amber-50/50'
                           : 'bg-white hover:bg-[#F8FAFC]'
                       }`}
                     >
-                      {/* Sort Order Rank Pill with Drag Handle & Live Rank */}
-                      <div className="col-span-3 flex items-center gap-2">
+                      {/* Sort Order Rank Pill with Move Buttons & Drag Handle */}
+                      <div className="col-span-3 flex items-center gap-1.5">
+                        <div className="flex flex-col items-center justify-center -space-y-1">
+                          <button
+                            type="button"
+                            disabled={index === 0 || isReorderingStatus}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoveStatus(statusItem.id, 'up');
+                            }}
+                            className="p-0.5 text-gray-400 hover:text-[#1F3864] disabled:opacity-20 disabled:hover:text-gray-400 cursor-pointer disabled:cursor-not-allowed transition-colors"
+                            title="Move Up"
+                          >
+                            <span className="material-symbols-outlined text-[15px] leading-none block">keyboard_arrow_up</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={index === localStatuses.length - 1 || isReorderingStatus}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMoveStatus(statusItem.id, 'down');
+                            }}
+                            className="p-0.5 text-gray-400 hover:text-[#1F3864] disabled:opacity-20 disabled:hover:text-gray-400 cursor-pointer disabled:cursor-not-allowed transition-colors"
+                            title="Move Down"
+                          >
+                            <span className="material-symbols-outlined text-[15px] leading-none block">keyboard_arrow_down</span>
+                          </button>
+                        </div>
                         <span
-                          className={`material-symbols-outlined text-[18px] transition-colors shrink-0 ${
+                          className={`material-symbols-outlined text-[18px] cursor-grab active:cursor-grabbing transition-colors shrink-0 ${
                             isBeingDragged ? 'text-emerald-700 font-bold' : 'text-gray-400 hover:text-emerald-700'
                           }`}
                           title="Drag up or down to reorder"
@@ -757,9 +976,9 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                         >
                           {index + 1}
                         </span>
-                        {isBeingDragged && (
-                          <span className="text-[10px] font-extrabold text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-200 shadow-2xs animate-pulse">
-                            Drop #{index + 1}
+                        {isDropTarget && (
+                          <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300 shadow-2xs">
+                            Place here
                           </span>
                         )}
                       </div>
@@ -820,22 +1039,42 @@ export const AdminPriorityStatusManagement: React.FC = () => {
 
                         <Can permission={PERMISSIONS.STATUS_RETIRE}>
                           {isArchived ? (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                setConfirmModal({
-                                  isOpen: true,
-                                  type: 'restore-status',
-                                  priority: null,
-                                  statusItem,
-                                  isLoading: false,
-                                })
-                              }
-                              className="p-1 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
-                              title="Restore Status"
-                            >
-                              <span className="material-symbols-outlined text-[17px]">unarchive</span>
-                            </button>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setConfirmModal({
+                                    isOpen: true,
+                                    type: 'restore-status',
+                                    priority: null,
+                                    statusItem,
+                                    isLoading: false,
+                                  })
+                                }
+                                className="p-1 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
+                                title="Restore Status"
+                              >
+                                <span className="material-symbols-outlined text-[17px]">unarchive</span>
+                              </button>
+                              {!statusItem.isDefault && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setConfirmModal({
+                                      isOpen: true,
+                                      type: 'delete-status',
+                                      priority: null,
+                                      statusItem,
+                                      isLoading: false,
+                                    })
+                                  }
+                                  className="p-1 rounded-lg text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition-all cursor-pointer"
+                                  title="Permanently Delete Status"
+                                >
+                                  <span className="material-symbols-outlined text-[17px]">delete_forever</span>
+                                </button>
+                              )}
+                            </div>
                           ) : statusItem.isDefault ? (
                             <span
                               className="p-1 text-gray-300 cursor-not-allowed"
@@ -894,6 +1133,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
         onClose={() => setIsCreateStatusOpen(false)}
         onSuccess={showToast}
         existingCount={statuses.length}
+        defaultTeamId={statusScopeFilter}
       />
 
       <EditStatusModal
@@ -906,7 +1146,11 @@ export const AdminPriorityStatusManagement: React.FC = () => {
       <ConfirmActionModal
         isOpen={confirmModal.isOpen}
         title={
-          confirmModal.type === 'archive-priority'
+          confirmModal.type === 'delete-priority'
+            ? 'Permanently Delete Priority Level'
+            : confirmModal.type === 'delete-status'
+            ? 'Permanently Delete Workflow Status'
+            : confirmModal.type === 'archive-priority'
             ? 'Archive Priority Level'
             : confirmModal.type === 'restore-priority'
             ? 'Restore Priority Level'
@@ -915,7 +1159,11 @@ export const AdminPriorityStatusManagement: React.FC = () => {
             : 'Restore Workflow Status'
         }
         message={
-          confirmModal.type === 'archive-priority'
+          confirmModal.type === 'delete-priority'
+            ? `Are you sure you want to permanently delete priority level "${confirmModal.priority?.label}"? This action cannot be undone.`
+            : confirmModal.type === 'delete-status'
+            ? `Are you sure you want to permanently delete workflow status "${confirmModal.statusItem?.label}"? This action cannot be undone.`
+            : confirmModal.type === 'archive-priority'
             ? `Are you sure you want to archive priority level "${confirmModal.priority?.label}"? It will no longer appear for newly created tickets.`
             : confirmModal.type === 'restore-priority'
             ? `Restore priority level "${confirmModal.priority?.label}" to active status?`
@@ -924,10 +1172,18 @@ export const AdminPriorityStatusManagement: React.FC = () => {
             : `Restore workflow status "${confirmModal.statusItem?.label}" to active status?`
         }
         confirmLabel={
-          confirmModal.type.startsWith('restore') ? 'Restore' : 'Archive'
+          confirmModal.type.startsWith('delete')
+            ? 'Delete Permanently'
+            : confirmModal.type.startsWith('restore')
+            ? 'Restore'
+            : 'Archive'
         }
         confirmVariant={
-          confirmModal.type.startsWith('restore') ? 'primary' : 'warning'
+          confirmModal.type.startsWith('delete')
+            ? 'danger'
+            : confirmModal.type.startsWith('restore')
+            ? 'primary'
+            : 'warning'
         }
         isLoading={confirmModal.isLoading}
         onConfirm={handleConfirmAction}

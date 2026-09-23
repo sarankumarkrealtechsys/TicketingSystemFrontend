@@ -20,3 +20,4 @@ export type {
   UpdateTicketStatusPayload,
 } from "./priority-status-management";
 export * from "./ticket-fields";
+export * from "./settings";

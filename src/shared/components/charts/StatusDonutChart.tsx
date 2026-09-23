@@ -1,8 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { getStatusColor } from "@/features/priority-status-management/colorRegistry";
+
+export interface StatusItem {
+  statusId: number;
+  label: string;
+  count: number;
+  behavior?: string;
+  color?: string;
+  sortOrder?: number;
+}
 
 export interface StatusDonutChartProps {
   total: number;
+  byStatus?: StatusItem[];
   byStatusBehavior?: {
     OPEN: number;
     IN_PROGRESS: number;
@@ -18,6 +29,7 @@ export interface StatusDonutChartProps {
 
 export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
   total = 0,
+  byStatus,
   byStatusBehavior = {
     OPEN: 0,
     IN_PROGRESS: 0,
@@ -31,15 +43,49 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
   breakdownLink = "/tickets",
 }) => {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [, setColorTick] = useState(0);
+
+  useEffect(() => {
+    const handleColorsUpdated = () => setColorTick((t) => t + 1);
+    window.addEventListener("rts_colors_updated", handleColorsUpdated);
+    return () => {
+      window.removeEventListener("rts_colors_updated", handleColorsUpdated);
+    };
+  }, []);
+
   const circumference = 2 * Math.PI * 38; // ~238.761
 
-  const statuses = [
-    { key: "OPEN", label: "Open", count: byStatusBehavior.OPEN || 0, color: "#1E88E5" },
-    { key: "IN_PROGRESS", label: "In Progress", count: byStatusBehavior.IN_PROGRESS || 0, color: "#FB8C00" },
-    { key: "ON_HOLD", label: "On Hold", count: byStatusBehavior.ON_HOLD || 0, color: "#8E24AA" },
-    { key: "RESOLVED", label: "Resolved", count: byStatusBehavior.RESOLVED || 0, color: "#43A047" },
-    { key: "CLOSED", label: "Closed", count: byStatusBehavior.CLOSED || 0, color: "#757575" },
-  ];
+  // Use dynamic byStatus if provided, otherwise fallback to byStatusBehavior
+  let statuses: Array<{
+    key: string;
+    label: string;
+    count: number;
+    color: string;
+  }> = [];
+
+  if (byStatus && byStatus.length > 0) {
+    const sorted = [...byStatus].sort((a, b) => {
+      const orderA = a.sortOrder !== undefined ? a.sortOrder : 999;
+      const orderB = b.sortOrder !== undefined ? b.sortOrder : 999;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.statusId || 0) - (b.statusId || 0);
+    });
+
+    statuses = sorted.map((s) => ({
+      key: String(s.statusId),
+      label: s.label,
+      count: s.count || 0,
+      color: s.color || getStatusColor(s.statusId, s.behavior, s.label),
+    }));
+  } else {
+    statuses = [
+      { key: "OPEN", label: "Open", count: byStatusBehavior.OPEN || 0, color: getStatusColor(null, "OPEN", "Open") },
+      { key: "IN_PROGRESS", label: "In Progress", count: byStatusBehavior.IN_PROGRESS || 0, color: getStatusColor(null, "IN_PROGRESS", "In Progress") },
+      { key: "ON_HOLD", label: "On Hold", count: byStatusBehavior.ON_HOLD || 0, color: getStatusColor(null, "ON_HOLD", "On Hold") },
+      { key: "RESOLVED", label: "Resolved", count: byStatusBehavior.RESOLVED || 0, color: getStatusColor(null, "RESOLVED", "Resolved") },
+      { key: "CLOSED", label: "Closed", count: byStatusBehavior.CLOSED || 0, color: getStatusColor(null, "CLOSED", "Closed") },
+    ];
+  }
 
   let accumulated = 0;
   const slices = statuses.map((item) => {
@@ -94,24 +140,26 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                 strokeWidth="12"
               />
               {/* Data Slices */}
-              {slices.map((slice) => (
-                <circle
-                  key={slice.key}
-                  cx="50"
-                  cy="50"
-                  fill="none"
-                  r="38"
-                  stroke={slice.color}
-                  strokeDasharray={`${slice.length} ${circumference}`}
-                  strokeDashoffset={slice.offset}
-                  strokeWidth={hoveredKey === slice.key ? 15 : 12}
-                  onMouseEnter={() => setHoveredKey(slice.key)}
-                  onMouseLeave={() => setHoveredKey(null)}
-                  className="transition-all duration-300 ease-in-out cursor-pointer opacity-90 hover:opacity-100"
-                >
-                  <title>{`${slice.label}: ${slice.count} tickets (${slice.pct}%)`}</title>
-                </circle>
-              ))}
+              {slices.map((slice) =>
+                slice.length > 0 ? (
+                  <circle
+                    key={slice.key}
+                    cx="50"
+                    cy="50"
+                    fill="none"
+                    r="38"
+                    stroke={slice.color}
+                    strokeDasharray={`${slice.length} ${circumference}`}
+                    strokeDashoffset={slice.offset}
+                    strokeWidth={hoveredKey === slice.key ? 15 : 12}
+                    onMouseEnter={() => setHoveredKey(slice.key)}
+                    onMouseLeave={() => setHoveredKey(null)}
+                    className="transition-all duration-300 ease-in-out cursor-pointer opacity-90 hover:opacity-100"
+                  >
+                    <title>{`${slice.label}: ${slice.count} tickets (${slice.pct}%)`}</title>
+                  </circle>
+                ) : null
+              )}
             </svg>
 
             {/* Centered Dynamic Status Display on Hover */}
@@ -139,7 +187,7 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                 }`}
               >
                 <span
-                  className="text-[10px] font-bold uppercase tracking-wider line-clamp-1"
+                  className="text-[10px] font-bold uppercase tracking-wider line-clamp-1 max-w-[100px] truncate"
                   style={{ color: activeSlice?.color }}
                 >
                   {activeSlice?.label}
@@ -154,8 +202,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
             </div>
           </div>
 
-          {/* Legend Items */}
-          <div className="flex-1 w-full space-y-2">
+          {/* Legend Items (compact & scrollable) */}
+          <div className="flex-1 w-full space-y-1.5 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
             {slices.map((item) => {
               const isHovered = hoveredKey === item.key;
               return (
@@ -169,20 +217,21 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                       : "hover:bg-gray-50"
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: item.color }}
                     />
                     <span
-                      className={`font-medium ${
-                        isHovered ? "text-[#1A1A1A] font-bold" : "text-[#1A1A1A]"
+                      className={`truncate ${
+                        isHovered ? "text-[#1A1A1A] font-bold" : "text-[#1A1A1A] font-medium"
                       }`}
+                      title={item.label}
                     >
                       {item.label}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 font-mono">
+                  <div className="flex items-center gap-1.5 font-mono shrink-0">
                     <span className="font-bold text-[#1A1A1A]">{item.count}</span>
                     <span className="text-[#5F6368] text-[11px]">
                       ({item.pct}%)

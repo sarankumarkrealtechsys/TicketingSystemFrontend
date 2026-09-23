@@ -11,6 +11,16 @@ export interface TicketStatsData {
     priorityId: number;
     label: string;
     count: number;
+    sortOrder?: number;
+    color?: string;
+  }>;
+  byStatus?: Array<{
+    statusId: number;
+    label: string;
+    behavior: string;
+    count: number;
+    sortOrder?: number;
+    color?: string;
   }>;
 }
 

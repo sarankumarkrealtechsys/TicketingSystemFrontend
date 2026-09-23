@@ -12,11 +12,39 @@ export interface AuthState {
   status: AuthStatus;
 }
 
-const initialState: AuthState = {
-  user: null,
-  permissions: {},
-  status: "loading",
+const STORAGE_KEY_AUTH_SESSION = "rts_auth_session";
+
+const loadInitialSession = (): AuthState => {
+  if (typeof window === "undefined") {
+    return {
+      user: null,
+      permissions: {},
+      status: "loading",
+    };
+  }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_AUTH_SESSION);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.user && parsed.user.id) {
+        return {
+          user: parsed.user,
+          permissions: parsed.permissions || {},
+          status: "authenticated",
+        };
+      }
+    }
+  } catch {
+    // Ignore storage parse errors
+  }
+  return {
+    user: null,
+    permissions: {},
+    status: "loading",
+  };
 };
+
+const initialState: AuthState = loadInitialSession();
 
 export const authSlice = createSlice({
   name: "auth",
@@ -26,11 +54,27 @@ export const authSlice = createSlice({
       state.user = action.payload.user;
       state.permissions = action.payload.permissions || {};
       state.status = "authenticated";
+      try {
+        localStorage.setItem(
+          STORAGE_KEY_AUTH_SESSION,
+          JSON.stringify({
+            user: action.payload.user,
+            permissions: action.payload.permissions || {},
+          }),
+        );
+      } catch {
+        // Ignore quota errors
+      }
     },
     clearSession: (state) => {
       state.user = null;
       state.permissions = {};
       state.status = "unauthenticated";
+      try {
+        localStorage.removeItem(STORAGE_KEY_AUTH_SESSION);
+      } catch {
+        // Ignore errors
+      }
     },
     setAuthStatus: (state, action: PayloadAction<AuthStatus>) => {
       state.status = action.payload;

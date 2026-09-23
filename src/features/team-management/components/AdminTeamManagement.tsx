@@ -253,8 +253,8 @@ export const AdminTeamManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+      {/* Quick Stats Cards (fluid responsive grid scaling) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 2xl:gap-6 w-full">
         <StatCard
           title="Active Teams"
           count={stats.activeTeams}

@@ -27,6 +27,26 @@ export const usePrioritiesQuery = (options?: { includeInactive?: boolean }) => {
   });
 };
 
+const invalidatePriorityData = (queryClient: any) => {
+  queryClient.invalidateQueries({ queryKey: ['priority-levels'] });
+  queryClient.invalidateQueries({ queryKey: ['admin'] });
+  queryClient.invalidateQueries({ queryKey: ['user-dashboard'] });
+  queryClient.invalidateQueries({ queryKey: ['tickets'] });
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rts_masterdata_updated'));
+  }
+};
+
+const invalidateStatusData = (queryClient: any) => {
+  queryClient.invalidateQueries({ queryKey: ['ticket-statuses'] });
+  queryClient.invalidateQueries({ queryKey: ['admin'] });
+  queryClient.invalidateQueries({ queryKey: ['user-dashboard'] });
+  queryClient.invalidateQueries({ queryKey: ['tickets'] });
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rts_masterdata_updated'));
+  }
+};
+
 export const useCreatePriorityMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -38,8 +58,7 @@ export const useCreatePriorityMutation = () => {
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['priority-levels'] });
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      invalidatePriorityData(queryClient);
     },
   });
 };
@@ -55,8 +74,7 @@ export const useUpdatePriorityMutation = () => {
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['priority-levels'] });
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      invalidatePriorityData(queryClient);
     },
   });
 };
@@ -71,8 +89,7 @@ export const useRetirePriorityMutation = () => {
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['priority-levels'] });
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      invalidatePriorityData(queryClient);
     },
   });
 };
@@ -114,8 +131,7 @@ export const useCreateTicketStatusMutation = () => {
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ticket-statuses'] });
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      invalidateStatusData(queryClient);
     },
   });
 };
@@ -131,8 +147,22 @@ export const useUpdateTicketStatusMutation = () => {
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ticket-statuses'] });
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      invalidateStatusData(queryClient);
+    },
+  });
+};
+
+export const useDeletePriorityPermanentlyMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await apiClient.delete<{ status: string; data: PriorityLevelItem }>(
+        `/priority-levels/${id}/permanent`
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      invalidatePriorityData(queryClient);
     },
   });
 };
@@ -147,8 +177,22 @@ export const useRetireTicketStatusMutation = () => {
       return data.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ticket-statuses'] });
-      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+      invalidateStatusData(queryClient);
+    },
+  });
+};
+
+export const useDeleteTicketStatusPermanentlyMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data } = await apiClient.delete<{ status: string; data: TicketStatusItem }>(
+        `/ticket-statuses/${id}/permanent`
+      );
+      return data.data;
+    },
+    onSuccess: () => {
+      invalidateStatusData(queryClient);
     },
   });
 };

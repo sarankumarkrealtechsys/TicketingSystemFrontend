@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { apiClient } from "@/shared/api";
-import { TicketFieldDefinition, CreateTicketFieldPayload } from "./types";
+import { TicketFieldDefinition, CreateTicketFieldPayload, UpdateTicketFieldPayload } from "./types";
 
 export const ticketFieldKeys = {
   all: ["ticketFields"] as const,
@@ -59,6 +59,42 @@ export const useCreateTicketFieldMutation = () => {
           queryKey: ticketFieldKeys.list({ teamId: variables.teamId }),
         });
       }
+    },
+  });
+};
+
+export const useUpdateTicketFieldMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    TicketFieldDefinition,
+    AxiosError<any>,
+    UpdateTicketFieldPayload
+  >({
+    mutationFn: async ({ id, ...payload }: UpdateTicketFieldPayload) => {
+      const { data } = await apiClient.patch<any>(`/ticket-fields/${id}`, payload);
+      return (data?.data ?? data) as TicketFieldDefinition;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketFieldKeys.all });
+    },
+  });
+};
+
+export const useDeleteTicketFieldMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { status: string; message?: string },
+    AxiosError<any>,
+    number
+  >({
+    mutationFn: async (id: number) => {
+      const { data } = await apiClient.delete<any>(`/ticket-fields/${id}`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketFieldKeys.all });
     },
   });
 };
