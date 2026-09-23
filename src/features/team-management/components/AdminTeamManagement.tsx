@@ -13,6 +13,7 @@ import { EditTeamModal } from "./EditTeamModal";
 import { TeamRosterDrawer } from "./TeamRosterDrawer";
 import { ReassignDepartmentModal } from "./ReassignDepartmentModal";
 import { SelectDropdown, SelectOption, StatCard, Can } from "@/shared/components";
+import { useCan } from "@/features/auth";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
   { value: "all", label: "All Statuses" },
@@ -22,6 +23,7 @@ const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
 
 export const AdminTeamManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const canManageMembers = useCan("TEAM_MEMBERSHIP_MANAGE");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
@@ -224,7 +226,7 @@ export const AdminTeamManagement: React.FC = () => {
 
         {/* Action button */}
         <div className="flex items-center gap-3">
-          <Can permission="TEAM_UPDATE">
+          <Can permission="TEAM_DEPARTMENT_CHANGE">
             <button
               type="button"
               onClick={() => setIsReassignOpen(true)}
@@ -393,8 +395,14 @@ export const AdminTeamManagement: React.FC = () => {
                       return (
                         <tr
                           key={t.id}
-                          onClick={() => setSelectedTeamForRoster(t)}
-                          className="hover:bg-gray-50/70 transition-colors cursor-pointer group"
+                          onClick={() => {
+                            if (canManageMembers) {
+                              setSelectedTeamForRoster(t);
+                            }
+                          }}
+                          className={`hover:bg-gray-50/70 transition-colors ${
+                            canManageMembers ? "cursor-pointer group" : ""
+                          }`}
                         >
                           <td className="px-4 py-3.5 font-medium text-[#1F3864]">
                             <div className="flex items-center gap-3">
@@ -450,20 +458,22 @@ export const AdminTeamManagement: React.FC = () => {
                             onClick={(e) => e.stopPropagation()}
                           >
                             <div className="inline-flex items-center gap-1">
-                              {/* View Roster */}
-                              <button
-                                type="button"
-                                onClick={() => setSelectedTeamForRoster(t)}
-                                title="View Roster Drawer"
-                                className="p-1 rounded text-[#0e61a1] hover:bg-blue-50 transition-colors"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  group
-                                </span>
-                              </button>
+                              {/* View / Manage Roster */}
+                              <Can permission="TEAM_MEMBERSHIP_MANAGE">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedTeamForRoster(t)}
+                                  title="Manage Team Members"
+                                  className="p-1 rounded text-[#0e61a1] hover:bg-blue-50 transition-colors cursor-pointer"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    group
+                                  </span>
+                                </button>
+                              </Can>
 
-                              {/* Change Department & Edit Team */}
-                              <Can permission="TEAM_UPDATE">
+                              {/* Change Department */}
+                              <Can permission="TEAM_DEPARTMENT_CHANGE">
                                 <button
                                   type="button"
                                   onClick={() => setSelectedTeamForReassign(t)}
@@ -474,6 +484,10 @@ export const AdminTeamManagement: React.FC = () => {
                                     swap_horiz
                                   </span>
                                 </button>
+                              </Can>
+
+                              {/* Edit Team */}
+                              <Can permission="TEAM_UPDATE">
                                 <button
                                   type="button"
                                   onClick={() => setSelectedTeamForEdit(t)}
@@ -552,8 +566,14 @@ export const AdminTeamManagement: React.FC = () => {
                   return (
                     <div
                       key={t.id}
-                      onClick={() => setSelectedTeamForRoster(t)}
-                      className="bg-white rounded-xl p-3.5 border border-[#E5E7EB] shadow-xs active:scale-[0.99] cursor-pointer hover:border-[#0e61a1]/40 transition-all flex flex-col space-y-3"
+                      onClick={() => {
+                        if (canManageMembers) {
+                          setSelectedTeamForRoster(t);
+                        }
+                      }}
+                      className={`bg-white rounded-xl p-3.5 border border-[#E5E7EB] shadow-xs active:scale-[0.99] transition-all flex flex-col space-y-3 ${
+                        canManageMembers ? "cursor-pointer hover:border-[#0e61a1]/40" : ""
+                      }`}
                     >
                       {/* Card Header: Badge, Name, Status */}
                       <div className="flex items-start justify-between gap-2">
@@ -624,17 +644,19 @@ export const AdminTeamManagement: React.FC = () => {
                         className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <button
-                          type="button"
-                          onClick={() => setSelectedTeamForRoster(t)}
-                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#0e61a1] bg-blue-50/70 hover:bg-blue-100 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">
-                            group
-                          </span>
-                          <span>Roster</span>
-                        </button>
-                        <Can permission="TEAM_UPDATE">
+                        <Can permission="TEAM_MEMBERSHIP_MANAGE">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedTeamForRoster(t)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-[#0e61a1] bg-blue-50/70 hover:bg-blue-100 transition-colors cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">
+                              group
+                            </span>
+                            <span>Roster</span>
+                          </button>
+                        </Can>
+                        <Can permission="TEAM_DEPARTMENT_CHANGE">
                           <button
                             type="button"
                             onClick={() => setSelectedTeamForReassign(t)}
@@ -645,6 +667,8 @@ export const AdminTeamManagement: React.FC = () => {
                             </span>
                             <span>Dept</span>
                           </button>
+                        </Can>
+                        <Can permission="TEAM_UPDATE">
                           <button
                             type="button"
                             onClick={() => setSelectedTeamForEdit(t)}

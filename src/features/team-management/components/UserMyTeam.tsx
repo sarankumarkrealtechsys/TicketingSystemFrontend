@@ -1,16 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   useTeamsQuery,
   useTeamDetailQuery,
   useTeamStatusesQuery,
+  useUpdateTeamStatusMutation,
+  useRetireTeamStatusMutation,
 } from "../api";
+import { TeamStatusItem } from "../types";
 import { CreateStatusModal } from "./CreateStatusModal";
+import { EditTeamStatusModal } from "./EditTeamStatusModal";
+import { ConfirmActionModal } from "@/features/priority-status-management/components/ConfirmActionModal";
 import { StatCard } from "@/shared/components";
 
 export const UserMyTeam: React.FC = () => {
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   const [isNewStatusOpen, setIsNewStatusOpen] = useState(false);
+  const [editingStatus, setEditingStatus] = useState<TeamStatusItem | null>(null);
+  const [isEditStatusOpen, setIsEditStatusOpen] = useState(false);
+  const [retiringStatus, setRetiringStatus] = useState<TeamStatusItem | null>(null);
+  const [isRetireModalOpen, setIsRetireModalOpen] = useState(false);
+  const [restoringStatus, setRestoringStatus] = useState<TeamStatusItem | null>(null);
+  const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"ACTIVE" | "ARCHIVED" | "ALL">("ACTIVE");
   const [successToast, setSuccessToast] = useState<string | null>(null);
+
+  const updateStatusMutation = useUpdateTeamStatusMutation();
+  const retireStatusMutation = useRetireTeamStatusMutation();
 
   // User query: backend automatically scopes GET /api/teams to caller's active teams
   const { data: myTeams = [], isLoading: isTeamsLoading } = useTeamsQuery();
@@ -26,9 +41,28 @@ export const UserMyTeam: React.FC = () => {
   const { data: currentTeam, isLoading: isTeamDetailLoading } =
     useTeamDetailQuery(selectedTeamId);
 
-  // Statuses for this team
+  // Statuses for this team (includes inactive so user can toggle between Active/Archived/All)
   const { data: teamStatuses = [], isLoading: isStatusesLoading } =
-    useTeamStatusesQuery(selectedTeamId);
+    useTeamStatusesQuery(selectedTeamId, true);
+
+  const activeStatusesCount = useMemo(
+    () => teamStatuses.filter((s) => s.status !== "INACTIVE").length,
+    [teamStatuses],
+  );
+
+  const archivedStatusesCount = useMemo(
+    () => teamStatuses.filter((s) => s.status === "INACTIVE").length,
+    [teamStatuses],
+  );
+
+  const filteredStatuses = useMemo(() => {
+    return teamStatuses.filter((s) => {
+      const isArchived = s.status === "INACTIVE";
+      if (statusFilter === "ACTIVE") return !isArchived;
+      if (statusFilter === "ARCHIVED") return isArchived;
+      return true;
+    });
+  }, [teamStatuses, statusFilter]);
 
   const showToast = (msg: string) => {
     setSuccessToast(msg);
@@ -120,29 +154,6 @@ export const UserMyTeam: React.FC = () => {
           {currentTeam?.name || "My Team"}
         </h1>
       </div>
-
-      {/* Multi-Team Switcher (if user belongs to multiple teams) */}
-      {myTeams.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          <span className="text-xs font-semibold text-gray-500 shrink-0">
-            Switch Team:
-          </span>
-          {myTeams.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setSelectedTeamId(t.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shrink-0 ${
-                selectedTeamId === t.id
-                  ? "bg-[#1F3864] text-white shadow-xs"
-                  : "bg-white text-gray-700 border border-[#D1D5DB] hover:bg-gray-50"
-              }`}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* TOP ROW: 4 KPI Cards (Strictly 2 per row on mobile, 4 per row on desktop) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
@@ -307,21 +318,61 @@ export const UserMyTeam: React.FC = () => {
       {/* TEAM WORKFLOW STATUSES SECTION */}
       <div className="bg-white rounded-xl shadow-xs border border-[#E5E7EB] overflow-hidden">
         {/* Section Header */}
-        <div className="p-4 sm:p-5 bg-white border-b border-[#F0F2F5] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1E88E5] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[18px]">
-                account_tree
-              </span>
+        <div className="p-4 sm:p-5 bg-white border-b border-[#F0F2F5] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1E88E5] flex items-center justify-center">
+                <span className="material-symbols-outlined text-[18px]">
+                  account_tree
+                </span>
+              </div>
+              <h2 className="font-bold text-base text-[#1A1A1A]">
+                Team Workflow Statuses
+              </h2>
             </div>
-            <h2 className="font-bold text-base text-[#1A1A1A]">
-              Team Workflow Statuses
-            </h2>
+
+            {/* Filter Pills */}
+            <div className="inline-flex p-0.5 bg-[#F0F2F5] rounded-lg border border-[#E5E7EB] text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("ACTIVE")}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  statusFilter === "ACTIVE"
+                    ? "bg-white text-[#1F3864] font-semibold shadow-xs"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Active ({activeStatusesCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("ARCHIVED")}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  statusFilter === "ARCHIVED"
+                    ? "bg-white text-amber-700 font-semibold shadow-xs"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                Archived ({archivedStatusesCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("ALL")}
+                className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                  statusFilter === "ALL"
+                    ? "bg-white text-[#1F3864] font-semibold shadow-xs"
+                    : "text-gray-500 hover:text-gray-900"
+                }`}
+              >
+                All ({teamStatuses.length})
+              </button>
+            </div>
           </div>
+
           <button
             type="button"
             onClick={() => setIsNewStatusOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1F3864] hover:bg-[#152747] text-white rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-[0.98]"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1F3864] hover:bg-[#152747] text-white rounded-lg text-xs font-semibold shadow-xs transition-all active:scale-[0.98] self-start sm:self-auto cursor-pointer"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
             <span>New Status</span>
@@ -329,86 +380,163 @@ export const UserMyTeam: React.FC = () => {
         </div>
 
         {/* Statuses List */}
-        {isStatusesLoading ? (
-          <div className="py-12 flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
-            <span className="w-5 h-5 border-2 border-[#1F3864] border-t-transparent rounded-full animate-spin" />
-            Loading workflow statuses...
-          </div>
-        ) : teamStatuses.length === 0 ? (
-          <div className="py-10 text-center text-xs text-gray-500">
-            No custom workflow statuses configured for this team.
-          </div>
-        ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#FAFBFD] border-b border-[#F0F2F5] text-gray-500 font-semibold text-[11px] uppercase tracking-wider">
-                  <th className="py-3 px-4 sm:px-6 w-[50%] min-w-[220px]">Custom Label</th>
-                  <th className="py-3 px-4 sm:px-6 w-[25%] min-w-[160px]">Mapped Lifecycle</th>
-                  <th className="py-3 px-4 sm:px-6 w-[25%] min-w-[140px]">Scope</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F0F2F5] text-xs">
-                {teamStatuses.map((s) => {
-                  const dotColor = getLifecycleDot(s.behavior);
-                  const badgeClass = getLifecycleBadge(s.behavior);
-                  const isTeamSpecific = Boolean(s.teamId);
+        <div className="min-h-[160px]">
+          {isStatusesLoading ? (
+            <div className="py-12 flex flex-col items-center justify-center text-xs text-gray-500 gap-2">
+              <span className="w-5 h-5 border-2 border-[#1F3864] border-t-transparent rounded-full animate-spin" />
+              Loading workflow statuses...
+            </div>
+          ) : filteredStatuses.length === 0 ? (
+            <div className="py-12 text-center text-xs text-gray-500">
+              {statusFilter === "ARCHIVED"
+                ? "No archived workflow statuses for this team."
+                : statusFilter === "ACTIVE"
+                ? "No active workflow statuses configured for this team."
+                : "No custom workflow statuses configured for this team."}
+            </div>
+          ) : (
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left border-collapse table-fixed">
+                <thead>
+                  <tr className="bg-[#FAFBFD] border-b border-[#F0F2F5] text-gray-500 font-semibold text-[11px] uppercase tracking-wider">
+                    <th className="py-3 px-4 sm:px-6 w-[35%] min-w-[200px]">Custom Label</th>
+                    <th className="py-3 px-4 sm:px-6 w-[20%] min-w-[140px]">Mapped Lifecycle</th>
+                    <th className="py-3 px-4 sm:px-6 w-[15%] min-w-[110px]">State</th>
+                    <th className="py-3 px-4 sm:px-6 w-[15%] min-w-[120px]">Scope</th>
+                    <th className="py-3 px-4 sm:px-6 w-[15%] min-w-[110px] text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F0F2F5] text-xs">
+                  {filteredStatuses.map((s) => {
+                    const dotColor = getLifecycleDot(s.behavior);
+                    const badgeClass = getLifecycleBadge(s.behavior);
+                    const isTeamSpecific = Boolean(s.teamId);
+                    const isArchived = s.status === "INACTIVE";
 
-                  return (
-                    <tr
-                      key={s.id}
-                      className="hover:bg-gray-50/60 transition-colors"
-                    >
-                      {/* Column 1: Custom Label */}
-                      <td className="py-3.5 px-4 sm:px-6">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotColor}`}
-                          />
-                          <div className="min-w-0">
+                    return (
+                      <tr
+                        key={s.id}
+                        className={`hover:bg-gray-50/60 transition-colors ${
+                          isArchived ? "bg-amber-50/20 opacity-80" : ""
+                        }`}
+                      >
+                        {/* Column 1: Custom Label */}
+                        <td className="py-3.5 px-4 sm:px-6">
+                          <div className="flex items-center gap-2.5">
                             <span
-                              className="font-bold text-sm text-[#1A1A1A] block truncate"
-                              title={s.label}
-                            >
-                              {s.label}
-                            </span>
-                            {s.description && (
-                              <span className="text-xs text-gray-500 line-clamp-1 block mt-0.5">
-                                {s.description}
+                              className={`w-2.5 h-2.5 rounded-full shrink-0 ${dotColor}`}
+                            />
+                            <div className="min-w-0">
+                              <span
+                                className={`font-bold text-sm block truncate ${
+                                  isArchived ? "text-gray-500 line-through" : "text-[#1A1A1A]"
+                                }`}
+                                title={s.label}
+                              >
+                                {s.label}
                               </span>
-                            )}
+                              {s.description && (
+                                <span className="text-xs text-gray-500 line-clamp-1 block mt-0.5">
+                                  {s.description}
+                                </span>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* Column 2: Mapped Lifecycle */}
-                      <td className="py-3.5 px-4 sm:px-6">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${badgeClass}`}
-                        >
-                          {s.behavior.replace("_", " ")}
-                        </span>
-                      </td>
+                        {/* Column 2: Mapped Lifecycle */}
+                        <td className="py-3.5 px-4 sm:px-6">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${badgeClass}`}
+                          >
+                            {s.behavior.replace("_", " ")}
+                          </span>
+                        </td>
 
-                      {/* Column 3: Scope */}
-                      <td className="py-3.5 px-4 sm:px-6">
-                        {isTeamSpecific ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#0e61a1] border border-blue-100">
-                            {currentTeam?.name}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
-                            Global Default
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        {/* Column 3: State (Active / Archived) */}
+                        <td className="py-3.5 px-4 sm:px-6">
+                          {isArchived ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              Archived
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              Active
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Column 4: Scope */}
+                        <td className="py-3.5 px-4 sm:px-6">
+                          {isTeamSpecific ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-[#0e61a1] border border-blue-100">
+                              {currentTeam?.name}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200">
+                              Global Default
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Column 5: Actions */}
+                        <td className="py-3.5 px-4 sm:px-6 text-right">
+                          {isTeamSpecific ? (
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingStatus(s);
+                                  setIsEditStatusOpen(true);
+                                }}
+                                className="p-1.5 rounded-lg text-gray-500 hover:text-[#1F3864] hover:bg-gray-100 transition-all cursor-pointer"
+                                title="Edit Workflow Status"
+                              >
+                                <span className="material-symbols-outlined text-[17px]">edit</span>
+                              </button>
+                              {isArchived ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRestoringStatus(s);
+                                    setIsRestoreModalOpen(true);
+                                  }}
+                                  className="p-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
+                                  title="Restore Workflow Status"
+                                >
+                                  <span className="material-symbols-outlined text-[17px]">unarchive</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRetiringStatus(s);
+                                    setIsRetireModalOpen(true);
+                                  }}
+                                  className="p-1.5 rounded-lg text-amber-600 hover:text-amber-800 hover:bg-amber-50 transition-all cursor-pointer"
+                                  title="Archive Workflow Status"
+                                >
+                                  <span className="material-symbols-outlined text-[17px]">archive</span>
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1 text-gray-400" title="Global statuses are managed by administrators">
+                              <span className="material-symbols-outlined text-[15px]">lock</span>
+                              <span className="text-[11px] font-medium">Default</span>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* New Status Modal */}
@@ -421,6 +549,77 @@ export const UserMyTeam: React.FC = () => {
           onSuccess={() => showToast("New workflow status created successfully!")}
         />
       )}
+
+      {/* Edit Status Modal */}
+      {currentTeam && (
+        <EditTeamStatusModal
+          statusItem={editingStatus}
+          teamName={currentTeam.name}
+          isOpen={isEditStatusOpen}
+          onClose={() => {
+            setIsEditStatusOpen(false);
+            setEditingStatus(null);
+          }}
+          onSuccess={() => showToast("Workflow status updated successfully!")}
+        />
+      )}
+
+      {/* Retire Status Modal */}
+      <ConfirmActionModal
+        isOpen={isRetireModalOpen}
+        title="Archive Workflow Status"
+        message={`Are you sure you want to archive workflow status "${retiringStatus?.label}"? It will no longer appear for newly created tickets.`}
+        confirmLabel="Archive"
+        confirmVariant="warning"
+        isLoading={retireStatusMutation.isPending}
+        onConfirm={async () => {
+          if (!retiringStatus) return;
+          try {
+            await retireStatusMutation.mutateAsync({
+              id: retiringStatus.id,
+              teamId: currentTeam?.id,
+            });
+            showToast(`Workflow status "${retiringStatus.label}" archived successfully.`);
+            setIsRetireModalOpen(false);
+            setRetiringStatus(null);
+          } catch (err: any) {
+            showToast(err?.response?.data?.message || "Failed to archive status");
+          }
+        }}
+        onClose={() => {
+          setIsRetireModalOpen(false);
+          setRetiringStatus(null);
+        }}
+      />
+
+      {/* Restore Status Modal */}
+      <ConfirmActionModal
+        isOpen={isRestoreModalOpen}
+        title="Restore Workflow Status"
+        message={`Are you sure you want to restore workflow status "${restoringStatus?.label}"? It will become active again for team tickets.`}
+        confirmLabel="Restore"
+        confirmVariant="primary"
+        isLoading={updateStatusMutation.isPending}
+        onConfirm={async () => {
+          if (!restoringStatus) return;
+          try {
+            await updateStatusMutation.mutateAsync({
+              id: restoringStatus.id,
+              status: "ACTIVE",
+              teamId: currentTeam?.id,
+            });
+            showToast(`Workflow status "${restoringStatus.label}" restored successfully.`);
+            setIsRestoreModalOpen(false);
+            setRestoringStatus(null);
+          } catch (err: any) {
+            showToast(err?.response?.data?.message || "Failed to restore status");
+          }
+        }}
+        onClose={() => {
+          setIsRestoreModalOpen(false);
+          setRestoringStatus(null);
+        }}
+      />
     </div>
   );
 };

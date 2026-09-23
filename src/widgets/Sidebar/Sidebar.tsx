@@ -67,6 +67,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const userUpdateScopes = usePermissionScopes(PERMISSIONS.USER_UPDATE);
   const userDeleteScopes = usePermissionScopes(PERMISSIONS.USER_DELETE);
   const priorityManageScopes = usePermissionScopes(PERMISSIONS.PRIORITY_MANAGE);
+  const priorityCreateScopes = usePermissionScopes(PERMISSIONS.PRIORITY_CREATE);
+  const priorityUpdateScopes = usePermissionScopes(PERMISSIONS.PRIORITY_UPDATE);
+  const priorityRetireScopes = usePermissionScopes(PERMISSIONS.PRIORITY_RETIRE);
   const statusCreateScopes = usePermissionScopes(PERMISSIONS.STATUS_CREATE);
   const statusUpdateScopes = usePermissionScopes(PERMISSIONS.STATUS_UPDATE);
   const statusRetireScopes = usePermissionScopes(PERMISSIONS.STATUS_RETIRE);
@@ -91,15 +94,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const hasPriorityOrStatusAccess =
     priorityManageScopes.length > 0 ||
+    priorityCreateScopes.length > 0 ||
+    priorityUpdateScopes.length > 0 ||
+    priorityRetireScopes.length > 0 ||
     statusCreateScopes.length > 0 ||
     statusUpdateScopes.length > 0 ||
     statusRetireScopes.length > 0;
 
-  const hasUserManagementAccess =
-    userViewScopes.includes("GLOBAL") ||
-    userCreateScopes.includes("GLOBAL") ||
-    userUpdateScopes.includes("GLOBAL") ||
-    userDeleteScopes.includes("GLOBAL");
+  const hasUserManagementAccess = userViewScopes.includes("GLOBAL");
   const hasRoleManage = roleManageScopes.length > 0;
 
   const hasHistoryGlobal = ticketHistoryScopes.includes("GLOBAL");

@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import { TeamItem } from "../types";
 import { useTeamDetailQuery, useBulkRemoveTeamMembersMutation } from "../api";
 import { AddMemberModal } from "./AddMemberModal";
+import { Can } from "@/shared/components";
+import { useCan } from "@/features/auth";
 
 interface TeamRosterDrawerProps {
   team: TeamItem | null;
@@ -42,6 +44,7 @@ export const TeamRosterDrawer: React.FC<TeamRosterDrawerProps> = ({
   });
 
   const teamId = team?.id || null;
+  const canManageMembers = useCan("TEAM_MEMBERSHIP_MANAGE");
   const { data: teamDetail, isLoading } = useTeamDetailQuery(teamId);
   const bulkRemoveMutation = useBulkRemoveTeamMembersMutation();
 
@@ -242,20 +245,22 @@ export const TeamRosterDrawer: React.FC<TeamRosterDrawerProps> = ({
                       {activeMembers.length}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsAddMemberOpen(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#1F3864] to-[#2B5EA7] hover:from-[#152747] hover:to-[#1F4A8A] text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-150 active:scale-[0.99]"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      person_add
-                    </span>
-                    <span>Add Member</span>
-                  </button>
+                  <Can permission="TEAM_MEMBERSHIP_MANAGE">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddMemberOpen(true)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#1F3864] to-[#2B5EA7] hover:from-[#152747] hover:to-[#1F4A8A] text-white rounded-xl text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-150 active:scale-[0.99] cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        person_add
+                      </span>
+                      <span>Add Member</span>
+                    </button>
+                  </Can>
                 </div>
 
                 {/* Bulk Selection Action Toolbar */}
-                {selectedUserIds.size > 0 && (
+                {canManageMembers && selectedUserIds.size > 0 && (
                   <div className="p-3 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl flex items-center justify-between shadow-xs animate-in fade-in duration-150">
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-full bg-red-600 text-white font-bold text-xs flex items-center justify-center">
@@ -309,20 +314,22 @@ export const TeamRosterDrawer: React.FC<TeamRosterDrawerProps> = ({
                     <thead className="bg-gradient-to-r from-[#F9FAFB] to-[#F1F5F9] border-b border-[#E5E7EB] text-[#64748B] font-semibold text-xs uppercase tracking-wider">
                       <tr>
                         {/* Select All Checkbox */}
-                        <th className="py-3 px-3 w-10 text-center">
-                          <input
-                            type="checkbox"
-                            checked={isAllSelected}
-                            onChange={toggleSelectAll}
-                            className="rounded text-[#1F3864] focus:ring-0 w-4 h-4 cursor-pointer"
-                            title={
-                              isAllSelected ? "Deselect all" : "Select all"
-                            }
-                          />
-                        </th>
+                        {canManageMembers && (
+                          <th className="py-3 px-3 w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isAllSelected}
+                              onChange={toggleSelectAll}
+                              className="rounded text-[#1F3864] focus:ring-0 w-4 h-4 cursor-pointer"
+                              title={
+                                isAllSelected ? "Deselect all" : "Select all"
+                              }
+                            />
+                          </th>
+                        )}
                         <th className="py-3 px-3">Member</th>
                         <th className="py-3 px-3">Role</th>
-                        <th className="py-3 px-3 text-right">Actions</th>
+                        {canManageMembers && <th className="py-3 px-3 text-right">Actions</th>}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -344,14 +351,16 @@ export const TeamRosterDrawer: React.FC<TeamRosterDrawerProps> = ({
                             }`}
                           >
                             {/* Row Checkbox */}
-                            <td className="py-3 px-3 w-10 text-center">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggleSelectMember(userId)}
-                                className="rounded text-[#1F3864] focus:ring-0 w-4 h-4 cursor-pointer"
-                              />
-                            </td>
+                            {canManageMembers && (
+                              <td className="py-3 px-3 w-10 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => toggleSelectMember(userId)}
+                                  className="rounded text-[#1F3864] focus:ring-0 w-4 h-4 cursor-pointer"
+                                />
+                              </td>
+                            )}
                             <td className="py-3 px-3">
                               <div className="flex items-center gap-3">
                                 <div
@@ -385,28 +394,30 @@ export const TeamRosterDrawer: React.FC<TeamRosterDrawerProps> = ({
                                 {memberUser?.userRole?.name || "Specialist"}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-right">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openSingleRemoveModal({
-                                    id: userId,
-                                    name: memberUser?.name || "User",
-                                    email: memberUser?.email,
-                                    role:
-                                      memberUser?.userRole?.name ||
-                                      "Specialist",
-                                    isLead,
-                                  })
-                                }
-                                className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all duration-150"
-                                title="Remove from team"
-                              >
-                                <span className="material-symbols-outlined text-[18px]">
-                                  person_remove
-                                </span>
-                              </button>
-                            </td>
+                            {canManageMembers && (
+                              <td className="py-3 px-3 text-right">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openSingleRemoveModal({
+                                      id: userId,
+                                      name: memberUser?.name || "User",
+                                      email: memberUser?.email,
+                                      role:
+                                        memberUser?.userRole?.name ||
+                                        "Specialist",
+                                      isLead,
+                                    })
+                                  }
+                                  className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-all duration-150 cursor-pointer"
+                                  title="Remove from team"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">
+                                    person_remove
+                                  </span>
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         );
                       })}

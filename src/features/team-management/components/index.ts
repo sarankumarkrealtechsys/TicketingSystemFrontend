@@ -5,4 +5,5 @@ export * from "./EditTeamModal";
 export * from "./AddMemberModal";
 export * from "./TeamRosterDrawer";
 export * from "./CreateStatusModal";
+export * from "./EditTeamStatusModal";
 export * from "./ReassignDepartmentModal";

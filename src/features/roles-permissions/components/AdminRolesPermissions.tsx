@@ -40,6 +40,7 @@ const CATEGORY_ICONS: Record<string, string> = {
   Dashboard: 'dashboard',
   Role: 'admin_panel_settings',
   System: 'settings',
+  'Priority & Status': 'tune',
 };
 
 export const AdminRolesPermissions: React.FC = () => {
@@ -97,8 +98,11 @@ export const AdminRolesPermissions: React.FC = () => {
     if (roleDetail && roleDetail.rolePermissions) {
       const grants: Record<number, PermissionScope> = {};
       roleDetail.rolePermissions.forEach((rp) => {
-        if (!grants[rp.permissionId] || rp.scope === 'GLOBAL') {
-          grants[rp.permissionId] = (rp.scope as PermissionScope) || 'GLOBAL';
+        const allowed = PERMISSION_ALLOWED_SCOPES[rp.permissionKey || ''] || ['GLOBAL'];
+        const isSingleGlobal = allowed.length === 1 && allowed[0] === 'GLOBAL';
+        const effectiveScope = isSingleGlobal ? 'GLOBAL' : ((rp.scope as PermissionScope) || 'GLOBAL');
+        if (!grants[rp.permissionId] || effectiveScope === 'GLOBAL') {
+          grants[rp.permissionId] = effectiveScope;
         }
       });
       setSelectedGrants(grants);
@@ -128,10 +132,35 @@ export const AdminRolesPermissions: React.FC = () => {
   const categorizedPermissions = useMemo(() => {
     const map: Record<string, PermissionItem[]> = {};
     for (const p of permissions) {
-      const cat = p.category || 'General';
+      if (p.key === 'PRIORITY_MANAGE') continue; // Hide legacy catch-all from active checklist
+
+      let cat = p.category || 'General';
+      if (cat === 'Priority' || cat === 'Status') {
+        cat = 'Priority & Status';
+      }
       if (!map[cat]) map[cat] = [];
       map[cat].push(p);
     }
+
+    if (map['Priority & Status']) {
+      const order = [
+        'PRIORITY_CREATE',
+        'PRIORITY_UPDATE',
+        'PRIORITY_RETIRE',
+        'STATUS_CREATE',
+        'STATUS_UPDATE',
+        'STATUS_RETIRE',
+      ];
+      map['Priority & Status'].sort((a, b) => {
+        const idxA = order.indexOf(a.key);
+        const idxB = order.indexOf(b.key);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.key.localeCompare(b.key);
+      });
+    }
+
     return map;
   }, [permissions]);
 
@@ -159,9 +188,12 @@ export const AdminRolesPermissions: React.FC = () => {
       if (next[permissionId]) {
         delete next[permissionId];
       } else {
-        const defaultScope = allowedScopes.includes('OWN')
-          ? 'OWN'
-          : allowedScopes[allowedScopes.length - 1] || 'GLOBAL';
+        const defaultScope =
+          permKey === 'USER_VIEW'
+            ? 'GLOBAL'
+            : allowedScopes.includes('OWN')
+            ? 'OWN'
+            : allowedScopes[allowedScopes.length - 1] || 'GLOBAL';
         next[permissionId] = defaultScope;
       }
       return next;
@@ -189,9 +221,13 @@ export const AdminRolesPermissions: React.FC = () => {
         items.forEach((p) => {
           if (!next[p.id]) {
             const allowedScopes = PERMISSION_ALLOWED_SCOPES[p.key] || ['GLOBAL'];
-            next[p.id] = allowedScopes.includes('OWN')
-              ? 'OWN'
-              : allowedScopes[allowedScopes.length - 1] || 'GLOBAL';
+            const defaultScope =
+              p.key === 'USER_VIEW'
+                ? 'GLOBAL'
+                : allowedScopes.includes('OWN')
+                ? 'OWN'
+                : allowedScopes[allowedScopes.length - 1] || 'GLOBAL';
+            next[p.id] = defaultScope;
           }
         });
       }
@@ -205,8 +241,11 @@ export const AdminRolesPermissions: React.FC = () => {
     if (roleDetail && roleDetail.rolePermissions) {
       const grants: Record<number, PermissionScope> = {};
       roleDetail.rolePermissions.forEach((rp) => {
-        if (!grants[rp.permissionId] || rp.scope === 'GLOBAL') {
-          grants[rp.permissionId] = (rp.scope as PermissionScope) || 'GLOBAL';
+        const allowed = PERMISSION_ALLOWED_SCOPES[rp.permissionKey || ''] || ['GLOBAL'];
+        const isSingleGlobal = allowed.length === 1 && allowed[0] === 'GLOBAL';
+        const effectiveScope = isSingleGlobal ? 'GLOBAL' : ((rp.scope as PermissionScope) || 'GLOBAL');
+        if (!grants[rp.permissionId] || effectiveScope === 'GLOBAL') {
+          grants[rp.permissionId] = effectiveScope;
         }
       });
       setSelectedGrants(grants);
@@ -663,13 +702,13 @@ export const AdminRolesPermissions: React.FC = () => {
             {currentRole ? (
               <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] overflow-hidden flex flex-col w-full">
                 {/* Fixed Column Header Row */}
-                <div className="grid grid-cols-12 px-6 py-3 bg-[#F8FAFC] text-[#334155] text-xs font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0]">
+                <div className="grid grid-cols-12 px-6 py-3 bg-[#F8FAFC] text-[#334155] text-xs font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0] shrink-0">
                   <div className="col-span-8 sm:col-span-8 font-bold">CAPABILITY & DESCRIPTION</div>
                   <div className="col-span-4 sm:col-span-4 text-right font-bold">SCOPE LEVEL</div>
                 </div>
 
-                {/* Categorized Permissions List */}
-                <div className="divide-y divide-[#E2E8F0]">
+                {/* Categorized Permissions List - Scrollable */}
+                <div className="divide-y divide-[#E2E8F0] overflow-y-auto max-h-[calc(100vh-340px)] min-h-[380px]">
                   {permissionsLoading || roleDetailLoading ? (
                     <div className="p-12 flex flex-col items-center justify-center gap-2 text-gray-400">
                       <div className="w-6 h-6 border-2 border-[#1F3864]/20 border-t-[#1F3864] rounded-full animate-spin" />

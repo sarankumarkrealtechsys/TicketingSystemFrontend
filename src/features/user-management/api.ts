@@ -20,7 +20,10 @@ export const userManagementKeys = {
 };
 
 // GET /api/users
-export const useUsersListQuery = (filters?: UserFilterParams) => {
+export const useUsersListQuery = (
+  filters?: UserFilterParams,
+  options?: { enabled?: boolean }
+) => {
   return useQuery<UserListItem[]>({
     queryKey: userManagementKeys.users(filters),
     queryFn: async () => {
@@ -44,6 +47,7 @@ export const useUsersListQuery = (filters?: UserFilterParams) => {
       const list = data?.data?.users ?? data?.data ?? data?.users ?? [];
       return Array.isArray(list) ? list : [];
     },
+    enabled: options?.enabled,
     staleTime: 60 * 1000,
   });
 };

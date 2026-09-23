@@ -56,6 +56,8 @@
   html {
     scroll-behavior: smooth;
     font-family: "Comfortaa", "Montserrat", sans-serif;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
   }
   body {
     @apply bg-background text-foreground;

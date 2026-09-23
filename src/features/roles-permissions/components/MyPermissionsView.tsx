@@ -83,9 +83,34 @@ export const MyPermissionsView: React.FC<MyPermissionsViewProps> = ({ onOpenGuid
         continue;
       }
 
-      const cat = p.category || 'General';
+      if (p.key === 'PRIORITY_MANAGE') {
+        continue;
+      }
+
+      let cat = p.category || 'General';
+      if (cat === 'Priority' || cat === 'Status') {
+        cat = 'Priority & Status';
+      }
       if (!map[cat]) map[cat] = [];
       map[cat].push(p);
+    }
+    if (map['Priority & Status']) {
+      const order = [
+        'PRIORITY_CREATE',
+        'PRIORITY_UPDATE',
+        'PRIORITY_RETIRE',
+        'STATUS_CREATE',
+        'STATUS_UPDATE',
+        'STATUS_RETIRE',
+      ];
+      map['Priority & Status'].sort((a, b) => {
+        const idxA = order.indexOf(a.key);
+        const idxB = order.indexOf(b.key);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.key.localeCompare(b.key);
+      });
     }
     return map;
   }, [permissions, userPermissions, user, filterMode, searchQuery]);
@@ -173,6 +198,8 @@ export const MyPermissionsView: React.FC<MyPermissionsViewProps> = ({ onOpenGuid
         return 'flag';
       case 'status':
         return 'toggle_on';
+      case 'priority & status':
+        return 'tune';
       case 'ticket field':
         return 'input';
       case 'dashboard':

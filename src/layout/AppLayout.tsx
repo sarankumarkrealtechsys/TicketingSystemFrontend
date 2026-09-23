@@ -119,7 +119,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
       {/* Content wrapper offset by sidebar width on desktop */}
       <div
-        className={`flex flex-col min-h-screen transition-all duration-300 ease-in-out pl-0 ${
+        className={`flex flex-col min-h-screen transition-[padding-left] duration-300 ease-in-out pl-0 ${
           collapsed ? "lg:pl-[68px]" : "lg:pl-[260px]"
         }`}
       >

@@ -93,3 +93,13 @@ export interface CreateStatusPayload {
   teamId: number;
   sortOrder?: number;
 }
+
+export interface UpdateStatusPayload {
+  id: number;
+  label?: string;
+  description?: string | null;
+  behavior?: TicketStatusBehavior;
+  teamId?: number | null;
+  sortOrder?: number;
+  status?: "ACTIVE" | "INACTIVE";
+}

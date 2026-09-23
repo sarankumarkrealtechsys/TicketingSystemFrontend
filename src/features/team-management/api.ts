@@ -9,6 +9,7 @@ import {
   UserSummary,
   TeamStatusItem,
   CreateStatusPayload,
+  UpdateStatusPayload,
 } from "./types";
 
 export const teamManagementKeys = {
@@ -270,13 +271,16 @@ export const useDepartmentUsersQuery = (departmentId?: number) => {
 };
 
 // GET /api/ticket-statuses?teamId=:id
-export const useTeamStatusesQuery = (teamId?: number | null) => {
+export const useTeamStatusesQuery = (
+  teamId?: number | null,
+  includeInactive: boolean = true,
+) => {
   return useQuery<TeamStatusItem[]>({
-    queryKey: teamManagementKeys.statuses(teamId),
+    queryKey: [...teamManagementKeys.statuses(teamId), { includeInactive }],
     queryFn: async () => {
       if (!teamId) return [];
       const { data } = await apiClient.get<any>("/ticket-statuses", {
-        params: { teamId },
+        params: { teamId, includeInactive },
       });
       const list = data?.data ?? data;
       return Array.isArray(list) ? list : [];
@@ -299,6 +303,46 @@ export const useCreateTeamStatusMutation = () => {
         queryKey: teamManagementKeys.statuses(variables.teamId),
       });
       queryClient.invalidateQueries({ queryKey: ["admin", "statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-statuses"] });
     },
   });
 };
+
+// PATCH /api/ticket-statuses/:id
+export const useUpdateTeamStatusMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...payload }: UpdateStatusPayload) => {
+      const res = await apiClient.patch<any>(`/ticket-statuses/${id}`, payload);
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: teamManagementKeys.statuses(variables.teamId),
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-statuses"] });
+    },
+  });
+};
+
+// DELETE /api/ticket-statuses/:id
+export const useRetireTeamStatusMutation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id }: { id: number; teamId?: number | null }) => {
+      const res = await apiClient.delete<any>(`/ticket-statuses/${id}`);
+      return res.data?.data ?? res.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: teamManagementKeys.statuses(variables.teamId),
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin", "statuses"] });
+      queryClient.invalidateQueries({ queryKey: ["ticket-statuses"] });
+    },
+  });
+};
+

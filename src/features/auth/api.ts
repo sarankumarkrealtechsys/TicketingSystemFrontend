@@ -58,8 +58,8 @@ export const useMeQuery = (
     queryKey: authKeys.me(),
     queryFn: getMeApi,
     retry: false,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: true,
+    staleTime: 0,
     ...options,
   });
 };

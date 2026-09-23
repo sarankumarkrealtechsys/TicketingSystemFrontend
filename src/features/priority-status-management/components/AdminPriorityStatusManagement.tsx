@@ -361,7 +361,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
 
           <div className="flex items-center gap-2.5 flex-wrap">
             {/* New Priority Button */}
-            <Can permission={PERMISSIONS.PRIORITY_MANAGE}>
+            <Can permission={PERMISSIONS.PRIORITY_CREATE}>
               <button
                 type="button"
                 onClick={() => setIsCreatePriorityOpen(true)}
@@ -603,7 +603,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
 
                       {/* Action Buttons */}
                       <div className="col-span-3 flex items-center justify-end gap-1.5">
-                        <Can permission={PERMISSIONS.PRIORITY_MANAGE}>
+                        <Can permission={PERMISSIONS.PRIORITY_UPDATE}>
                           <button
                             type="button"
                             onClick={() => setSelectedPriorityForEdit(priority)}
@@ -612,7 +612,9 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                           >
                             <span className="material-symbols-outlined text-[17px]">edit</span>
                           </button>
+                        </Can>
 
+                        <Can permission={PERMISSIONS.PRIORITY_RETIRE}>
                           {isArchived ? (
                             <button
                               type="button"
@@ -623,7 +625,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                                   priority,
                                   statusItem: null,
                                   isLoading: false,
-                                 })
+                                })
                               }
                               className="p-1 rounded-lg text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-all cursor-pointer"
                               title="Restore Priority"

@@ -2,7 +2,7 @@ import React from "react";
 import { useCan, useCanAtScope } from "@/features/auth";
 
 export interface CanProps {
-  permission: string;
+  permission: string | string[];
   scope?: string;
   children: React.ReactNode;
   fallback?: React.ReactNode;

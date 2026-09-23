@@ -217,12 +217,7 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.USERS}
             element={
               <ProtectedRoute
-                requiredPermission={[
-                  PERMISSIONS.USER_VIEW,
-                  PERMISSIONS.USER_CREATE,
-                  PERMISSIONS.USER_UPDATE,
-                  PERMISSIONS.USER_DELETE,
-                ]}
+                requiredPermission={PERMISSIONS.USER_VIEW}
                 requiredScope="GLOBAL"
               >
                 <UserManagementPage />
@@ -235,6 +230,7 @@ export const AppRoutes: React.FC = () => {
               <ProtectedRoute
                 requiredPermission={PERMISSIONS.USER_PERFORMANCE_VIEW}
                 requiredScope="GLOBAL"
+                fallbackPath={ROUTES.USERS}
               >
                 <UserPerformanceProfilePage />
               </ProtectedRoute>

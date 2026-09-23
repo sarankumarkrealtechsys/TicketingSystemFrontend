@@ -48,22 +48,28 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
  * Hook to check if the active user possesses a permission.
  * Returns true if the key exists with 'GLOBAL' or at least one scope.
  */
-export const useCan = (permissionKey: string): boolean => {
+export const useCan = (permissionKey: string | string[]): boolean => {
   const permissions = useAppSelector((state) => state.auth.permissions);
-  const scopes = permissions[permissionKey];
-  if (!scopes) return false;
-  if (scopes.includes("GLOBAL")) return true;
-  return scopes.length > 0;
+  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  return keys.some((key) => {
+    const scopes = permissions[key];
+    if (!scopes) return false;
+    if (scopes.includes("GLOBAL")) return true;
+    return scopes.length > 0;
+  });
 };
 
 /**
  * Hook to check if the active user possesses a permission at a specific scope.
  * Returns true only if the key exists with that exact scope string.
  */
-export const useCanAtScope = (permissionKey: string, scope: string): boolean => {
+export const useCanAtScope = (permissionKey: string | string[], scope: string): boolean => {
   const permissions = useAppSelector((state) => state.auth.permissions);
-  const scopes = permissions[permissionKey];
-  return Array.isArray(scopes) && scopes.includes(scope);
+  const keys = Array.isArray(permissionKey) ? permissionKey : [permissionKey];
+  return keys.some((key) => {
+    const scopes = permissions[key];
+    return Array.isArray(scopes) && scopes.includes(scope);
+  });
 };
 
 export default authSlice.reducer;

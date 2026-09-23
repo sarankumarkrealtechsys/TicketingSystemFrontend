@@ -4,6 +4,7 @@ import { useUsersListQuery } from "../api";
 import { UserListItem } from "../types";
 import { useDepartmentsQuery } from "@/features/department-management";
 import { useRolesQuery } from "@/features/roles-permissions";
+import { PERMISSIONS, useCanAtScope } from "@/features/auth";
 import { StatCard, SelectDropdown, SelectOption, Can } from "@/shared/components";
 import { CreateUserModal } from "./CreateUserModal";
 import { EditUserModal } from "./EditUserModal";
@@ -13,6 +14,8 @@ import { DeleteUserConfirmModal } from "./DeleteUserConfirmModal";
 
 export const AdminUserManagement: React.FC = () => {
   const navigate = useNavigate();
+  const hasUserViewGlobal = useCanAtScope(PERMISSIONS.USER_VIEW, "GLOBAL");
+  const canViewPerformance = useCanAtScope(PERMISSIONS.USER_PERFORMANCE_VIEW, "GLOBAL");
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -43,7 +46,7 @@ export const AdminUserManagement: React.FC = () => {
     isError,
     refetch,
     isFetching,
-  } = useUsersListQuery();
+  } = useUsersListQuery(undefined, { enabled: hasUserViewGlobal });
 
   const { data: departments = [] } = useDepartmentsQuery({
     includeInactive: false,
@@ -147,6 +150,7 @@ export const AdminUserManagement: React.FC = () => {
   };
 
   const handleOpenPerformanceProfile = (userId: number) => {
+    if (!canViewPerformance) return;
     navigate(`/users/${userId}/performance`);
   };
 
@@ -382,7 +386,12 @@ export const AdminUserManagement: React.FC = () => {
                       <tr
                         key={u.id}
                         onClick={() => handleOpenPerformanceProfile(u.id)}
-                        className="hover:bg-blue-50/40 dark:hover:bg-slate-800/60 transition-colors cursor-pointer group"
+                        className={`transition-colors ${
+                          canViewPerformance
+                            ? "hover:bg-blue-50/40 dark:hover:bg-slate-800/60 cursor-pointer group"
+                            : "cursor-default"
+                        }`}
+                        title={canViewPerformance ? "View user performance profile" : undefined}
                       >
                         {/* User (Name + Username + Avatar) */}
                         <td className="py-3.5 px-4 font-bold text-sm text-[#1A1A1A] dark:text-white">
@@ -584,7 +593,12 @@ export const AdminUserManagement: React.FC = () => {
                   <div
                     key={u.id}
                     onClick={() => handleOpenPerformanceProfile(u.id)}
-                    className="p-3 bg-gray-50/60 dark:bg-[#162234] rounded-xl border border-gray-200 dark:border-[#1E2D45] space-y-2.5 cursor-pointer hover:border-blue-300 transition-colors"
+                    className={`p-3 bg-gray-50/60 dark:bg-[#162234] rounded-xl border border-gray-200 dark:border-[#1E2D45] space-y-2.5 transition-colors ${
+                      canViewPerformance
+                        ? "cursor-pointer hover:border-blue-300"
+                        : "cursor-default"
+                    }`}
+                    title={canViewPerformance ? "View user performance profile" : undefined}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">
