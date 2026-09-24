@@ -405,7 +405,11 @@ export const AppRoutes: React.FC = () => {
             path={ROUTES.SETTINGS}
             element={
               <ProtectedRoute
-                requiredPermission={PERMISSIONS.SYSTEM_SETTINGS_MANAGE}
+                requiredPermission={[
+                  PERMISSIONS.SYSTEM_SETTINGS_MANAGE,
+                  PERMISSIONS.EMAIL_NOTIFICATIONS_MANAGE,
+                  PERMISSIONS.IN_APP_NOTIFICATIONS_MANAGE,
+                ]}
                 requiredScope="GLOBAL"
               >
                 <SettingsPage />

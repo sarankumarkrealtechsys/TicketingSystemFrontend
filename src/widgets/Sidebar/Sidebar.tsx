@@ -76,6 +76,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const roleManageScopes = usePermissionScopes(PERMISSIONS.ROLE_MANAGE);
   const ticketHistoryScopes = usePermissionScopes(PERMISSIONS.TICKET_HISTORY_VIEW);
   const settingsScopes = usePermissionScopes(PERMISSIONS.SYSTEM_SETTINGS_MANAGE);
+  const emailNotificationScopes = usePermissionScopes(PERMISSIONS.EMAIL_NOTIFICATIONS_MANAGE);
+  const inAppNotificationScopes = usePermissionScopes(PERMISSIONS.IN_APP_NOTIFICATIONS_MANAGE);
 
   // ── Derive visibility flags ──
   const hasGlobalDashboard = dashboardScopes.includes("GLOBAL");
@@ -107,7 +109,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const hasHistoryGlobal = ticketHistoryScopes.includes("GLOBAL");
   const hasHistoryAny = ticketHistoryScopes.length > 0;
 
-  const hasSettings = settingsScopes.length > 0;
+  const hasSettings =
+    settingsScopes.length > 0 ||
+    emailNotificationScopes.length > 0 ||
+    inAppNotificationScopes.length > 0;
 
   // ── Determine workspace pill text ──
   const isAdminConsole = hasGlobalDashboard;
