@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useUserPerformanceQuery } from "../api";
 import {
   StatCard,
@@ -170,25 +170,29 @@ export const UserPerformanceProfile: React.FC = () => {
     <div className="space-y-6">
       {/* Top Breadcrumbs & Back Navigation Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-          <span>Home</span>
-          <span className="material-symbols-outlined text-[14px]">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 font-medium">
+          <Link
+            to={ROUTES.ROOT}
+            className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+          >
+            Home
+          </Link>
+          <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
             chevron_right
           </span>
-          <button
-            type="button"
-            onClick={() => navigate(ROUTES.USERS)}
+          <Link
+            to={ROUTES.USERS}
             className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
           >
             User Management
-          </button>
-          <span className="material-symbols-outlined text-[14px]">
+          </Link>
+          <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
             chevron_right
           </span>
           <span className="text-[#1F3864] dark:text-blue-400 font-semibold">
             User Performance Profile
           </span>
-        </div>
+        </nav>
 
         <button
           type="button"

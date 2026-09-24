@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
 import { FilterToolbar } from "@/features/admin/components/FilterToolbar";
 import { TicketsTable } from "@/features/admin/components/TicketsTable";
@@ -28,6 +28,7 @@ import {
   exportAuditLogsToPDF,
   ReportMetadata,
 } from "../utils/exportUtils";
+import { ROUTES } from "@/app/routes/routePaths";
 import {
   Download,
   FileSpreadsheet,
@@ -407,19 +408,29 @@ export const AuditReportsView: React.FC<AuditReportsViewProps> = ({
       {/* ── Page Header Section ── */}
       <div className="flex flex-row items-center justify-between gap-3 sm:gap-4">
         <div>
-          <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-medium mb-0.5 sm:mb-1">
-            <span>Home</span>
-            <span className="material-symbols-outlined text-[13px] sm:text-[14px]">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-medium mb-0.5 sm:mb-1">
+            <Link
+              to={ROUTES.ROOT}
+              className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              Home
+            </Link>
+            <span className="material-symbols-outlined text-[13px] sm:text-[14px] text-gray-400 select-none">
               chevron_right
             </span>
-            <span>Reports</span>
-            <span className="material-symbols-outlined text-[13px] sm:text-[14px]">
+            <Link
+              to={isGlobal ? ROUTES.AUDIT : ROUTES.MY_TICKET_REPORTS}
+              className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              Reports
+            </Link>
+            <span className="material-symbols-outlined text-[13px] sm:text-[14px] text-gray-400 select-none">
               chevron_right
             </span>
             <span className="text-[#1F3864] dark:text-blue-400 font-semibold">
               {isGlobal ? "Audit Reports & History" : "My Ticket Reports"}
             </span>
-          </div>
+          </nav>
           <h1 className="text-xl sm:text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
             {isGlobal ? "Audit Reports & History" : "My Ticket Reports"}
           </h1>

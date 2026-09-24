@@ -428,7 +428,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="flex flex-col gap-5 w-full max-w-7xl mx-auto px-3 sm:px-6 py-5">
+      <div className="flex flex-col gap-5 w-full">
         {/* ========================================================================= */}
         {/* TOP HEADER */}
         {/* ========================================================================= */}
@@ -573,8 +573,8 @@ export const AdminPriorityStatusManagement: React.FC = () => {
               </div>
 
               {/* Search Bar for Priorities */}
-              <div className="relative w-full sm:w-44">
-                <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[15px]">
+              <div className="relative w-full sm:w-60 md:w-64">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
                   search
                 </span>
                 <input
@@ -582,7 +582,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                   value={prioritySearch}
                   onChange={(e) => setPrioritySearch(e.target.value)}
                   placeholder="Search priorities..."
-                  className="w-full h-7.5 pl-8 pr-2.5 bg-white border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all"
+                  className="w-full h-9 pl-9 pr-3 bg-white border border-[#D1D5DB] rounded-lg text-xs text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864]/20 transition-all shadow-2xs"
                 />
               </div>
             </div>
@@ -812,8 +812,8 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                 </div>
 
                 {/* Search Bar for Statuses */}
-                <div className="relative w-full sm:w-44">
-                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[15px]">
+                <div className="relative w-full sm:w-60 md:w-64">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">
                     search
                   </span>
                   <input
@@ -821,7 +821,7 @@ export const AdminPriorityStatusManagement: React.FC = () => {
                     value={statusSearch}
                     onChange={(e) => setStatusSearch(e.target.value)}
                     placeholder="Search statuses..."
-                    className="w-full h-7.5 pl-8 pr-2.5 bg-white border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all"
+                    className="w-full h-9 pl-9 pr-3 bg-white border border-[#D1D5DB] rounded-lg text-xs text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864]/20 transition-all shadow-2xs"
                   />
                 </div>
               </div>

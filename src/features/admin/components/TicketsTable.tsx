@@ -356,31 +356,31 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
         </table>
       </div>
 
-      {/* ── Mobile View: Neat Ticket Cards (< md) ── */}
+      {/* ── Mobile View: Spacious & Modern Ticket Cards (< md) ── */}
       <div
-        className={`block md:hidden divide-y divide-[#EEEEEE] transition-opacity duration-150 ${
+        className={`block md:hidden p-3 sm:p-4 space-y-3.5 bg-[#F9FAFB]/60 dark:bg-slate-900/40 transition-opacity duration-150 ${
           isFetching ? "opacity-75" : "opacity-100"
         }`}
       >
         {isInitialLoading ? (
-          <div className="py-12 text-center text-[#5F6368]">
+          <div className="py-16 text-center text-[#5F6368] bg-white dark:bg-[#152033] rounded-xl border border-[#E5E7EB] dark:border-[#1E2D45] p-6 shadow-xs">
             <div className="flex flex-col items-center justify-center gap-2">
-              <span className="material-symbols-outlined animate-spin text-[24px] text-[#1E88E5]">
+              <span className="material-symbols-outlined animate-spin text-[26px] text-[#1E88E5]">
                 progress_activity
               </span>
               <span className="text-xs font-medium">Loading tickets...</span>
             </div>
           </div>
         ) : tickets.length === 0 ? (
-          <div className="py-12 text-center text-[#5F6368] px-4">
-            <div className="flex flex-col items-center justify-center gap-1">
-              <span className="material-symbols-outlined text-[32px] text-[#C4C6D0]">
+          <div className="py-16 text-center text-[#5F6368] px-4 bg-white dark:bg-[#152033] rounded-xl border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs">
+            <div className="flex flex-col items-center justify-center gap-1.5">
+              <span className="material-symbols-outlined text-[36px] text-[#C4C6D0]">
                 inbox
               </span>
-              <p className="font-semibold text-sm text-[#1A1A1A]">
+              <p className="font-semibold text-sm text-[#1A1A1A] dark:text-white">
                 No tickets found
               </p>
-              <p className="text-xs">
+              <p className="text-xs text-gray-500">
                 Try adjusting your filters or search query.
               </p>
             </div>
@@ -398,90 +398,170 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
             const formattedDate = ticket.createdAt
               ? format(new Date(ticket.createdAt), "dd MMM yyyy")
               : "—";
+            const isSubTicket = Boolean(ticket.parentTicketId || ticket.parentTicket);
+            const hasSubs = Boolean(
+              ticket.subTicketsCount && ticket.subTicketsCount > 0,
+            );
 
             return (
               <div
                 key={ticket.id}
                 onClick={() => onViewTicket(ticket.id)}
-                className="p-3.5 hover:bg-[#F0F4F8] transition-colors cursor-pointer space-y-2 active:bg-[#E3EDF7]"
+                className="bg-white dark:bg-[#152033] rounded-xl p-3.5 sm:p-4 border border-[#E5E7EB] dark:border-[#1E2D45] shadow-xs hover:shadow-md hover:border-[#1F3864]/30 dark:hover:border-blue-500/40 active:scale-[0.99] transition-all flex flex-col space-y-3 cursor-pointer group"
               >
-                {/* Top: Ticket ID + Priority on left, Status on right */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-mono font-bold text-[13px] text-[#1E88E5]">
+                {/* 1. Header: Ticket ID & Badges on Left, Status Badge on Right */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#1F3864] dark:text-blue-300 font-mono font-bold text-xs border border-blue-100 dark:border-blue-900/60 shadow-2xs">
                       #{ticket.ticketNumber}
                     </span>
                     <PriorityBadge priority={priorityName} priorityId={priorityId} />
-                  </div>
-                  <StatusBadge
-                    status={statusName}
-                    statusId={statusId}
-                    behavior={statusBehavior}
-                  />
-                </div>
-
-                {/* Summary */}
-                <h3 className="font-semibold text-[13px] text-[#1A1A1A] leading-snug line-clamp-2">
-                  {ticket.summary}
-                </h3>
-
-                {/* Project & Team Chips */}
-                <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-[#5F6368]">
-                  {ticket.project?.name && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F6F3F2] rounded font-medium text-[#1A1A1A]">
-                      <span className="material-symbols-outlined text-[13px] text-[#5F6368]">
-                        folder
-                      </span>
-                      <span className="truncate max-w-[120px]">
-                        {ticket.project.name}
-                      </span>
-                    </span>
-                  )}
-                  {ticket.team?.name && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#F6F3F2] rounded font-medium text-[#1A1A1A]">
-                      <span className="material-symbols-outlined text-[13px] text-[#5F6368]">
-                        group
-                      </span>
-                      <span className="truncate max-w-[120px]">
-                        {ticket.team.name}
-                      </span>
-                    </span>
-                  )}
-                </div>
-
-                {/* Bottom: Assignee & Date */}
-                <div className="flex items-center justify-between pt-1.5 text-[11px] text-[#5F6368] border-t border-[#F0EDED]">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {primaryAssignee ? (
-                      <>
-                        <UserAvatar
-                          name={
-                            primaryAssignee.name ||
-                            primaryAssignee.email ||
-                            "User"
-                          }
-                          size="sm"
-                        />
-                        <span className="truncate max-w-[120px] font-medium text-[#1A1A1A]">
-                          {primaryAssignee.name || primaryAssignee.email}
+                    {isSubTicket && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800 rounded shadow-2xs">
+                        <span className="material-symbols-outlined text-[11px]">
+                          subdirectory_arrow_right
                         </span>
-                        {extraAssigneesCount > 0 && (
-                          <span className="text-[10px] px-1 py-0.2 rounded bg-[#EEEEEE] text-[#5F6368] font-semibold">
-                            +{extraAssigneesCount}
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="italic text-[#9E9E9E]">Unassigned</span>
+                        Sub
+                      </span>
+                    )}
+                    {hasSubs && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded">
+                        <span className="material-symbols-outlined text-[11px]">
+                          account_tree
+                        </span>
+                        {ticket.subTicketsCount} sub
+                        {ticket.subTicketsCount! > 1 ? "s" : ""}
+                      </span>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1 text-[11px] text-[#5F6368] flex-shrink-0">
-                    <span className="material-symbols-outlined text-[13px]">
-                      calendar_today
-                    </span>
-                    <span>{formattedDate}</span>
+                  <div className="shrink-0">
+                    <StatusBadge
+                      status={statusName}
+                      statusId={statusId}
+                      behavior={statusBehavior}
+                    />
                   </div>
+                </div>
+
+                {/* Parent Link if Sub-ticket */}
+                {isSubTicket && ticket.parentTicket && (
+                  <div
+                    className="text-[11px] text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 cursor-pointer flex items-center gap-1 transition-colors -mt-1 font-medium"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onViewTicket(ticket.parentTicket!.id);
+                    }}
+                    title={`Parent: #${ticket.parentTicket.ticketNumber} - ${ticket.parentTicket.summary}`}
+                  >
+                    <span>↳ Parent:</span>
+                    <span className="font-mono text-indigo-600 dark:text-indigo-400 font-semibold underline">
+                      #{ticket.parentTicket.ticketNumber}
+                    </span>
+                    <span className="truncate text-gray-500 max-w-[180px]">
+                      {ticket.parentTicket.summary}
+                    </span>
+                  </div>
+                )}
+
+                {/* 2. Ticket Summary */}
+                <h3 className="font-semibold text-sm text-[#1A1A1A] dark:text-white leading-snug line-clamp-2 group-hover:text-[#1F3864] dark:group-hover:text-blue-400 transition-colors">
+                  {ticket.summary}
+                </h3>
+
+                {/* 3. Spacious 2-Column Metadata Grid (Matches Team & Department mobile cards) */}
+                <div className="grid grid-cols-2 gap-2.5 text-xs pt-2.5 border-t border-gray-100 dark:border-gray-800">
+                  <div>
+                    <span className="block text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                      Project
+                    </span>
+                    <div className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300 truncate mt-0.5">
+                      <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">
+                        folder
+                      </span>
+                      <span className="truncate">{ticket.project?.name || "—"}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                      Team
+                    </span>
+                    <div className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300 truncate mt-0.5">
+                      <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">
+                        group
+                      </span>
+                      <span className="truncate">{ticket.team?.name || "—"}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                      Assignee
+                    </span>
+                    <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                      {primaryAssignee ? (
+                        <>
+                          <UserAvatar
+                            name={
+                              primaryAssignee.name ||
+                              primaryAssignee.email ||
+                              "User"
+                            }
+                            size="sm"
+                          />
+                          <span className="truncate text-gray-700 dark:text-gray-300 font-medium">
+                            {primaryAssignee.name || primaryAssignee.email}
+                          </span>
+                          {extraAssigneesCount > 0 && (
+                            <span className="text-[10px] px-1 py-0.2 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-semibold shrink-0">
+                              +{extraAssigneesCount}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="italic text-gray-400">Unassigned</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">
+                      Created Date
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 font-medium mt-0.5">
+                      <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">
+                        calendar_today
+                      </span>
+                      <span>{formattedDate}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. Action & Creator Footer */}
+                <div
+                  className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-gray-800"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[55%]">
+                    <span className="material-symbols-outlined text-[15px] text-gray-400 shrink-0">
+                      person_outline
+                    </span>
+                    <span className="truncate">
+                      {ticket.createdBy?.name || ticket.createdBy?.email || "Unknown"}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => onViewTicket(ticket.id)}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1F3864] dark:text-blue-300 bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 transition-colors cursor-pointer shrink-0 active:scale-[0.98]"
+                  >
+                    <span>View Details</span>
+                    <span className="material-symbols-outlined text-[15px]">
+                      arrow_forward
+                    </span>
+                  </button>
                 </div>
               </div>
             );

@@ -1,8 +1,10 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useAppSelector } from "@/features/auth/authSlice";
 import { AppLayout } from "@/layout/AppLayout";
 import { useDepartmentDetailQuery } from "../api";
 import { StatCard } from "@/shared/components";
+import { ROUTES } from "@/app/routes/routePaths";
 
 export const UserMyDepartment: React.FC = () => {
   const currentUser = useAppSelector((state) => state.auth.user);
@@ -48,15 +50,20 @@ export const UserMyDepartment: React.FC = () => {
       <div className="flex flex-col space-y-6">
         {/* Header */}
         <div className="flex flex-col space-y-1">
-          <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-            <span>Home</span>
-            <span className="material-symbols-outlined text-[14px]">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 font-medium">
+            <Link
+              to={ROUTES.ROOT}
+              className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              Home
+            </Link>
+            <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
               chevron_right
             </span>
             <span className="text-[#1F3864] dark:text-blue-400 font-semibold">
               My Department
             </span>
-          </div>
+          </nav>
           <h1 className="text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
             {department.name}
           </h1>

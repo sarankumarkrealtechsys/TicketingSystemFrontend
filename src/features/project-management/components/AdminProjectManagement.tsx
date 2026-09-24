@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { AppLayout } from '@/layout/AppLayout';
 import { useProjectsQuery, useUpdateProjectMutation, useRetireProjectMutation, useDeleteProjectPermanentMutation } from '../api';
@@ -6,6 +7,7 @@ import { ProjectItem } from '../types';
 import CreateProjectModal from './CreateProjectModal';
 import EditProjectModal from './EditProjectModal';
 import { StatCard, Can } from '@/shared/components';
+import { ROUTES } from '@/app/routes/routePaths';
 
 export const AdminProjectManagement: React.FC = () => {
   const { data: projects = [], isLoading, isError, refetch, isFetching } = useProjectsQuery({ includeInactive: true });
@@ -124,19 +126,29 @@ export const AdminProjectManagement: React.FC = () => {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium mb-1">
-              <span>Home</span>
-              <span className="material-symbols-outlined text-[14px]">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 font-medium mb-1">
+              <Link
+                to={ROUTES.ROOT}
+                className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+              >
+                Home
+              </Link>
+              <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
                 chevron_right
               </span>
-              <span>Management</span>
-              <span className="material-symbols-outlined text-[14px]">
+              <Link
+                to={ROUTES.ADMIN_DASHBOARD}
+                className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+              >
+                Management
+              </Link>
+              <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
                 chevron_right
               </span>
               <span className="text-[#1F3864] dark:text-blue-400 font-semibold">
                 Projects
               </span>
-            </div>
+            </nav>
             <h1 className="text-2xl font-bold text-[#1A1A1A] dark:text-white tracking-tight">
               Projects Management
             </h1>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   useTeamsQuery,
   useTeamDetailQuery,
@@ -12,6 +13,7 @@ import { CreateStatusModal } from "./CreateStatusModal";
 import { EditTeamStatusModal } from "./EditTeamStatusModal";
 import { ConfirmActionModal } from "@/features/priority-status-management/components/ConfirmActionModal";
 import { StatCard } from "@/shared/components";
+import { ROUTES } from "@/app/routes/routePaths";
 
 export const UserMyTeam: React.FC = () => {
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
@@ -149,13 +151,18 @@ export const UserMyTeam: React.FC = () => {
 
       {/* Clean Header & Breadcrumbs (Zero redundant text) */}
       <div className="flex flex-col space-y-1">
-        <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-          <span>Home</span>
-          <span className="material-symbols-outlined text-[14px]">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 font-medium">
+          <Link
+            to={ROUTES.ROOT}
+            className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+          >
+            Home
+          </Link>
+          <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
             chevron_right
           </span>
           <span className="text-[#1F3864] font-semibold">My Team</span>
-        </div>
+        </nav>
         <h1 className="text-2xl font-bold text-[#1A1A1A] tracking-tight">
           {currentTeam?.name || "My Team"}
         </h1>

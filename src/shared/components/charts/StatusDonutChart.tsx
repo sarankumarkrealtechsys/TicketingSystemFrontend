@@ -43,6 +43,7 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
   breakdownLink = "/tickets",
 }) => {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [isAnimated, setIsAnimated] = useState(false);
   const [, setColorTick] = useState(0);
 
   useEffect(() => {
@@ -52,6 +53,17 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
       window.removeEventListener("rts_colors_updated", handleColorsUpdated);
     };
   }, []);
+
+  useEffect(() => {
+    setIsAnimated(false);
+    const frame = requestAnimationFrame(() => {
+      const timer = setTimeout(() => {
+        setIsAnimated(true);
+      }, 50);
+      return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [total]);
 
   const circumference = 2 * Math.PI * 38; // ~238.761
 
@@ -174,8 +186,12 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                 strokeWidth="12"
               />
               {/* Data Slices */}
-              {slices.map((slice) =>
-                slice.length > 0 ? (
+              {slices.map((slice) => {
+                if (slice.length <= 0) return null;
+                const isHovered = hoveredKey === slice.key;
+                const isAnyHovered = hoveredKey !== null;
+
+                return (
                   <circle
                     key={slice.key}
                     cx="50"
@@ -183,56 +199,44 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                     fill="none"
                     r="38"
                     stroke={slice.color}
-                    strokeDasharray={`${slice.length} ${circumference}`}
-                    strokeDashoffset={slice.offset}
-                    strokeWidth={hoveredKey === slice.key ? 15 : 12}
+                    strokeDasharray={
+                      isAnimated
+                        ? `${slice.length} ${circumference}`
+                        : `0 ${circumference}`
+                    }
+                    strokeDashoffset={isAnimated ? slice.offset : 0}
+                    strokeWidth={isHovered ? 16 : 12}
                     onMouseEnter={() => setHoveredKey(slice.key)}
                     onMouseLeave={() => setHoveredKey(null)}
-                    className="transition-all duration-300 ease-in-out cursor-pointer opacity-90 hover:opacity-100"
+                    style={{
+                      transition:
+                        "stroke-dasharray 1.4s cubic-bezier(0.16, 1, 0.3, 1), stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1), stroke-width 0.5s ease-out, opacity 0.5s ease-out, filter 0.5s ease-out",
+                      filter: isHovered
+                        ? `drop-shadow(0 0 5px ${slice.color}99)`
+                        : "none",
+                    }}
+                    className={`cursor-pointer ${
+                      isHovered
+                        ? "opacity-100"
+                        : isAnyHovered
+                        ? "opacity-40"
+                        : "opacity-95 hover:opacity-100"
+                    }`}
                   >
                     <title>{`${slice.label}: ${slice.count} tickets (${slice.pct}%)`}</title>
                   </circle>
-                ) : null
-              )}
+                );
+              })}
             </svg>
 
-            {/* Centered Dynamic Status Display on Hover */}
+            {/* Centered Total Display (Always static total count, no status text popup on hover) */}
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none p-2">
-              <div
-                className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
-                  activeSlice
-                    ? "opacity-0 scale-90 pointer-events-none absolute"
-                    : "opacity-100 scale-100"
-                }`}
-              >
-                <span className="font-bold text-[22px] text-[#1A1A1A] leading-none font-mono">
-                  {total}
-                </span>
-                <span className="text-[9px] font-bold text-[#5F6368] tracking-wider uppercase mt-0.5">
-                  TICKETS
-                </span>
-              </div>
-
-              <div
-                className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
-                  activeSlice
-                    ? "opacity-100 scale-100"
-                    : "opacity-0 scale-90 pointer-events-none absolute"
-                }`}
-              >
-                <span
-                  className="text-[10px] font-bold uppercase tracking-wider line-clamp-1 max-w-[100px] truncate"
-                  style={{ color: activeSlice?.color }}
-                >
-                  {activeSlice?.label}
-                </span>
-                <span className="font-bold text-[20px] text-[#1A1A1A] leading-tight font-mono mt-0.5">
-                  {activeSlice?.count}
-                </span>
-                <span className="text-[10px] font-mono text-gray-500">
-                  {activeSlice?.pct}%
-                </span>
-              </div>
+              <span className="font-bold text-[22px] text-[#1A1A1A] leading-none font-mono">
+                {total}
+              </span>
+              <span className="text-[9px] font-bold text-[#5F6368] tracking-wider uppercase mt-1">
+                TICKETS
+              </span>
             </div>
           </div>
 
@@ -240,24 +244,33 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
           <div className="flex-1 w-full space-y-1.5 max-h-52 overflow-y-auto pr-1 scrollbar-thin">
             {slices.map((item) => {
               const isHovered = hoveredKey === item.key;
+              const isAnyHovered = hoveredKey !== null;
               return (
                 <div
                   key={item.key}
                   onMouseEnter={() => setHoveredKey(item.key)}
                   onMouseLeave={() => setHoveredKey(null)}
-                  className={`flex items-center justify-between text-[12px] p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`flex items-center justify-between text-[12px] p-1.5 rounded-md transition-all duration-500 ease-out cursor-pointer ${
                     isHovered
-                      ? "bg-gray-100/80 font-bold ring-1 ring-black/5"
+                      ? "bg-gray-100/90 font-bold ring-1 ring-black/10 scale-[1.01]"
+                      : isAnyHovered
+                      ? "opacity-50 hover:opacity-100 hover:bg-gray-50"
                       : "hover:bg-gray-50"
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-2">
                     <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: item.color }}
+                      className="w-2.5 h-2.5 rounded-full shrink-0 transition-all duration-500 ease-out"
+                      style={{
+                        backgroundColor: item.color,
+                        transform: isHovered ? "scale(1.35)" : "scale(1)",
+                        boxShadow: isHovered
+                          ? `0 0 8px ${item.color}`
+                          : "none",
+                      }}
                     />
                     <span
-                      className={`truncate ${
+                      className={`truncate transition-colors duration-500 ${
                         isHovered ? "text-[#1A1A1A] font-bold" : "text-[#1A1A1A] font-medium"
                       }`}
                       title={item.label}

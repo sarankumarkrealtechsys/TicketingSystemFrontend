@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import {
   useTeamsQuery,
@@ -14,6 +15,7 @@ import { TeamRosterDrawer } from "./TeamRosterDrawer";
 import { ReassignDepartmentModal } from "./ReassignDepartmentModal";
 import { SelectDropdown, SelectOption, StatCard, Can } from "@/shared/components";
 import { useCan } from "@/features/auth";
+import { ROUTES } from "@/app/routes/routePaths";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
   { value: "all", label: "All Statuses" },
@@ -208,17 +210,27 @@ export const AdminTeamManagement: React.FC = () => {
       {/* Breadcrumbs & Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex flex-col space-y-1">
-          <div className="flex items-center gap-2 text-xs text-gray-500 font-medium">
-            <span>Home</span>
-            <span className="material-symbols-outlined text-[14px]">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 font-medium">
+            <Link
+              to={ROUTES.ROOT}
+              className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              Home
+            </Link>
+            <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
               chevron_right
             </span>
-            <span>Management</span>
-            <span className="material-symbols-outlined text-[14px]">
+            <Link
+              to={ROUTES.ADMIN_DASHBOARD}
+              className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              Management
+            </Link>
+            <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">
               chevron_right
             </span>
             <span className="text-[#1F3864] font-semibold">Teams</span>
-          </div>
+          </nav>
           <h1 className="text-2xl font-bold text-[#1A1A1A] tracking-tight">
             Team Management
           </h1>
@@ -306,7 +318,7 @@ export const AdminTeamManagement: React.FC = () => {
               />
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
               {/* Department Filter */}
               <div className="w-full sm:w-56">
                 <SelectDropdown<string>
@@ -327,27 +339,25 @@ export const AdminTeamManagement: React.FC = () => {
                   size="sm"
                 />
               </div>
-            </div>
-          </div>
 
-          {/* Next Line: Medium Navy Blue Refresh Button */}
-          <div className="pt-2 flex justify-end border-t border-gray-100 w-full">
-            <button
-              type="button"
-              onClick={() => {
-                refetchTeams();
-                refetchDepts();
-                setActionSuccessMessage("Refreshed team list!");
-                setTimeout(() => setActionSuccessMessage(null), 3000);
-              }}
-              className="h-8 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
-              title="Refresh Teams List"
-            >
-              <span className={`material-symbols-outlined text-[16px] ${isFetchingTeams ? "animate-spin" : ""}`}>
-                refresh
-              </span>
-              <span>Refresh</span>
-            </button>
+              {/* Refresh Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  refetchTeams();
+                  refetchDepts();
+                  setActionSuccessMessage("Refreshed team list!");
+                  setTimeout(() => setActionSuccessMessage(null), 3000);
+                }}
+                className="h-9 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 shrink-0 w-full sm:w-auto active:scale-[0.98] cursor-pointer"
+                title="Refresh Teams List"
+              >
+                <span className={`material-symbols-outlined text-[16px] ${isFetchingTeams ? "animate-spin" : ""}`}>
+                  refresh
+                </span>
+                <span>Refresh</span>
+              </button>
+            </div>
           </div>
         </div>
 

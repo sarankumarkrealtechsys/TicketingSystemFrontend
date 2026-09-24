@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { AppLayout } from "@/layout/AppLayout";
 import { PERMISSIONS } from "@/features/auth/permissions";
 import { Can } from "@/shared/components";
@@ -9,6 +10,7 @@ import {
   useUpdateEmailNotificationsMutation,
   useUpdateInAppNotificationsMutation,
 } from "../api";
+import { ROUTES } from "@/app/routes/routePaths";
 
 export const AdminSettings: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -51,16 +53,26 @@ export const AdminSettings: React.FC = () => {
         </div>
       )}
 
-      <div className="flex flex-col gap-6 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-12">
+      <div className="flex flex-col gap-6 w-full pb-12">
         {/* Breadcrumbs & Page Header */}
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
-            <span>Workspace</span>
-            <span className="material-symbols-outlined text-[14px]">chevron_right</span>
-            <span>System Configuration</span>
-            <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-xs font-medium text-gray-500">
+            <Link
+              to={ROUTES.ROOT}
+              className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              Home
+            </Link>
+            <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">chevron_right</span>
+            <Link
+              to={ROUTES.ADMIN_DASHBOARD}
+              className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
+            >
+              Management
+            </Link>
+            <span className="material-symbols-outlined text-[14px] text-gray-400 select-none">chevron_right</span>
             <span className="text-[#1F3864] font-semibold">Settings</span>
-          </div>
+          </nav>
 
           <div className="flex items-center gap-3 mt-1">
             <h1 className="text-2xl font-bold text-[#1F3864] tracking-tight">System Settings</h1>
