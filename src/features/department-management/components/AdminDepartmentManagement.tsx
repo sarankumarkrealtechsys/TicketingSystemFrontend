@@ -183,9 +183,9 @@ export const AdminDepartmentManagement: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsCreateOpen(true)}
-              className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 active:scale-[0.98]"
+              className="w-fit self-start sm:self-auto h-8.5 px-3 py-1.5 bg-[#1F3864] hover:bg-[#152747] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[18px]">
+              <span className="material-symbols-outlined text-[16px]">
                 corporate_fare
               </span>
               <span>New Department</span>

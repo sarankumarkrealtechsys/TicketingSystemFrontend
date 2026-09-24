@@ -532,8 +532,44 @@ export const CreateTicket: React.FC = () => {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  const ALLOWED_TICKET_FILE_EXTENSIONS = [
+    ".pdf",
+    ".xlsx",
+    ".xls",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".svg",
+    ".doc",
+    ".docx",
+    ".txt",
+    ".csv",
+  ];
+  const MAX_TICKET_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+
   const processFiles = (newFiles: File[]) => {
-    const formatted = newFiles.map((f) => ({
+    const validFiles: File[] = [];
+    for (const f of newFiles) {
+      if (f.size > MAX_TICKET_FILE_SIZE) {
+        showToast(`File "${f.name}" exceeds the 25 MB size limit.`);
+        continue;
+      }
+      const dotIdx = f.name.lastIndexOf(".");
+      const ext = dotIdx !== -1 ? f.name.substring(dotIdx).toLowerCase() : "";
+      if (!ALLOWED_TICKET_FILE_EXTENSIONS.includes(ext)) {
+        showToast(
+          `File "${f.name}" format is not supported. Please upload Excel (.xlsx, .xls), PDF, photos (.png, .jpg, .webp), or documents.`
+        );
+        continue;
+      }
+      validFiles.push(f);
+    }
+
+    if (validFiles.length === 0) return;
+
+    const formatted = validFiles.map((f) => ({
       id: Math.random().toString(36).substring(2, 9),
       file: f,
       name: f.name,
@@ -1016,7 +1052,7 @@ export const CreateTicket: React.FC = () => {
                       <span className="material-symbols-outlined text-[17px] text-gray-500">attach_file</span>
                       <span>Attachments <span className="font-normal text-gray-400">(Optional)</span></span>
                     </label>
-                    <span className="text-[11px] text-gray-400 font-medium">Max 50MB per file</span>
+                    <span className="text-[11px] text-gray-400 font-medium">Max 25MB per file</span>
                   </div>
 
                   {/* Drag and Drop Dropzone */}
@@ -1029,6 +1065,7 @@ export const CreateTicket: React.FC = () => {
                       type="file"
                       multiple
                       id="file-input"
+                      accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg,.webp,.gif,.svg,.csv,.doc,.docx"
                       className="hidden"
                       onChange={handleFileInputChange}
                     />
@@ -1040,7 +1077,7 @@ export const CreateTicket: React.FC = () => {
                         Drag files here or <span className="text-[#0E61A1] underline">browse files</span> from your workstation
                       </p>
                       <span className="text-[11px] text-gray-400 block mt-0.5">
-                        Supports PNG, JPG, PDF, TXT, LOG, CSV up to 50MB
+                        Supports Excel (.xlsx, .xls), PDF, photos (.png, .jpg, .webp), and docs up to 25MB
                       </span>
                     </label>
                   </div>
@@ -1048,39 +1085,54 @@ export const CreateTicket: React.FC = () => {
                   {/* File Preview Chips */}
                   {uploadedFiles.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-                      {uploadedFiles.map((file) => (
-                        <div
-                          key={file.id}
-                          className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-200 shadow-2xs"
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="w-7 h-7 rounded bg-blue-100 flex items-center justify-center text-[#1F3864] shrink-0">
-                              <span className="material-symbols-outlined text-[16px]">
-                                {file.name.match(/\.(png|jpe?g|gif|webp)$/i) ? "image" : "description"}
-                              </span>
+                      {uploadedFiles.map((file) => {
+                        const ext = file.name.toLowerCase();
+                        const isExcel = ext.endsWith(".xlsx") || ext.endsWith(".xls") || ext.endsWith(".csv");
+                        const isPdf = ext.endsWith(".pdf");
+                        const isImg = Boolean(ext.match(/\.(png|jpe?g|gif|webp|svg)$/i));
+
+                        const chipStyle = isExcel
+                          ? { icon: "table_chart", bg: "bg-emerald-100 text-emerald-700" }
+                          : isPdf
+                          ? { icon: "picture_as_pdf", bg: "bg-red-100 text-red-700" }
+                          : isImg
+                          ? { icon: "image", bg: "bg-purple-100 text-purple-700" }
+                          : { icon: "description", bg: "bg-blue-100 text-[#1F3864]" };
+
+                        return (
+                          <div
+                            key={file.id}
+                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-200 shadow-2xs"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className={`w-7 h-7 rounded flex items-center justify-center shrink-0 ${chipStyle.bg}`}>
+                                <span className="material-symbols-outlined text-[16px]">
+                                  {chipStyle.icon}
+                                </span>
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-xs font-semibold text-[#1A1A1A] truncate" title={file.name}>
+                                  {file.name}
+                                </span>
+                                <span className="text-[10px] text-gray-400">{file.size} · Ready</span>
+                              </div>
                             </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-xs font-semibold text-[#1A1A1A] truncate">
-                                {file.name}
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className="material-symbols-outlined text-[16px] text-emerald-600">
+                                check_circle
                               </span>
-                              <span className="text-[10px] text-gray-400">{file.size} · Ready</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFile(file.id)}
+                                className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                                title="Remove file"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">close</span>
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <span className="material-symbols-outlined text-[16px] text-emerald-600">
-                              check_circle
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveFile(file.id)}
-                              className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-50 text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
-                              title="Remove file"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">close</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

@@ -24,6 +24,9 @@ import {
   Search,
   CheckCircle2,
   RotateCw,
+  FileSpreadsheet,
+  Image,
+  File,
 } from "lucide-react";
 import { useAppSelector } from "@/features/auth/authSlice";
 import {
@@ -42,6 +45,8 @@ import {
   useCloseTicketMutation,
   useAddRemarkMutation,
   useUploadAttachmentMutation,
+  useDeleteAttachmentMutation,
+  downloadTicketAttachment,
   useLogTimeMutation,
   useAddCollaboratingTeamMutation,
   useRemoveCollaboratingTeamMutation,
@@ -50,7 +55,13 @@ import {
   useDeleteTicketMutation,
 } from "../api";
 import { formatDistanceToNow, format } from "date-fns";
-import { TicketStatusItem, PriorityItem, TicketHistoryItem, SubTicketItem } from "../types";
+import {
+  TicketStatusItem,
+  PriorityItem,
+  TicketHistoryItem,
+  SubTicketItem,
+  TicketAttachmentItem,
+} from "../types";
 import { TeamItem } from "@/features/team-management/types";
 import { PriorityBadge, StatusBadge } from "@/shared/components";
 import {
@@ -251,6 +262,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [newTeamId, setNewTeamId] = useState<number | "">("");
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null);
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<number | null>(null);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
 
   // Real-time sync for priority & status colors
   const [, setColorUpdateTick] = useState(0);
@@ -369,6 +382,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const closeMutation = useCloseTicketMutation(ticketId || 0);
   const addRemarkMutation = useAddRemarkMutation(ticketId || 0);
   const uploadAttachmentMutation = useUploadAttachmentMutation(ticketId || 0);
+  const deleteAttachmentMutation = useDeleteAttachmentMutation(ticketId || 0);
   const logTimeMutation = useLogTimeMutation(ticketId || 0);
   const addTeamMutation = useAddCollaboratingTeamMutation(ticketId || 0);
   const removeTeamMutation = useRemoveCollaboratingTeamMutation(ticketId || 0);
@@ -395,6 +409,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const canLogTime = Boolean(ticket?.actions?.logTime);
   const canCreateSubTicket = Boolean(ticket?.actions?.createSubticket);
   const canManageAttachments = Boolean(ticket?.actions?.addAttachment);
+  const canRemoveAttachments = Boolean(ticket?.actions?.removeAttachment ?? ticket?.actions?.addAttachment);
   const canManageTeams = Boolean(ticket?.actions?.manageTeams);
 
   // Time logging calculations with fallback to sum of time entries
@@ -698,17 +713,123 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
     }
   };
 
+  const getFileBadgeInfo = (att: TicketAttachmentItem) => {
+    const ext = (att.fileExtension || "").toLowerCase().replace(".", "");
+    const mime = (att.mimeType || "").toLowerCase();
+
+    if (
+      ["xlsx", "xls", "csv"].includes(ext) ||
+      mime.includes("spreadsheet") ||
+      mime.includes("excel") ||
+      mime.includes("csv")
+    ) {
+      return {
+        label: ext ? ext.toUpperCase() : "XLS",
+        badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        icon: <FileSpreadsheet className="w-4 h-4 text-emerald-600" />,
+      };
+    }
+    if (ext === "pdf" || mime.includes("pdf")) {
+      return {
+        label: "PDF",
+        badgeBg: "bg-red-50 text-red-700 border-red-200",
+        icon: <FileText className="w-4 h-4 text-red-600" />,
+      };
+    }
+    if (
+      ["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext) ||
+      mime.startsWith("image/")
+    ) {
+      return {
+        label: ext ? ext.toUpperCase() : "IMG",
+        badgeBg: "bg-purple-50 text-purple-700 border-purple-200",
+        icon: <Image className="w-4 h-4 text-purple-600" />,
+      };
+    }
+    return {
+      label: ext ? ext.toUpperCase() : "FILE",
+      badgeBg: "bg-blue-50 text-[#1F3864] border-blue-200",
+      icon: <File className="w-4 h-4 text-[#1F3864]" />,
+    };
+  };
+
+  const ALLOWED_ATTACHMENT_EXTS = [
+    ".pdf",
+    ".xlsx",
+    ".xls",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".webp",
+    ".gif",
+    ".svg",
+    ".doc",
+    ".docx",
+    ".txt",
+    ".csv",
+  ];
+  const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024; // 25 MB
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setActionErrorMsg(`File "${file.name}" exceeds the maximum allowed size limit of 25 MB.`);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
+    const dotIdx = file.name.lastIndexOf(".");
+    const ext = dotIdx !== -1 ? file.name.substring(dotIdx).toLowerCase() : "";
+    if (!ALLOWED_ATTACHMENT_EXTS.includes(ext)) {
+      setActionErrorMsg(
+        `File type "${ext || "unknown"}" is not permitted. Supported formats include Excel (.xlsx, .xls), PDF, photos (.png, .jpg, .webp), and documents.`
+      );
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("file", file);
     try {
       await uploadAttachmentMutation.mutateAsync(formData);
-      setActionSuccessMsg(`File "${file.name}" uploaded`);
+      setActionSuccessMsg(`File "${file.name}" uploaded successfully`);
+      refetchTicket();
+      refetchHistory();
       if (fileInputRef.current) fileInputRef.current.value = "";
     } catch (err: any) {
       setActionErrorMsg(err.response?.data?.message || "Failed to upload file");
+    }
+  };
+
+  const handleDownloadAttachment = async (att: TicketAttachmentItem) => {
+    if (!ticket?.id) return;
+    try {
+      setDownloadingAttachmentId(att.id);
+      await downloadTicketAttachment(ticket.id, att.id, att.originalFileName);
+    } catch (err: any) {
+      setActionErrorMsg(err.response?.data?.message || `Failed to download file "${att.originalFileName}"`);
+    } finally {
+      setDownloadingAttachmentId(null);
+    }
+  };
+
+  const handleDeleteAttachment = async (att: TicketAttachmentItem) => {
+    if (!ticket?.id) return;
+    if (!window.confirm(`Are you sure you want to remove attachment "${att.originalFileName}"?`)) {
+      return;
+    }
+    try {
+      setDeletingAttachmentId(att.id);
+      await deleteAttachmentMutation.mutateAsync(att.id);
+      setActionSuccessMsg(`Attachment "${att.originalFileName}" removed`);
+      refetchTicket();
+      refetchHistory();
+    } catch (err: any) {
+      setActionErrorMsg(err.response?.data?.message || "Failed to delete attachment");
+    } finally {
+      setDeletingAttachmentId(null);
     }
   };
 
@@ -1817,15 +1938,26 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                         type="file"
                         ref={fileInputRef}
                         onChange={handleFileUpload}
+                        accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg,.webp,.gif,.svg,.csv,.doc,.docx"
                         className="hidden"
                       />
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-[#1F3864] hover:text-[#2E74B5] cursor-pointer"
+                        disabled={uploadAttachmentMutation.isPending}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1F3864] hover:text-[#2E74B5] disabled:opacity-50 cursor-pointer transition"
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Upload File</span>
+                        {uploadAttachmentMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Uploading...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Upload File</span>
+                          </>
+                        )}
                       </button>
                     </div>
                   )}
@@ -1833,36 +1965,78 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 text-xs">
                   {ticket.attachments && ticket.attachments.length > 0 ? (
-                    ticket.attachments.map((att) => (
-                      <div
-                        key={att.id}
-                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-slate-50 hover:bg-slate-100 transition"
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-8 h-8 rounded bg-blue-100 text-[#1F3864] flex items-center justify-center font-mono text-[10px] font-bold">
-                            {(att.fileExtension || "FILE").toUpperCase().replace(".", "")}
+                    ticket.attachments.map((att) => {
+                      const badgeInfo = getFileBadgeInfo(att);
+                      const isDownloading = downloadingAttachmentId === att.id;
+                      const isDeleting = deletingAttachmentId === att.id;
+                      const formattedSize =
+                        att.fileSizeBytes < 1024 * 1024
+                          ? `${Math.max(1, Math.round(att.fileSizeBytes / 1024))} KB`
+                          : `${(att.fileSizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+
+                      return (
+                        <div
+                          key={att.id}
+                          className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-slate-50 hover:bg-slate-100 transition group"
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden min-w-0">
+                            <div
+                              className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${badgeInfo.badgeBg}`}
+                              title={badgeInfo.label}
+                            >
+                              {badgeInfo.icon}
+                            </div>
+                            <div className="truncate min-w-0">
+                              <span
+                                className="font-bold text-gray-900 block truncate"
+                                title={att.originalFileName}
+                              >
+                                {att.originalFileName}
+                              </span>
+                              <span className="text-[11px] text-gray-600 font-medium flex items-center gap-1 mt-0.5 truncate">
+                                <span>{formattedSize}</span>
+                                <span>•</span>
+                                <span className="text-gray-800 font-semibold truncate">
+                                  {att.uploadedBy?.name || "User"}
+                                </span>
+                              </span>
+                            </div>
                           </div>
-                          <div className="truncate">
-                            <span className="font-bold text-gray-900 block truncate">
-                              {att.originalFileName}
-                            </span>
-                            <span className="text-xs text-gray-600 font-medium">
-                              {Math.round(att.fileSizeBytes / 1024)} KB •{" "}
-                              {att.uploadedBy?.name || "User"}
-                            </span>
+
+                          <div className="flex items-center gap-1 shrink-0 ml-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDownloadAttachment(att)}
+                              disabled={isDownloading}
+                              className="p-1.5 rounded text-gray-600 hover:text-[#1F3864] hover:bg-slate-200 transition cursor-pointer"
+                              title="Download Attachment"
+                            >
+                              {isDownloading ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-[#1F3864]" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
+                            </button>
+
+                            {canRemoveAttachments && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAttachment(att)}
+                                disabled={isDeleting}
+                                className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                title="Remove Attachment"
+                              >
+                                {isDeleting ? (
+                                  <Loader2 className="w-4 h-4 animate-spin text-red-600" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
                           </div>
                         </div>
-                        <a
-                          href={`/api/tickets/${ticket.id}/attachments/${att.id}/download`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="p-1.5 text-gray-600 hover:text-[#1F3864] transition"
-                          title="Download"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="col-span-2 text-xs text-gray-600 font-medium italic py-2">
                       No attachments uploaded.

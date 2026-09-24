@@ -344,6 +344,46 @@ export const useUploadAttachmentMutation = (ticketId: number) => {
   });
 };
 
+// GET /api/tickets/:id/attachments/:attachmentId/download — Secure authenticated download
+export const downloadTicketAttachment = async (
+  ticketId: number,
+  attachmentId: number,
+  originalFileName: string
+): Promise<void> => {
+  const response = await apiClient.get(
+    `/tickets/${ticketId}/attachments/${attachmentId}/download`,
+    { responseType: "blob" }
+  );
+  const contentType = (response.headers?.["content-type"] as string) || "application/octet-stream";
+  const blob = new Blob([response.data], {
+    type: contentType,
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", originalFileName);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+// DELETE /api/tickets/:id/attachments/:attachmentId — Delete attachment
+export const useDeleteAttachmentMutation = (ticketId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, AxiosError<any>, number>({
+    mutationFn: async (attachmentId: number) => {
+      const { data } = await apiClient.delete(`/tickets/${ticketId}/attachments/${attachmentId}`);
+      return data?.data ?? data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.history(ticketId) });
+    },
+  });
+};
+
 // POST /api/tickets/:id/time-entries — Log time
 export const useLogTimeMutation = (ticketId: number) => {
   const queryClient = useQueryClient();

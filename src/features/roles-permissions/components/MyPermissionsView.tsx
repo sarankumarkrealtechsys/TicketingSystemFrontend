@@ -352,7 +352,7 @@ export const MyPermissionsView: React.FC<MyPermissionsViewProps> = ({ onOpenGuid
           </div>
 
           {/* Fixed Column Header Row */}
-          <div className="grid grid-cols-12 px-5 py-2.5 bg-[#F1F5F9] text-[#334155] text-[11px] font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0]">
+          <div className="hidden sm:grid grid-cols-12 px-5 py-2.5 bg-[#F1F5F9] text-[#334155] text-[11px] font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0]">
             <div className="col-span-7 sm:col-span-8">Capability & Description</div>
             <div className="col-span-5 sm:col-span-4 text-center">Assigned Scope & Access Level</div>
           </div>
@@ -374,7 +374,7 @@ export const MyPermissionsView: React.FC<MyPermissionsViewProps> = ({ onOpenGuid
               return (
                 <div key={category} className="flex flex-col">
                   {/* Sticky Category Header Row */}
-                  <div className="bg-[#F8FAFC] px-5 py-2.5 flex items-center justify-between border-b border-[#E2E8F0] sticky top-0 z-10 shadow-xs">
+                  <div className="bg-[#F8FAFC] px-4 sm:px-5 py-2.5 flex items-center justify-between border-b border-[#E2E8F0] sticky top-0 z-10 shadow-xs">
                     <div className="flex items-center gap-2.5">
                       <span className="material-symbols-outlined text-[#1F3864] text-[18px]">
                         {getCategoryIcon(category)}
@@ -393,9 +393,9 @@ export const MyPermissionsView: React.FC<MyPermissionsViewProps> = ({ onOpenGuid
                     {items.map((perm) => (
                       <div
                         key={perm.id}
-                        className="grid grid-cols-12 px-5 py-3.5 items-center hover:bg-[#F8FAFC] transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 sm:px-5 py-3.5 hover:bg-[#F8FAFC] transition-colors"
                       >
-                        <div className="col-span-7 sm:col-span-8 pr-4">
+                        <div className="flex-1 min-w-0 pr-0 sm:pr-4">
                           <span className="text-xs font-semibold text-[#0F172A] block">
                             {perm.key.replace(/_/g, ' ')}
                           </span>
@@ -403,7 +403,7 @@ export const MyPermissionsView: React.FC<MyPermissionsViewProps> = ({ onOpenGuid
                             {perm.description}
                           </p>
                         </div>
-                        <div className="col-span-5 sm:col-span-4 flex justify-center items-center">
+                        <div className="flex justify-start sm:justify-center items-center shrink-0">
                           {getScopeBadge(perm.key)}
                         </div>
                       </div>

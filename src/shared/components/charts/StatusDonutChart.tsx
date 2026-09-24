@@ -55,37 +55,71 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
 
   const circumference = 2 * Math.PI * 38; // ~238.761
 
-  // Use dynamic byStatus if provided, otherwise fallback to byStatusBehavior
-  let statuses: Array<{
+  // Always group and display tickets by the 5 canonical lifecycle stages (Open, In Progress, On Hold, Resolved, Closed).
+  // Team workflow statuses roll up directly to their selected lifecycle stage count.
+  const behaviorCounts = {
+    OPEN: byStatusBehavior?.OPEN || 0,
+    IN_PROGRESS: byStatusBehavior?.IN_PROGRESS || 0,
+    ON_HOLD: byStatusBehavior?.ON_HOLD || 0,
+    RESOLVED: byStatusBehavior?.RESOLVED || 0,
+    CLOSED: byStatusBehavior?.CLOSED || 0,
+  };
+
+  // If byStatusBehavior wasn't provided or all values are 0, but byStatus is passed, roll up counts by behavior
+  if (
+    byStatus &&
+    byStatus.length > 0 &&
+    !byStatusBehavior?.OPEN &&
+    !byStatusBehavior?.IN_PROGRESS &&
+    !byStatusBehavior?.ON_HOLD &&
+    !byStatusBehavior?.RESOLVED &&
+    !byStatusBehavior?.CLOSED
+  ) {
+    for (const item of byStatus) {
+      const b = (item.behavior || "OPEN").toUpperCase() as keyof typeof behaviorCounts;
+      if (behaviorCounts[b] !== undefined) {
+        behaviorCounts[b] += item.count || 0;
+      }
+    }
+  }
+
+  const statuses: Array<{
     key: string;
     label: string;
     count: number;
     color: string;
-  }> = [];
-
-  if (byStatus && byStatus.length > 0) {
-    const sorted = [...byStatus].sort((a, b) => {
-      const orderA = a.sortOrder !== undefined ? a.sortOrder : 999;
-      const orderB = b.sortOrder !== undefined ? b.sortOrder : 999;
-      if (orderA !== orderB) return orderA - orderB;
-      return (a.statusId || 0) - (b.statusId || 0);
-    });
-
-    statuses = sorted.map((s) => ({
-      key: String(s.statusId),
-      label: s.label,
-      count: s.count || 0,
-      color: s.color || getStatusColor(s.statusId, s.behavior, s.label),
-    }));
-  } else {
-    statuses = [
-      { key: "OPEN", label: "Open", count: byStatusBehavior.OPEN || 0, color: getStatusColor(null, "OPEN", "Open") },
-      { key: "IN_PROGRESS", label: "In Progress", count: byStatusBehavior.IN_PROGRESS || 0, color: getStatusColor(null, "IN_PROGRESS", "In Progress") },
-      { key: "ON_HOLD", label: "On Hold", count: byStatusBehavior.ON_HOLD || 0, color: getStatusColor(null, "ON_HOLD", "On Hold") },
-      { key: "RESOLVED", label: "Resolved", count: byStatusBehavior.RESOLVED || 0, color: getStatusColor(null, "RESOLVED", "Resolved") },
-      { key: "CLOSED", label: "Closed", count: byStatusBehavior.CLOSED || 0, color: getStatusColor(null, "CLOSED", "Closed") },
-    ];
-  }
+  }> = [
+    {
+      key: "OPEN",
+      label: "Open",
+      count: behaviorCounts.OPEN,
+      color: getStatusColor(null, "OPEN", "Open"),
+    },
+    {
+      key: "IN_PROGRESS",
+      label: "In Progress",
+      count: behaviorCounts.IN_PROGRESS,
+      color: getStatusColor(null, "IN_PROGRESS", "In Progress"),
+    },
+    {
+      key: "ON_HOLD",
+      label: "On Hold",
+      count: behaviorCounts.ON_HOLD,
+      color: getStatusColor(null, "ON_HOLD", "On Hold"),
+    },
+    {
+      key: "RESOLVED",
+      label: "Resolved",
+      count: behaviorCounts.RESOLVED,
+      color: getStatusColor(null, "RESOLVED", "Resolved"),
+    },
+    {
+      key: "CLOSED",
+      label: "Closed",
+      count: behaviorCounts.CLOSED,
+      color: getStatusColor(null, "CLOSED", "Closed"),
+    },
+  ];
 
   let accumulated = 0;
   const slices = statuses.map((item) => {

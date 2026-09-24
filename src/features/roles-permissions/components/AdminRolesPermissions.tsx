@@ -702,7 +702,7 @@ export const AdminRolesPermissions: React.FC = () => {
             {currentRole ? (
               <div className="bg-white rounded-2xl shadow-xs border border-[#E2E8F0] overflow-hidden flex flex-col w-full">
                 {/* Fixed Column Header Row */}
-                <div className="grid grid-cols-12 px-6 py-3 bg-[#F8FAFC] text-[#334155] text-xs font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0] shrink-0">
+                <div className="hidden sm:grid grid-cols-12 px-6 py-3 bg-[#F8FAFC] text-[#334155] text-xs font-bold uppercase tracking-wider items-center border-b border-[#E2E8F0] shrink-0">
                   <div className="col-span-8 sm:col-span-8 font-bold">CAPABILITY & DESCRIPTION</div>
                   <div className="col-span-4 sm:col-span-4 text-right font-bold">SCOPE LEVEL</div>
                 </div>
@@ -724,7 +724,7 @@ export const AdminRolesPermissions: React.FC = () => {
                       return (
                         <div key={category} className="flex flex-col">
                           {/* Sticky Category Header Row */}
-                          <div className="bg-[#F1F5F9] px-6 py-2.5 flex items-center justify-between border-b border-[#E2E8F0] sticky top-0 z-10 shadow-2xs">
+                          <div className="bg-[#F1F5F9] px-4 sm:px-6 py-2.5 flex items-center justify-between border-b border-[#E2E8F0] sticky top-0 z-10 shadow-2xs">
                             <div className="flex items-center gap-2.5">
                               <span className="material-symbols-outlined text-[19px] text-[#1F3864]">
                                 {CATEGORY_ICONS[category] || 'tune'}
@@ -759,12 +759,12 @@ export const AdminRolesPermissions: React.FC = () => {
                             return (
                               <div
                                 key={perm.id}
-                                className={`grid grid-cols-12 px-6 py-3.5 items-center hover:bg-[#F8FAFC] transition-colors border-b border-[#F1F5F9] last:border-b-0 ${
+                                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3.5 hover:bg-[#F8FAFC] transition-colors border-b border-[#F1F5F9] last:border-b-0 ${
                                   isEnabled ? 'bg-white' : 'bg-gray-50/40'
                                 }`}
                               >
                                 {/* Checkbox + Bold Title & Description */}
-                                <div className="col-span-8 sm:col-span-8 pr-4 flex items-start gap-3.5">
+                                <div className="flex items-start gap-3.5 flex-1 min-w-0 pr-0 sm:pr-4">
                                   <input
                                     type="checkbox"
                                     checked={isEnabled}
@@ -772,7 +772,7 @@ export const AdminRolesPermissions: React.FC = () => {
                                     className="w-4 h-4 mt-0.5 accent-[#1F3864] rounded cursor-pointer transition-transform active:scale-95 shrink-0"
                                     title={`Toggle ${perm.key}`}
                                   />
-                                  <div className="flex flex-col">
+                                  <div className="flex flex-col min-w-0">
                                     <span
                                       onClick={() => handleTogglePermission(perm.id, perm.key)}
                                       className={`font-bold text-xs tracking-tight cursor-pointer hover:underline ${
@@ -788,7 +788,7 @@ export const AdminRolesPermissions: React.FC = () => {
                                 </div>
 
                                 {/* Scope Configuration Dropdown / Badge */}
-                                <div className="col-span-4 sm:col-span-4 flex items-center justify-end">
+                                <div className="flex items-center justify-start sm:justify-end shrink-0 pl-7 sm:pl-0">
                                   {!isEnabled ? (
                                     <span className="text-xs font-semibold text-gray-400">
                                       Disabled
@@ -819,7 +819,7 @@ export const AdminRolesPermissions: React.FC = () => {
                                             : 'bg-emerald-600',
                                       }))}
                                       size="sm"
-                                      className="w-52"
+                                      className="w-48 sm:w-52"
                                       triggerClassName="!h-8.5 !py-1 !px-3 !text-xs !font-bold !rounded-lg !border-gray-200 hover:!border-gray-300 shadow-2xs"
                                     />
                                   )}

@@ -225,7 +225,6 @@ export const AdminDashboard: React.FC = () => {
           />
           <StatusDonutChart
             total={total}
-            byStatus={statsData?.byStatus || []}
             byStatusBehavior={statusBehaviors}
             title="Tickets by Status"
           />

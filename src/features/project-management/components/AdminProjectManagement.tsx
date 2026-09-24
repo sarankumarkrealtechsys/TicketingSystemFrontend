@@ -146,7 +146,7 @@ export const AdminProjectManagement: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsCreateModalOpen(true)}
-              className="px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0"
+              className="w-fit self-start sm:self-auto px-4 py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[18px]">
                 add
@@ -156,8 +156,8 @@ export const AdminProjectManagement: React.FC = () => {
           </Can>
         </div>
 
-        {/* TOP ROW: 3 Quick KPI Stat Cards (fluid responsive grid scaling) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-4 2xl:gap-6 w-full">
+        {/* TOP ROW: 3 Quick KPI Stat Cards (2 per row on mobile, 3 on desktop) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-4 2xl:gap-6 w-full">
           <StatCard
             title="Active Projects"
             count={activeProjects}

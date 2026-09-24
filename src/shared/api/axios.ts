@@ -1,8 +1,10 @@
 import axios from "axios";
 
 // Normalize base URL so it reliably points to the /api endpoint without duplicating it
-const rawBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-const normalizedBaseUrl = rawBaseUrl.replace(/\/api\/?$/, "") + "/api";
+const rawBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
+const normalizedBaseUrl = rawBaseUrl
+  ? rawBaseUrl.replace(/\/api\/?$/, "") + "/api"
+  : "/api";
 
 export const apiClient = axios.create({
   baseURL: normalizedBaseUrl,
