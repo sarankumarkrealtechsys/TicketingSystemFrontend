@@ -58,10 +58,17 @@
     font-family: "Comfortaa", "Montserrat", sans-serif;
     overflow-y: scroll;
     scrollbar-gutter: stable;
+    background-color: #F7F8FA;
   }
   body {
-    @apply bg-background text-foreground;
+    background-color: #F7F8FA;
+    color: #1A1A1A;
     font-family: "Comfortaa", "Montserrat", sans-serif;
+    min-height: 100vh;
+  }
+  #root {
+    background-color: #F7F8FA;
+    min-height: 100vh;
   }
 
   /* Enterprise Thin Scrollbar */

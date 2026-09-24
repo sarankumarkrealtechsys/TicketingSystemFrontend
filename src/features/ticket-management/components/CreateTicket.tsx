@@ -245,16 +245,23 @@ export const CreateTicket: React.FC = () => {
   // Reset & Auto-select primary team when Department changes
   useEffect(() => {
     if (departmentTeams.length > 0) {
-      const validSelected = selectedTeamIds.filter((id) =>
-        departmentTeams.some((t) => t.id === id)
-      );
-      if (validSelected.length === 0) {
-        setSelectedTeamIds([departmentTeams[0].id]);
-      } else {
-        setSelectedTeamIds(validSelected);
-      }
+      setSelectedTeamIds((prev) => {
+        const validSelected = prev.filter((id) =>
+          departmentTeams.some((t) => t.id === id)
+        );
+        if (validSelected.length === 0) {
+          return [departmentTeams[0].id];
+        }
+        if (
+          validSelected.length === prev.length &&
+          validSelected.every((id, idx) => id === prev[idx])
+        ) {
+          return prev;
+        }
+        return validSelected;
+      });
     } else {
-      setSelectedTeamIds([]);
+      setSelectedTeamIds((prev) => (prev.length === 0 ? prev : []));
     }
   }, [departmentTeams]);
 
@@ -262,6 +269,11 @@ export const CreateTicket: React.FC = () => {
   const selectedTeamsQueries = useSelectedTeamsDetailsQuery(selectedTeamIds);
   const isFetchingTeamDetails = selectedTeamsQueries.some((q) => q.isFetching);
   const isLoadingTeamDetails = selectedTeamsQueries.some((q) => q.isLoading);
+
+  // Serialize query update tokens so availableTeamMembers only recomputes when actual data changes
+  const queriesDataToken = selectedTeamsQueries
+    .map((q) => `${q.dataUpdatedAt}-${q.isSuccess}-${q.data?.id ?? ""}`)
+    .join(";");
 
   // Combine and deduplicate active members from all currently selected teams
   const availableTeamMembers: AnnotatedAssignee[] = useMemo(() => {
@@ -299,17 +311,23 @@ export const CreateTicket: React.FC = () => {
       const nameB = b.name || b.username || b.email || "";
       return nameA.localeCompare(nameB);
     });
-  }, [selectedTeamsQueries, selectedTeamIds]);
+  }, [queriesDataToken, selectedTeamIds]);
 
   // Prune any selected assignees that are not in the new available list
   useEffect(() => {
-    if (availableTeamMembers.length > 0) {
-      setSelectedAssigneeIds((prev) =>
-        prev.filter((id) => availableTeamMembers.some((m) => m.id === id))
+    setSelectedAssigneeIds((prev) => {
+      if (prev.length === 0) return prev;
+      const valid = prev.filter((id) =>
+        availableTeamMembers.some((m) => m.id === id)
       );
-    } else {
-      setSelectedAssigneeIds([]);
-    }
+      if (
+        valid.length === prev.length &&
+        valid.every((id, idx) => id === prev[idx])
+      ) {
+        return prev;
+      }
+      return valid;
+    });
   }, [availableTeamMembers]);
 
   // Fetch Global statuses (available to all)
