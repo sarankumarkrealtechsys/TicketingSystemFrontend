@@ -16,6 +16,7 @@ export * from "./priorities/PriorityStatusManagementPage";
 export * from "./error/NotFoundPage";
 export * from "./reports";
 export * from "./settings/SettingsPage";
+export * from "./notifications/NotificationHistoryPage";
 
 
 

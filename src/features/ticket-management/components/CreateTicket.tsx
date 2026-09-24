@@ -8,11 +8,15 @@ import {
   usePrioritiesQuery,
   useGlobalStatusesQuery,
   useTeamStatusesQuery,
-  useSelectedTeamDetailQuery,
+  useSelectedTeamsDetailsQuery,
   useCreateTicketMutation,
 } from "../api";
 import { apiClient } from "@/shared/api";
 import { UserSummary } from "../types";
+
+export interface AnnotatedAssignee extends UserSummary {
+  teamNames: string[];
+}
 import {
   DynamicCustomFieldsRenderer,
   AddFieldModal,
@@ -254,18 +258,59 @@ export const CreateTicket: React.FC = () => {
     }
   }, [departmentTeams]);
 
-  // Fetch Primary Team detail for members list
-  const {
-    data: primaryTeamDetail,
-    isFetching: isFetchingTeamDetail,
-    refetch: refetchTeamDetail,
-  } = useSelectedTeamDetailQuery(primaryTeamId);
+  // Fetch details for all selected teams in parallel
+  const selectedTeamsQueries = useSelectedTeamsDetailsQuery(selectedTeamIds);
+  const isFetchingTeamDetails = selectedTeamsQueries.some((q) => q.isFetching);
+  const isLoadingTeamDetails = selectedTeamsQueries.some((q) => q.isLoading);
 
-  // Combine members from primary team
-  const availableTeamMembers: UserSummary[] = useMemo(() => {
-    if (!primaryTeamDetail?.members) return [];
-    return primaryTeamDetail.members.map((m: any) => m.user || m).filter(Boolean);
-  }, [primaryTeamDetail]);
+  // Combine and deduplicate active members from all currently selected teams
+  const availableTeamMembers: AnnotatedAssignee[] = useMemo(() => {
+    const map = new Map<number, AnnotatedAssignee>();
+
+    for (const q of selectedTeamsQueries) {
+      const teamDetail = q.data;
+      if (!teamDetail || !Array.isArray(teamDetail.members)) continue;
+      // Guarantee only currently selected teams are considered
+      if (!selectedTeamIds.includes(teamDetail.id)) continue;
+
+      const teamName = teamDetail.name || `Team #${teamDetail.id}`;
+
+      for (const m of teamDetail.members) {
+        if (m.removedAt) continue;
+        const u = m.user || (m as any);
+        if (!u || !u.id || u.status === "INACTIVE") continue;
+
+        if (map.has(u.id)) {
+          const existing = map.get(u.id)!;
+          if (!existing.teamNames.includes(teamName)) {
+            existing.teamNames.push(teamName);
+          }
+        } else {
+          map.set(u.id, {
+            ...u,
+            teamNames: [teamName],
+          });
+        }
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      const nameA = a.name || a.username || a.email || "";
+      const nameB = b.name || b.username || b.email || "";
+      return nameA.localeCompare(nameB);
+    });
+  }, [selectedTeamsQueries, selectedTeamIds]);
+
+  // Prune any selected assignees that are not in the new available list
+  useEffect(() => {
+    if (availableTeamMembers.length > 0) {
+      setSelectedAssigneeIds((prev) =>
+        prev.filter((id) => availableTeamMembers.some((m) => m.id === id))
+      );
+    } else {
+      setSelectedAssigneeIds([]);
+    }
+  }, [availableTeamMembers]);
 
   // Fetch Global statuses (available to all)
   const {
@@ -334,7 +379,7 @@ export const CreateTicket: React.FC = () => {
     isFetchingProjects ||
     isFetchingDepartments ||
     isFetchingTeams ||
-    isFetchingTeamDetail ||
+    isFetchingTeamDetails ||
     isFetchingPriorities ||
     isFetchingStatuses;
 
@@ -344,7 +389,7 @@ export const CreateTicket: React.FC = () => {
         refetchProjects(),
         refetchDepartments(),
         refetchTeams(),
-        primaryTeamId ? refetchTeamDetail() : Promise.resolve(),
+        ...selectedTeamsQueries.map((q) => q.refetch()),
         refetchPriorities(),
         refetchStatuses(),
       ]);
@@ -384,16 +429,53 @@ export const CreateTicket: React.FC = () => {
     });
   }, [availableTeamMembers, assigneeSearchQuery]);
 
-  // Toggle Team checkbox in multi-select
-  const handleToggleTeam = (teamId: number) => {
+  // Switch team on row click (or promote collaborating team to primary)
+  const handleSelectTeamRow = (teamId: number) => {
+    setSelectedTeamIds((prev) => {
+      // If team is already primary, do nothing
+      if (prev[0] === teamId) return prev;
+
+      // If team is already in collaborating list, promote it to primary
+      if (prev.includes(teamId)) {
+        return [teamId, ...prev.filter((id) => id !== teamId)];
+      }
+
+      // If only 1 team was selected, switch to this new team directly
+      if (prev.length <= 1) {
+        return [teamId];
+      }
+
+      // If multiple teams are already selected, add as collaborating
+      return [...prev, teamId];
+    });
+  };
+
+  // Toggle Team checkbox explicitly
+  const handleToggleTeamCheckbox = (teamId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     setSelectedTeamIds((prev) => {
       if (prev.includes(teamId)) {
-        if (prev.length === 1) return prev; // Keep at least one team selected
+        if (prev.length === 1) {
+          showToast("At least one team must be selected.");
+          return prev;
+        }
         return prev.filter((id) => id !== teamId);
       } else {
         return [...prev, teamId];
       }
     });
+  };
+
+  // Set a collaborating team as Primary
+  const handleSetPrimaryTeam = (teamId: number, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSelectedTeamIds((prev) => {
+      if (!prev.includes(teamId)) {
+        return [teamId, ...prev];
+      }
+      return [teamId, ...prev.filter((id) => id !== teamId)];
+    });
+    showToast("Primary team updated.");
   };
 
   // Toggle Assignee checkbox in multi-select
@@ -801,8 +883,8 @@ export const CreateTicket: React.FC = () => {
                       </button>
 
                       {isTeamDropdownOpen && (
-                        <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-white border border-[#E5E7EB] rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-gray-100">
-                          <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
+                        <div className="absolute left-0 right-0 top-full mt-1 z-40 bg-white border border-[#E5E7EB] rounded-xl shadow-xl max-h-64 overflow-y-auto divide-y divide-gray-100">
+                          <div className="p-2 border-b border-gray-100 sticky top-0 bg-white z-10">
                             <input
                               type="text"
                               value={teamSearchQuery}
@@ -817,28 +899,53 @@ export const CreateTicket: React.FC = () => {
                           ) : (
                             filteredDepartmentTeams.map((t) => {
                               const isChecked = selectedTeamIds.includes(t.id);
+                              const isPrimary = selectedTeamIds[0] === t.id;
                               return (
                                 <div
                                   key={t.id}
-                                  onClick={() => handleToggleTeam(t.id)}
+                                  onClick={() => handleSelectTeamRow(t.id)}
                                   className={`p-2.5 text-xs flex items-center justify-between cursor-pointer hover:bg-blue-50 transition-colors ${
-                                    isChecked ? "bg-blue-50/60 font-semibold text-[#1F3864]" : "text-[#1A1A1A]"
+                                    isPrimary
+                                      ? "bg-blue-50/80 font-bold text-[#1F3864]"
+                                      : isChecked
+                                      ? "bg-slate-50 font-medium text-[#1A1A1A]"
+                                      : "text-[#1A1A1A]"
                                   }`}
                                 >
-                                  <div className="flex items-center gap-2 truncate">
+                                  <div className="flex items-center gap-2 truncate min-w-0">
                                     <input
                                       type="checkbox"
                                       checked={isChecked}
+                                      onClick={(e) => handleToggleTeamCheckbox(t.id, e)}
                                       onChange={() => {}}
-                                      className="rounded text-[#1F3864] focus:ring-[#1F3864] w-3.5 h-3.5"
+                                      className="rounded text-[#1F3864] focus:ring-[#1F3864] w-3.5 h-3.5 cursor-pointer shrink-0"
+                                      title={isChecked ? "Deselect team" : "Select team"}
                                     />
                                     <span className="truncate">{t.name}</span>
                                   </div>
-                                  {selectedTeamIds[0] === t.id && (
-                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-[#1F3864] font-bold">
-                                      Primary
-                                    </span>
-                                  )}
+                                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                    {isPrimary ? (
+                                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1F3864] text-white font-bold flex items-center gap-1 shadow-2xs">
+                                        <span className="material-symbols-outlined text-[12px]">star</span>
+                                        Primary
+                                      </span>
+                                    ) : isChecked ? (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">
+                                          Collab
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => handleSetPrimaryTeam(t.id, e)}
+                                          className="text-[10px] px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-[#1F3864] font-semibold transition-colors cursor-pointer flex items-center gap-0.5"
+                                          title="Set as Primary Team"
+                                        >
+                                          <span className="material-symbols-outlined text-[11px]">star</span>
+                                          Set Primary
+                                        </button>
+                                      </div>
+                                    ) : null}
+                                  </div>
                                 </div>
                               );
                             })
@@ -1152,8 +1259,14 @@ export const CreateTicket: React.FC = () => {
                     <label className="text-xs font-semibold text-[#1A1A1A] flex items-center gap-1">
                       Assignee(s) <span className="text-red-500 font-bold">*</span>
                     </label>
-                    <span className="text-[10px] text-gray-400 italic truncate max-w-[150px]">
-                      {primaryTeam?.name ? `Team: ${primaryTeam.name}` : "Pick team first"}
+                    <span className="text-[10px] text-gray-400 italic truncate max-w-[200px]">
+                      {isLoadingTeamDetails
+                        ? "Loading team members..."
+                        : selectedTeamIds.length > 1
+                        ? `${selectedTeamIds.length} Teams (${availableTeamMembers.length} members)`
+                        : primaryTeam?.name
+                        ? `${primaryTeam.name} (${availableTeamMembers.length} members)`
+                        : "Pick team first"}
                     </span>
                   </div>
 
@@ -1161,7 +1274,7 @@ export const CreateTicket: React.FC = () => {
                   <div className="flex flex-col gap-2 min-h-[44px]">
                     {selectedAssigneeIds.length === 0 ? (
                       <div className="text-[11px] text-gray-400 py-1.5 italic">
-                        No team member assigned yet. Select below.
+                        No assignee selected yet. Select below.
                       </div>
                     ) : (
                       selectedAssigneeIds.map((userId) => {
@@ -1169,6 +1282,7 @@ export const CreateTicket: React.FC = () => {
                         if (!member) return null;
                         const memberName =
                           member.name || `${member.firstName || ""} ${member.lastName || ""}`.trim() || member.email;
+                        const teamLabel = member.teamNames && member.teamNames.length > 0 ? member.teamNames.join(", ") : undefined;
                         return (
                           <div
                             key={userId}
@@ -1182,9 +1296,15 @@ export const CreateTicket: React.FC = () => {
                                 <span className="text-xs font-semibold text-[#1A1A1A] truncate">
                                   {memberName}
                                 </span>
-                                <span className="text-[10px] text-gray-400 truncate">
-                                  {member.email}
-                                </span>
+                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 truncate">
+                                  <span>{member.email}</span>
+                                  {teamLabel && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-[#1F3864] font-medium">{teamLabel}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             <button
@@ -1210,7 +1330,7 @@ export const CreateTicket: React.FC = () => {
                     >
                       <div className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[16px] text-gray-400">person_add</span>
-                        <span>+ Add team member...</span>
+                        <span>+ Add assignee...</span>
                       </div>
                       <span className="material-symbols-outlined text-gray-400 text-[16px]">
                         expand_more
@@ -1224,16 +1344,23 @@ export const CreateTicket: React.FC = () => {
                             type="text"
                             value={assigneeSearchQuery}
                             onChange={(e) => setAssigneeSearchQuery(e.target.value)}
-                            placeholder="Search team members..."
+                            placeholder="Search assignees..."
                             className="w-full px-2.5 py-1.5 text-xs bg-gray-50 border border-gray-200 rounded-md focus:outline-none"
                             onClick={(e) => e.stopPropagation()}
                           />
                         </div>
-                        {filteredTeamMembers.length === 0 ? (
+                        {isLoadingTeamDetails ? (
+                          <div className="p-3 text-xs text-gray-400 text-center flex items-center justify-center gap-2">
+                            <span className="material-symbols-outlined text-[16px] animate-spin text-[#1F3864]">
+                              progress_activity
+                            </span>
+                            <span>Loading team members...</span>
+                          </div>
+                        ) : filteredTeamMembers.length === 0 ? (
                           <div className="p-3 text-xs text-gray-400 text-center">
                             {availableTeamMembers.length === 0
-                              ? "No members in this team"
-                              : "No matching members"}
+                              ? "No assignees available for selected team(s)"
+                              : "No matching assignees"}
                           </div>
                         ) : (
                           filteredTeamMembers.map((member) => {
@@ -1243,6 +1370,7 @@ export const CreateTicket: React.FC = () => {
                               member.name ||
                               `${member.firstName || ""} ${member.lastName || ""}`.trim() ||
                               member.email;
+                            const teamLabel = member.teamNames && member.teamNames.length > 0 ? member.teamNames.join(", ") : undefined;
                             return (
                               <div
                                 key={member.id}
@@ -1251,20 +1379,27 @@ export const CreateTicket: React.FC = () => {
                                   isChecked ? "bg-blue-50/70 text-[#1F3864] font-bold" : "text-[#1A1A1A]"
                                 }`}
                               >
-                                <div className="flex items-center gap-2 truncate">
+                                <div className="flex items-center gap-2 truncate min-w-0">
                                   <input
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => {}}
-                                    className="rounded text-[#1F3864] focus:ring-[#1F3864] w-3.5 h-3.5"
+                                    className="rounded text-[#1F3864] focus:ring-[#1F3864] w-3.5 h-3.5 shrink-0"
                                   />
                                   <div className="w-5 h-5 rounded-full bg-blue-100 text-[#1F3864] text-[9px] flex items-center justify-center font-bold shrink-0">
                                     {getInitials(nameStr)}
                                   </div>
-                                  <span className="truncate">{nameStr}</span>
+                                  <div className="flex flex-col truncate min-w-0">
+                                    <span className="truncate">{nameStr}</span>
+                                    {teamLabel && (
+                                      <span className="text-[10px] text-gray-400 font-normal truncate">
+                                        {teamLabel}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 {isChecked && (
-                                  <span className="material-symbols-outlined text-[15px] text-[#1F3864]">
+                                  <span className="material-symbols-outlined text-[15px] text-[#1F3864] shrink-0 ml-1">
                                     check
                                   </span>
                                 )}

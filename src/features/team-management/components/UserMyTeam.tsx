@@ -31,8 +31,10 @@ export const UserMyTeam: React.FC = () => {
   const retireStatusMutation = useRetireTeamStatusMutation();
   const deleteTeamStatusMutation = useDeleteTeamStatusPermanentlyMutation();
 
-  // User query: backend automatically scopes GET /api/teams to caller's active teams
-  const { data: myTeams = [], isLoading: isTeamsLoading } = useTeamsQuery();
+  // User query: explicitly query caller's active teams
+  const { data: myTeams = [], isLoading: isTeamsLoading } = useTeamsQuery({
+    myTeamsOnly: true,
+  });
 
   // Set default team
   useEffect(() => {

@@ -29,6 +29,7 @@ export const teamManagementKeys = {
 export const useTeamsQuery = (params?: {
   departmentId?: number;
   includeInactive?: boolean;
+  myTeamsOnly?: boolean;
 }) => {
   return useQuery<TeamItem[]>({
     queryKey: teamManagementKeys.teams(params),
@@ -37,6 +38,7 @@ export const useTeamsQuery = (params?: {
         params: {
           departmentId: params?.departmentId,
           includeInactive: params?.includeInactive,
+          myTeamsOnly: params?.myTeamsOnly,
         },
       });
       const list = data?.data ?? data;

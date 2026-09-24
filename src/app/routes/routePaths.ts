@@ -26,6 +26,8 @@ export const ROUTES = {
   PRIORITIES: "/admin/priorities",
   PRIORITY_LEVELS: "/priority-levels",
   STATUSES: "/admin/statuses",
+  NOTIFICATIONS: "/notifications",
+  NOTIFICATIONS_HISTORY: "/notifications/history",
 } as const;
 
 

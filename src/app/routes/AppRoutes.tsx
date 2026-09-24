@@ -31,6 +31,7 @@ import {
   AuditReportsPage,
   MyTicketReportsPage,
   SettingsPage,
+  NotificationHistoryPage,
 } from "@/pages";
 
 /**
@@ -197,6 +198,7 @@ export const AppRoutes: React.FC = () => {
               <ProtectedRoute
                 requiredPermission={PERMISSIONS.TEAM_VIEW}
                 requiredScope="GLOBAL"
+                fallbackPath={ROUTES.MY_TEAM}
               >
                 <TeamManagementPage />
               </ProtectedRoute>
@@ -325,7 +327,25 @@ export const AppRoutes: React.FC = () => {
           />
 
           {/* ============================================================= */}
-          {/* 7. CATCH-ALL 404 FALLBACK                                     */}
+          {/* 7. IN-APP NOTIFICATIONS & HISTORY                             */}
+          {/* ============================================================= */}
+          <Route
+            path={ROUTES.NOTIFICATIONS_HISTORY}
+            element={
+              <ProtectedRoute>
+                <NotificationHistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path={ROUTES.NOTIFICATIONS}
+            element={
+              <Navigate to={ROUTES.NOTIFICATIONS_HISTORY} replace />
+            }
+          />
+
+          {/* ============================================================= */}
+          {/* 8. CATCH-ALL 404 FALLBACK                                     */}
           {/* ============================================================= */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

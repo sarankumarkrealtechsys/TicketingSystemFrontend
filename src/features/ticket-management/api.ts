@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useQueries } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { apiClient } from "@/shared/api";
 import {
@@ -17,6 +17,7 @@ import {
   AddRemarkPayload,
   LogTimePayload,
   UpdateTicketPayload,
+  UserSummary,
 } from "./types";
 import { ProjectItem } from "@/features/project-management/types";
 import { TeamItem, TeamDetailResponse } from "@/features/team-management/types";
@@ -120,7 +121,7 @@ export const useActiveTeamsQuery = () => {
   });
 };
 
-// GET /api/teams/:id for fetching team members
+// GET /api/teams/:id for fetching single team detail & members
 export const useSelectedTeamDetailQuery = (teamId: number | null) => {
   return useQuery<TeamDetailResponse>({
     queryKey: ["team-detail", teamId],
@@ -130,6 +131,37 @@ export const useSelectedTeamDetailQuery = (teamId: number | null) => {
       return data?.data ?? data;
     },
     enabled: Boolean(teamId && teamId > 0),
+  });
+};
+
+// GET /api/teams/:id for fetching multiple selected teams' details & members in parallel
+export const useSelectedTeamsDetailsQuery = (teamIds: number[]) => {
+  return useQueries({
+    queries: teamIds.map((teamId) => ({
+      queryKey: ["team-detail", teamId],
+      queryFn: async () => {
+        const { data } = await apiClient.get<any>(`/teams/${teamId}`);
+        return (data?.data ?? data) as TeamDetailResponse;
+      },
+      enabled: Boolean(teamId && teamId > 0),
+      staleTime: 60 * 1000,
+    })),
+  });
+};
+
+// GET /api/teams/:teamId/assignees — candidate assignees matching team's department
+export const useTeamAssigneesQuery = (teamId: number | null) => {
+  return useQuery<UserSummary[]>({
+    queryKey: ["team-assignees", teamId],
+    queryFn: async () => {
+      if (!teamId) return [];
+      const { data } = await apiClient.get<any>(`/teams/${teamId}/assignees`);
+      const payload = data?.data ?? data;
+      const assignees = payload?.assignees ?? (Array.isArray(payload) ? payload : []);
+      return Array.isArray(assignees) ? assignees : [];
+    },
+    enabled: Boolean(teamId && teamId > 0),
+    staleTime: 60 * 1000,
   });
 };
 
