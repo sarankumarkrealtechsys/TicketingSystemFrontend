@@ -168,20 +168,23 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
           );
         },
       }),
-      columnHelper.accessor((row) => row.status?.label || row.status?.behavior, {
-        id: "status",
-        header: "Status",
-        cell: (info) => {
-          const row = info.row.original;
-          return (
-            <StatusBadge
-              status={row.status?.label || row.status?.behavior || "Open"}
-              statusId={row.status?.id}
-              behavior={row.status?.behavior}
-            />
-          );
+      columnHelper.accessor(
+        (row) => row.status?.label || row.status?.behavior,
+        {
+          id: "status",
+          header: "Status",
+          cell: (info) => {
+            const row = info.row.original;
+            return (
+              <StatusBadge
+                status={row.status?.label || row.status?.behavior || "Open"}
+                statusId={row.status?.id}
+                behavior={row.status?.behavior}
+              />
+            );
+          },
         },
-      }),
+      ),
       columnHelper.accessor(
         (row) => row.createdBy?.email || row.createdBy?.name,
         {
@@ -398,7 +401,9 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
             const formattedDate = ticket.createdAt
               ? format(new Date(ticket.createdAt), "dd MMM yyyy")
               : "—";
-            const isSubTicket = Boolean(ticket.parentTicketId || ticket.parentTicket);
+            const isSubTicket = Boolean(
+              ticket.parentTicketId || ticket.parentTicket,
+            );
             const hasSubs = Boolean(
               ticket.subTicketsCount && ticket.subTicketsCount > 0,
             );
@@ -415,7 +420,10 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-[#1F3864] dark:text-blue-300 font-mono font-bold text-xs border border-blue-100 dark:border-blue-900/60 shadow-2xs">
                       #{ticket.ticketNumber}
                     </span>
-                    <PriorityBadge priority={priorityName} priorityId={priorityId} />
+                    <PriorityBadge
+                      priority={priorityName}
+                      priorityId={priorityId}
+                    />
                     {isSubTicket && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/70 dark:border-indigo-800 rounded shadow-2xs">
                         <span className="material-symbols-outlined text-[11px]">
@@ -479,7 +487,9 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                       <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">
                         folder
                       </span>
-                      <span className="truncate">{ticket.project?.name || "—"}</span>
+                      <span className="truncate">
+                        {ticket.project?.name || "—"}
+                      </span>
                     </div>
                   </div>
 
@@ -491,7 +501,9 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                       <span className="material-symbols-outlined text-[14px] text-gray-400 shrink-0">
                         group
                       </span>
-                      <span className="truncate">{ticket.team?.name || "—"}</span>
+                      <span className="truncate">
+                        {ticket.team?.name || "—"}
+                      </span>
                     </div>
                   </div>
 
@@ -548,7 +560,9 @@ export const TicketsTable: React.FC<TicketsTableProps> = ({
                       person_outline
                     </span>
                     <span className="truncate">
-                      {ticket.createdBy?.name || ticket.createdBy?.email || "Unknown"}
+                      {ticket.createdBy?.name ||
+                        ticket.createdBy?.email ||
+                        "Unknown"}
                     </span>
                   </div>
 

@@ -18,7 +18,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   subtitleColor,
 }) => {
   const [displayCount, setDisplayCount] = useState<number | string>(
-    typeof count === "number" ? 0 : count
+    typeof count === "number" ? 0 : count,
   );
 
   useEffect(() => {
@@ -63,7 +63,9 @@ export const StatCard: React.FC<StatCardProps> = ({
             color: accentColor,
           }}
         >
-          <span className="material-symbols-outlined text-[13px] sm:text-[18px]">{icon}</span>
+          <span className="material-symbols-outlined text-[13px] sm:text-[18px]">
+            {icon}
+          </span>
         </div>
       </div>
       <div className="mt-1.5 sm:mt-2.5">
@@ -95,6 +97,5 @@ export const StatCard: React.FC<StatCardProps> = ({
     </div>
   );
 };
-
 
 export default StatCard;

@@ -114,7 +114,9 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
     !byStatusBehavior?.CLOSED
   ) {
     for (const item of byStatus) {
-      const b = (item.behavior || "OPEN").toUpperCase() as keyof typeof behaviorCounts;
+      const b = (
+        item.behavior || "OPEN"
+      ).toUpperCase() as keyof typeof behaviorCounts;
       if (behaviorCounts[b] !== undefined) {
         behaviorCounts[b] += item.count || 0;
       }
@@ -193,9 +195,7 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
           </span>
         </div>
         {subtitle && (
-          <p className="text-[12px] text-[#5F6368] mb-4">
-            {subtitle}
-          </p>
+          <p className="text-[12px] text-[#5F6368] mb-4">{subtitle}</p>
         )}
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-1">
@@ -245,8 +245,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                       isHovered
                         ? "opacity-100"
                         : isAnyHovered
-                        ? "opacity-40"
-                        : "opacity-95 hover:opacity-100"
+                          ? "opacity-40"
+                          : "opacity-95 hover:opacity-100"
                     }`}
                   >
                     <title>{`${slice.label}: ${slice.count} tickets (${slice.pct}%)`}</title>
@@ -280,8 +280,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                     isHovered
                       ? "bg-gray-100/90 font-bold ring-1 ring-black/10 scale-[1.01]"
                       : isAnyHovered
-                      ? "opacity-50 hover:opacity-100 hover:bg-gray-50"
-                      : "hover:bg-gray-50"
+                        ? "opacity-50 hover:opacity-100 hover:bg-gray-50"
+                        : "hover:bg-gray-50"
                   }`}
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-2">
@@ -290,14 +290,14 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                       style={{
                         backgroundColor: item.color,
                         transform: isHovered ? "scale(1.35)" : "scale(1)",
-                        boxShadow: isHovered
-                          ? `0 0 8px ${item.color}`
-                          : "none",
+                        boxShadow: isHovered ? `0 0 8px ${item.color}` : "none",
                       }}
                     />
                     <span
                       className={`truncate transition-colors duration-500 ${
-                        isHovered ? "text-[#1A1A1A] font-bold" : "text-[#1A1A1A] font-medium"
+                        isHovered
+                          ? "text-[#1A1A1A] font-bold"
+                          : "text-[#1A1A1A] font-medium"
                       }`}
                       title={item.label}
                     >
@@ -305,7 +305,9 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5 font-mono shrink-0">
-                    <span className="font-bold text-[#1A1A1A]">{item.count}</span>
+                    <span className="font-bold text-[#1A1A1A]">
+                      {item.count}
+                    </span>
                     <span className="text-[#5F6368] text-[11px]">
                       ({item.pct}%)
                     </span>

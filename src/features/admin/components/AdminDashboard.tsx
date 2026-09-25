@@ -41,7 +41,7 @@ export const AdminDashboard: React.FC = () => {
         }
         return next;
       },
-      { replace: true }
+      { replace: true },
     );
   };
 
@@ -63,7 +63,9 @@ export const AdminDashboard: React.FC = () => {
   const [isDateActive, setIsDateActive] = useState(false);
 
   // Queries
-  const { data: statsData, refetch: refetchStats } = useTicketStatsQuery(currentUser?.id);
+  const { data: statsData, refetch: refetchStats } = useTicketStatsQuery(
+    currentUser?.id,
+  );
   const {
     data: ticketsData,
     isLoading: isTicketsLoading,
@@ -73,7 +75,8 @@ export const AdminDashboard: React.FC = () => {
   const { data: projects = [] } = useProjectsQuery();
   const { data: teams = [] } = useTeamsQuery();
   const { data: users = [] } = useUsersQuery();
-  const { data: priorities = [], refetch: refetchPriorities } = usePrioritiesQuery();
+  const { data: priorities = [], refetch: refetchPriorities } =
+    usePrioritiesQuery();
   const { data: statuses = [], refetch: refetchStatuses } = useStatusesQuery();
 
   useEffect(() => {
@@ -85,7 +88,10 @@ export const AdminDashboard: React.FC = () => {
     };
     window.addEventListener("rts_masterdata_updated", handleMasterDataUpdate);
     return () => {
-      window.removeEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+      window.removeEventListener(
+        "rts_masterdata_updated",
+        handleMasterDataUpdate,
+      );
     };
   }, [refetchPriorities, refetchStatuses, refetchTickets, refetchStats]);
 
@@ -164,9 +170,7 @@ export const AdminDashboard: React.FC = () => {
               onClick={() => navigate("/tickets/create")}
               type="button"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                add
-              </span>
+              <span className="material-symbols-outlined text-[18px]">add</span>
               <span>Create Ticket</span>
             </button>
           </div>

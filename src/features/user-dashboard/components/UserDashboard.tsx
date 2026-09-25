@@ -39,7 +39,7 @@ export const UserDashboard: React.FC = () => {
         }
         return next;
       },
-      { replace: true }
+      { replace: true },
     );
   };
 
@@ -60,7 +60,10 @@ export const UserDashboard: React.FC = () => {
   const [isDateActive, setIsDateActive] = useState(false);
 
   // Queries strictly scoped to active user
-  const { data: statsData, refetch: refetchStats } = useUserTicketStatsQuery(currentUser?.id, "personal");
+  const { data: statsData, refetch: refetchStats } = useUserTicketStatsQuery(
+    currentUser?.id,
+    "personal",
+  );
   const {
     data: ticketsData,
     isLoading: isTicketsLoading,
@@ -68,7 +71,8 @@ export const UserDashboard: React.FC = () => {
     refetch: refetchTickets,
   } = useUserTicketsTableQuery(currentUser?.id, filters);
   const { data: projects = [] } = useProjectsQuery();
-  const { data: priorities = [], refetch: refetchPriorities } = usePrioritiesQuery();
+  const { data: priorities = [], refetch: refetchPriorities } =
+    usePrioritiesQuery();
   const { data: statuses = [], refetch: refetchStatuses } = useStatusesQuery();
 
   useEffect(() => {
@@ -84,7 +88,10 @@ export const UserDashboard: React.FC = () => {
     window.addEventListener("rts_masterdata_updated", handleMasterDataUpdate);
     window.addEventListener("rts_colors_updated", handleColorsUpdate);
     return () => {
-      window.removeEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+      window.removeEventListener(
+        "rts_masterdata_updated",
+        handleMasterDataUpdate,
+      );
       window.removeEventListener("rts_colors_updated", handleColorsUpdate);
     };
   }, [refetchPriorities, refetchStatuses, refetchTickets, refetchStats]);
@@ -163,9 +170,7 @@ export const UserDashboard: React.FC = () => {
               onClick={() => navigate("/tickets/create")}
               type="button"
             >
-              <span className="material-symbols-outlined text-[18px]">
-                add
-              </span>
+              <span className="material-symbols-outlined text-[18px]">add</span>
               <span>Create Ticket</span>
             </button>
           </div>
@@ -228,7 +233,6 @@ export const UserDashboard: React.FC = () => {
             title="Tickets by Status"
           />
         </div>
-
 
         {/* FILTER TOOLBAR */}
         <UserFilterToolbar

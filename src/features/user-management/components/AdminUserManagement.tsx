@@ -5,7 +5,12 @@ import { UserListItem } from "../types";
 import { useDepartmentsQuery } from "@/features/department-management";
 import { useRolesQuery } from "@/features/roles-permissions";
 import { PERMISSIONS, useCanAtScope } from "@/features/auth";
-import { StatCard, SelectDropdown, SelectOption, Can } from "@/shared/components";
+import {
+  StatCard,
+  SelectDropdown,
+  SelectOption,
+  Can,
+} from "@/shared/components";
 import { CreateUserModal } from "./CreateUserModal";
 import { EditUserModal } from "./EditUserModal";
 import { BulkUploadUsersModal } from "./BulkUploadUsersModal";
@@ -17,11 +22,16 @@ import { ROUTES } from "@/app/routes/routePaths";
 export const AdminUserManagement: React.FC = () => {
   const navigate = useNavigate();
   const hasUserViewGlobal = useCanAtScope(PERMISSIONS.USER_VIEW, "GLOBAL");
-  const canViewPerformance = useCanAtScope(PERMISSIONS.USER_PERFORMANCE_VIEW, "GLOBAL");
+  const canViewPerformance = useCanAtScope(
+    PERMISSIONS.USER_PERFORMANCE_VIEW,
+    "GLOBAL",
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [statusFilter, setStatusFilter] = useState<
+    "ALL" | "ACTIVE" | "INACTIVE"
+  >("ALL");
 
   // Bottom Toast Notification state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -29,13 +39,18 @@ export const AdminUserManagement: React.FC = () => {
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
-  const [selectedUserForEdit, setSelectedUserForEdit] = useState<UserListItem | null>(null);
-  const [selectedUserForTeams, setSelectedUserForTeams] = useState<UserListItem | null>(null);
-  const [selectedUserForDeactivate, setSelectedUserForDeactivate] = useState<UserListItem | null>(null);
-  const [selectedUserForDelete, setSelectedUserForDelete] = useState<UserListItem | null>(null);
+  const [selectedUserForEdit, setSelectedUserForEdit] =
+    useState<UserListItem | null>(null);
+  const [selectedUserForTeams, setSelectedUserForTeams] =
+    useState<UserListItem | null>(null);
+  const [selectedUserForDeactivate, setSelectedUserForDeactivate] =
+    useState<UserListItem | null>(null);
+  const [selectedUserForDelete, setSelectedUserForDelete] =
+    useState<UserListItem | null>(null);
 
   // Active popover state for permissions preview
-  const [activePermissionsUser, setActivePermissionsUser] = useState<UserListItem | null>(null);
+  const [activePermissionsUser, setActivePermissionsUser] =
+    useState<UserListItem | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -74,9 +89,7 @@ export const AdminUserManagement: React.FC = () => {
 
   // Role Dropdown Options
   const roleOptions = useMemo<SelectOption<string>[]>(() => {
-    const opts: SelectOption<string>[] = [
-      { value: "all", label: "All Roles" },
-    ];
+    const opts: SelectOption<string>[] = [{ value: "all", label: "All Roles" }];
     roles.forEach((r) => {
       opts.push({
         value: r.id.toString(),
@@ -131,15 +144,15 @@ export const AdminUserManagement: React.FC = () => {
   const totalUsers = users.length;
   const activeUsers = useMemo(
     () => users.filter((u) => u.status === "ACTIVE").length,
-    [users]
+    [users],
   );
   const inactiveUsers = useMemo(
     () => users.filter((u) => u.status === "INACTIVE").length,
-    [users]
+    [users],
   );
   const uniqueDepartmentsCovered = useMemo(() => {
     const deptIds = new Set(
-      users.filter((u) => u.status === "ACTIVE").map((u) => u.departmentId)
+      users.filter((u) => u.status === "ACTIVE").map((u) => u.departmentId),
     );
     return deptIds.size;
   }, [users]);
@@ -172,7 +185,10 @@ export const AdminUserManagement: React.FC = () => {
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-medium mb-0.5 sm:mb-1">
+          <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-medium mb-0.5 sm:mb-1"
+          >
             <Link
               to={ROUTES.ROOT}
               className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
@@ -394,11 +410,17 @@ export const AdminUserManagement: React.FC = () => {
                   <tr className="bg-[#FAFBFD] dark:bg-[#162234] border-b border-[#F0F2F5] dark:border-[#1E2D45] text-gray-500 dark:text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
                     <th className="py-3 px-4 w-[24%] min-w-[200px]">User</th>
                     <th className="py-3 px-4 w-[18%] min-w-[170px]">Email</th>
-                    <th className="py-3 px-4 w-[14%] min-w-[130px]">Department</th>
+                    <th className="py-3 px-4 w-[14%] min-w-[130px]">
+                      Department
+                    </th>
                     <th className="py-3 px-4 w-[16%] min-w-[150px]">Teams</th>
-                    <th className="py-3 px-4 w-[14%] min-w-[130px]">Role & Perms</th>
+                    <th className="py-3 px-4 w-[14%] min-w-[130px]">
+                      Role & Perms
+                    </th>
                     <th className="py-3 px-4 w-[8%] min-w-[90px]">Status</th>
-                    <th className="py-3 px-4 w-[6%] min-w-[90px] text-right">Actions</th>
+                    <th className="py-3 px-4 w-[6%] min-w-[90px] text-right">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1E2D45] text-xs">
@@ -416,7 +438,11 @@ export const AdminUserManagement: React.FC = () => {
                             ? "hover:bg-blue-50/40 dark:hover:bg-slate-800/60 cursor-pointer group"
                             : "cursor-default"
                         }`}
-                        title={canViewPerformance ? "View user performance profile" : undefined}
+                        title={
+                          canViewPerformance
+                            ? "View user performance profile"
+                            : undefined
+                        }
                       >
                         {/* User (Name + Username + Avatar) */}
                         <td className="py-3.5 px-4 font-bold text-sm text-[#1A1A1A] dark:text-white">
@@ -490,7 +516,9 @@ export const AdminUserManagement: React.FC = () => {
                               }`}
                             >
                               <span className="material-symbols-outlined text-[13px]">
-                                {roleName === "ADMIN" ? "admin_panel_settings" : "shield"}
+                                {roleName === "ADMIN"
+                                  ? "admin_panel_settings"
+                                  : "shield"}
                               </span>
                               {roleName}
                             </span>
@@ -501,7 +529,9 @@ export const AdminUserManagement: React.FC = () => {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setActivePermissionsUser(
-                                    activePermissionsUser?.id === u.id ? null : u
+                                    activePermissionsUser?.id === u.id
+                                      ? null
+                                      : u,
                                   );
                                 }}
                                 className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-[#1F3864] dark:text-blue-300 rounded border border-blue-200 dark:border-blue-800 cursor-pointer"
@@ -623,7 +653,11 @@ export const AdminUserManagement: React.FC = () => {
                         ? "cursor-pointer hover:border-blue-300"
                         : "cursor-default"
                     }`}
-                    title={canViewPerformance ? "View user performance profile" : undefined}
+                    title={
+                      canViewPerformance
+                        ? "View user performance profile"
+                        : undefined
+                    }
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2.5">

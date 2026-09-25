@@ -60,9 +60,7 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
           </span>
         </div>
         {subtitle && (
-          <p className="text-[12px] text-[#5F6368] mb-4">
-            {subtitle}
-          </p>
+          <p className="text-[12px] text-[#5F6368] mb-4">{subtitle}</p>
         )}
 
         {sortedPriorities.length === 0 ? (
@@ -73,8 +71,10 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
           <div className="space-y-4 max-h-[340px] overflow-y-auto pr-1">
             {sortedPriorities.map((item) => {
               const count = item.count || 0;
-              const pct = total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
-              const color = item.color || getPriorityColor(item.priorityId, item.label);
+              const pct =
+                total > 0 ? ((count / total) * 100).toFixed(1) : "0.0";
+              const color =
+                item.color || getPriorityColor(item.priorityId, item.label);
 
               return (
                 <div key={item.priorityId || item.label} className="group">
@@ -89,10 +89,7 @@ export const PriorityBarChart: React.FC<PriorityBarChartProps> = ({
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 font-mono">
-                      <span
-                        className="font-bold"
-                        style={{ color }}
-                      >
+                      <span className="font-bold" style={{ color }}>
                         {count}
                       </span>
                       <span className="text-[11px] text-[#5F6368]">

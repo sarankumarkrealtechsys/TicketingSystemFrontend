@@ -13,7 +13,12 @@ import { CreateDepartmentModal } from "./CreateDepartmentModal";
 import { EditDepartmentModal } from "./EditDepartmentModal";
 import { ViewDepartmentModal } from "./ViewDepartmentModal";
 import { DepartmentDonutChart } from "./DepartmentDonutChart";
-import { SelectDropdown, SelectOption, StatCard, Can } from "@/shared/components";
+import {
+  SelectDropdown,
+  SelectOption,
+  StatCard,
+  Can,
+} from "@/shared/components";
 import { ROUTES } from "@/app/routes/routePaths";
 
 const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
@@ -24,9 +29,9 @@ const STATUS_FILTER_OPTIONS: SelectOption<"all" | "active" | "inactive">[] = [
 
 export const AdminDepartmentManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">(
-    "active",
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("active");
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [selectedDeptForEdit, setSelectedDeptForEdit] =
@@ -35,7 +40,12 @@ export const AdminDepartmentManagement: React.FC = () => {
     useState<DepartmentItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const { data: departments = [], isLoading, refetch, isFetching } = useDepartmentsQuery({
+  const {
+    data: departments = [],
+    isLoading,
+    refetch,
+    isFetching,
+  } = useDepartmentsQuery({
     includeInactive: true,
   });
 
@@ -46,13 +56,13 @@ export const AdminDepartmentManagement: React.FC = () => {
   // Archive / Unarchive / Delete Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
-    type: 'archive' | 'unarchive' | 'delete';
+    type: "archive" | "unarchive" | "delete";
     department: DepartmentItem | null;
     isLoading: boolean;
     error: string | null;
   }>({
     isOpen: false,
-    type: 'archive',
+    type: "archive",
     department: null,
     isLoading: false,
     error: null,
@@ -75,8 +85,8 @@ export const AdminDepartmentManagement: React.FC = () => {
         statusFilter === "all"
           ? true
           : statusFilter === "active"
-          ? d.status === "ACTIVE"
-          : d.status === "INACTIVE";
+            ? d.status === "ACTIVE"
+            : d.status === "INACTIVE";
 
       return matchesSearch && matchesStatus;
     });
@@ -101,7 +111,10 @@ export const AdminDepartmentManagement: React.FC = () => {
     };
   }, [departments]);
 
-  const openConfirmModal = (dept: DepartmentItem, type: 'archive' | 'unarchive' | 'delete') => {
+  const openConfirmModal = (
+    dept: DepartmentItem,
+    type: "archive" | "unarchive" | "delete",
+  ) => {
     setConfirmModal({
       isOpen: true,
       type,
@@ -117,10 +130,12 @@ export const AdminDepartmentManagement: React.FC = () => {
     const dept = confirmModal.department;
 
     try {
-      if (confirmModal.type === 'delete') {
+      if (confirmModal.type === "delete") {
         await deletePermanentMutation.mutateAsync(dept.id);
-        showToast(`Department "${dept.name}" permanently deleted successfully.`);
-      } else if (confirmModal.type === 'unarchive') {
+        showToast(
+          `Department "${dept.name}" permanently deleted successfully.`,
+        );
+      } else if (confirmModal.type === "unarchive") {
         await updateMutation.mutateAsync({
           id: dept.id,
           data: { status: "ACTIVE" },
@@ -133,7 +148,7 @@ export const AdminDepartmentManagement: React.FC = () => {
 
       setConfirmModal({
         isOpen: false,
-        type: 'archive',
+        type: "archive",
         department: null,
         isLoading: false,
         error: null,
@@ -142,7 +157,10 @@ export const AdminDepartmentManagement: React.FC = () => {
       setConfirmModal((prev) => ({
         ...prev,
         isLoading: false,
-        error: err?.response?.data?.message || err?.message || `Failed to ${confirmModal.type} department.`,
+        error:
+          err?.response?.data?.message ||
+          err?.message ||
+          `Failed to ${confirmModal.type} department.`,
       }));
     }
   };
@@ -163,7 +181,10 @@ export const AdminDepartmentManagement: React.FC = () => {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 font-medium mb-1">
+            <nav
+              aria-label="Breadcrumb"
+              className="flex items-center gap-1.5 sm:gap-2 text-xs text-gray-500 font-medium mb-1"
+            >
               <Link
                 to={ROUTES.ROOT}
                 className="hover:text-[#1F3864] dark:hover:text-blue-400 transition-colors cursor-pointer"
@@ -282,7 +303,9 @@ export const AdminDepartmentManagement: React.FC = () => {
                 className="h-8 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
                 title="Refresh Departments List"
               >
-                <span className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}>
+                <span
+                  className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}
+                >
                   refresh
                 </span>
                 <span>Refresh</span>
@@ -332,8 +355,10 @@ export const AdminDepartmentManagement: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-[#F0F2F5] dark:divide-[#1E2D45] text-xs">
                     {filteredDepartments.map((d) => {
-                      const teamsCount = d._count?.teams || d.teams?.length || 0;
-                      const usersCount = d._count?.users || d.users?.length || 0;
+                      const teamsCount =
+                        d._count?.teams || d.teams?.length || 0;
+                      const usersCount =
+                        d._count?.users || d.users?.length || 0;
                       const isActive = d.status === "ACTIVE";
 
                       return (
@@ -355,7 +380,10 @@ export const AdminDepartmentManagement: React.FC = () => {
 
                           {/* Description */}
                           <td className="py-3.5 px-4 sm:px-6 text-gray-500 dark:text-gray-400">
-                            <span className="line-clamp-1" title={d.description || "—"}>
+                            <span
+                              className="line-clamp-1"
+                              title={d.description || "—"}
+                            >
                               {d.description || "—"}
                             </span>
                           </td>
@@ -376,7 +404,8 @@ export const AdminDepartmentManagement: React.FC = () => {
                               <span className="material-symbols-outlined text-[13px]">
                                 badge
                               </span>
-                              {usersCount} {usersCount === 1 ? "person" : "persons"}
+                              {usersCount}{" "}
+                              {usersCount === 1 ? "person" : "persons"}
                             </span>
                           </td>
 
@@ -423,13 +452,22 @@ export const AdminDepartmentManagement: React.FC = () => {
                               <Can permission="DEPARTMENT_DELETE">
                                 <button
                                   type="button"
-                                  onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
+                                  onClick={() =>
+                                    openConfirmModal(
+                                      d,
+                                      isActive ? "archive" : "unarchive",
+                                    )
+                                  }
                                   className={`p-1.5 rounded-lg transition-colors ${
                                     isActive
                                       ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40"
                                       : "text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
                                   }`}
-                                  title={isActive ? "Archive department" : "Unarchive department"}
+                                  title={
+                                    isActive
+                                      ? "Archive department"
+                                      : "Unarchive department"
+                                  }
                                 >
                                   <span className="material-symbols-outlined text-[18px]">
                                     {isActive ? "archive" : "unarchive"}
@@ -438,11 +476,15 @@ export const AdminDepartmentManagement: React.FC = () => {
                                 {!isActive && (
                                   <button
                                     type="button"
-                                    onClick={() => openConfirmModal(d, "delete")}
+                                    onClick={() =>
+                                      openConfirmModal(d, "delete")
+                                    }
                                     className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition-colors"
                                     title="Permanently Delete department"
                                   >
-                                    <span className="material-symbols-outlined text-[18px]">delete</span>
+                                    <span className="material-symbols-outlined text-[18px]">
+                                      delete
+                                    </span>
                                   </button>
                                 )}
                               </Can>
@@ -512,7 +554,8 @@ export const AdminDepartmentManagement: React.FC = () => {
                             Personnel
                           </span>
                           <span className="font-semibold text-gray-700 dark:text-gray-300">
-                            {usersCount} {usersCount === 1 ? "person" : "persons"}
+                            {usersCount}{" "}
+                            {usersCount === 1 ? "person" : "persons"}
                           </span>
                         </div>
                       </div>
@@ -526,7 +569,9 @@ export const AdminDepartmentManagement: React.FC = () => {
                           onClick={() => setSelectedDeptForView(d)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#1E88E5] dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 flex items-center gap-1"
                         >
-                          <span className="material-symbols-outlined text-[16px]">visibility</span>
+                          <span className="material-symbols-outlined text-[16px]">
+                            visibility
+                          </span>
                           <span>View</span>
                         </button>
                         <Can permission="DEPARTMENT_UPDATE">
@@ -535,14 +580,21 @@ export const AdminDepartmentManagement: React.FC = () => {
                             onClick={() => setSelectedDeptForEdit(d)}
                             className="px-3 py-1.5 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-slate-800 flex items-center gap-1"
                           >
-                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                            <span className="material-symbols-outlined text-[16px]">
+                              edit
+                            </span>
                             <span>Edit</span>
                           </button>
                         </Can>
                         <Can permission="DEPARTMENT_DELETE">
                           <button
                             type="button"
-                            onClick={() => openConfirmModal(d, isActive ? "archive" : "unarchive")}
+                            onClick={() =>
+                              openConfirmModal(
+                                d,
+                                isActive ? "archive" : "unarchive",
+                              )
+                            }
                             className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 ${
                               isActive
                                 ? "text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40"
@@ -560,7 +612,9 @@ export const AdminDepartmentManagement: React.FC = () => {
                               onClick={() => openConfirmModal(d, "delete")}
                               className="px-3 py-1.5 rounded-lg text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 flex items-center gap-1"
                             >
-                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                              <span className="material-symbols-outlined text-[16px]">
+                                delete
+                              </span>
                               <span>Delete</span>
                             </button>
                           )}
@@ -572,7 +626,6 @@ export const AdminDepartmentManagement: React.FC = () => {
               </div>
             </>
           )}
-
         </div>
 
         {/* Modals */}
@@ -613,31 +666,35 @@ export const AdminDepartmentManagement: React.FC = () => {
                   <div className="flex items-start gap-4">
                     <div
                       className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-xs ${
-                        confirmModal.type === 'delete'
-                          ? 'bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-900'
-                          : confirmModal.type === 'archive'
-                          ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900'
-                          : 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900'
+                        confirmModal.type === "delete"
+                          ? "bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-900"
+                          : confirmModal.type === "archive"
+                            ? "bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900"
+                            : "bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900"
                       }`}
                     >
                       <span className="material-symbols-outlined text-[26px]">
-                        {confirmModal.type === 'delete' ? 'delete_forever' : confirmModal.type === 'archive' ? 'archive' : 'unarchive'}
+                        {confirmModal.type === "delete"
+                          ? "delete_forever"
+                          : confirmModal.type === "archive"
+                            ? "archive"
+                            : "unarchive"}
                       </span>
                     </div>
                     <div className="flex-1">
                       <h3 className="text-base font-bold text-[#1A1A1A] dark:text-white tracking-tight">
-                        {confirmModal.type === 'delete'
+                        {confirmModal.type === "delete"
                           ? `Permanently Delete Department "${confirmModal.department.name}"?`
-                          : confirmModal.type === 'archive'
-                          ? `Archive Department "${confirmModal.department.name}"?`
-                          : `Restore Department "${confirmModal.department.name}"?`}
+                          : confirmModal.type === "archive"
+                            ? `Archive Department "${confirmModal.department.name}"?`
+                            : `Restore Department "${confirmModal.department.name}"?`}
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                        {confirmModal.type === 'delete'
+                        {confirmModal.type === "delete"
                           ? `Are you sure you want to permanently delete this department? This action cannot be undone.`
-                          : confirmModal.type === 'archive'
-                          ? `Are you sure you want to archive this department? It will be marked as inactive and hidden from active team allocations.`
-                          : `Are you sure you want to restore this department? It will be reactivated immediately.`}
+                          : confirmModal.type === "archive"
+                            ? `Are you sure you want to archive this department? It will be marked as inactive and hidden from active team allocations.`
+                            : `Are you sure you want to restore this department? It will be reactivated immediately.`}
                       </p>
                     </div>
                   </div>
@@ -664,31 +721,35 @@ export const AdminDepartmentManagement: React.FC = () => {
                       disabled={confirmModal.isLoading}
                       onClick={handleConfirmAction}
                       className={`px-5 py-2 rounded-xl text-xs font-semibold text-white shadow-sm flex items-center gap-2 transition-all active:scale-[0.99] ${
-                        confirmModal.type === 'delete'
-                          ? 'bg-red-600 hover:bg-red-700'
-                          : confirmModal.type === 'archive'
-                          ? 'bg-amber-600 hover:bg-amber-700'
-                          : 'bg-emerald-600 hover:bg-emerald-700'
+                        confirmModal.type === "delete"
+                          ? "bg-red-600 hover:bg-red-700"
+                          : confirmModal.type === "archive"
+                            ? "bg-amber-600 hover:bg-amber-700"
+                            : "bg-emerald-600 hover:bg-emerald-700"
                       }`}
                     >
                       {confirmModal.isLoading && (
                         <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       )}
                       <span className="material-symbols-outlined text-[16px]">
-                        {confirmModal.type === 'delete' ? 'delete' : confirmModal.type === 'archive' ? 'archive' : 'unarchive'}
+                        {confirmModal.type === "delete"
+                          ? "delete"
+                          : confirmModal.type === "archive"
+                            ? "archive"
+                            : "unarchive"}
                       </span>
                       <span>
                         {confirmModal.isLoading
-                          ? confirmModal.type === 'delete'
-                            ? 'Deleting...'
-                            : confirmModal.type === 'archive'
-                            ? 'Archiving...'
-                            : 'Restoring...'
-                          : confirmModal.type === 'delete'
-                          ? 'Permanently Delete'
-                          : confirmModal.type === 'archive'
-                          ? 'Archive Department'
-                          : 'Restore Department'}
+                          ? confirmModal.type === "delete"
+                            ? "Deleting..."
+                            : confirmModal.type === "archive"
+                              ? "Archiving..."
+                              : "Restoring..."
+                          : confirmModal.type === "delete"
+                            ? "Permanently Delete"
+                            : confirmModal.type === "archive"
+                              ? "Archive Department"
+                              : "Restore Department"}
                       </span>
                     </button>
                   </div>
