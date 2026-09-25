@@ -7,14 +7,12 @@ import { SelectDropdown, SelectOption } from "@/shared/components";
 const STATUS_OPTIONS: SelectOption<"ACTIVE" | "INACTIVE">[] = [
   {
     value: "ACTIVE",
-    label: "Active Team",
-    sublabel: "Available for new ticket routing & incident assignments",
+    label: "Active",
     dotColor: "bg-emerald-500",
   },
   {
     value: "INACTIVE",
     label: "Archived / Inactive",
-    sublabel: "Hidden from triage, preserves historical tickets",
     dotColor: "bg-gray-400",
   },
 ];
@@ -97,7 +95,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Gradient Header Accent */}
-        <div className="h-1.5 bg-gradient-to-r from-[#1F3864] via-[#2B5EA7] to-[#0e61a1]" />
+        <div className="h-1.5 bg-gradient-to-r from-[#1F3864] via-[#2B5EA7] to-[#1F3864]" />
 
         {/* Header */}
         <div className="px-7 py-5 bg-gradient-to-b from-[#FAFBFD] to-white border-b border-[#EEF1F5] flex items-center justify-between">
@@ -118,7 +116,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
           </div>
           <button
             type="button"
-            className="text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-all duration-150"
+            className="text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-all duration-150 cursor-pointer"
             onClick={onClose}
           >
             <span className="material-symbols-outlined text-[22px]">close</span>
@@ -128,7 +126,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
         {/* Body */}
         <form
           onSubmit={handleSubmit}
-          className="px-7 py-6 space-y-5 overflow-y-auto"
+          className="px-7 py-6 space-y-5 overflow-y-auto pb-10"
         >
           {errorMessage && (
             <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-3 animate-in fade-in shadow-sm">
@@ -151,7 +149,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
               maxLength={120}
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 focus:bg-white transition-all"
+              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 focus:bg-white transition-all"
             />
           </div>
 
@@ -164,7 +162,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
               required
               value={teamAdminEmail}
               onChange={(e) => setTeamAdminEmail(e.target.value)}
-              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 focus:bg-white transition-all font-mono"
+              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 focus:bg-white transition-all font-mono"
             />
           </div>
 
@@ -177,6 +175,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
               onChange={setStatus}
               options={STATUS_OPTIONS}
               placeholder="Select team status..."
+              size="lg"
             />
           </div>
 
@@ -189,7 +188,7 @@ export const EditTeamModal: React.FC<EditTeamModalProps> = ({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Optional description..."
-              className="w-full p-3.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 focus:bg-white transition-all resize-none"
+              className="w-full p-3.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 focus:bg-white transition-all resize-none"
             />
           </div>
 

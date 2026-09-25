@@ -8,6 +8,7 @@ import { PERMISSIONS, useCanAtScope } from "@/features/auth";
 import { StatCard, SelectDropdown, SelectOption, Can } from "@/shared/components";
 import { CreateUserModal } from "./CreateUserModal";
 import { EditUserModal } from "./EditUserModal";
+import { BulkUploadUsersModal } from "./BulkUploadUsersModal";
 import { ManageUserTeamsModal } from "./ManageUserTeamsModal";
 import { DeactivateUserConfirmModal } from "./DeactivateUserConfirmModal";
 import { DeleteUserConfirmModal } from "./DeleteUserConfirmModal";
@@ -27,6 +28,7 @@ export const AdminUserManagement: React.FC = () => {
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isBulkUploadModalOpen, setIsBulkUploadModalOpen] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState<UserListItem | null>(null);
   const [selectedUserForTeams, setSelectedUserForTeams] = useState<UserListItem | null>(null);
   const [selectedUserForDeactivate, setSelectedUserForDeactivate] = useState<UserListItem | null>(null);
@@ -168,7 +170,7 @@ export const AdminUserManagement: React.FC = () => {
       )}
 
       {/* Header Section */}
-      <div className="flex flex-row items-center justify-between gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-gray-500 font-medium mb-0.5 sm:mb-1">
             <Link
@@ -199,16 +201,28 @@ export const AdminUserManagement: React.FC = () => {
         </div>
 
         <Can permission="USER_CREATE">
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="px-3 sm:px-4 py-2 sm:py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 sm:gap-2 shrink-0 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
-              person_add
-            </span>
-            <span>Create User</span>
-          </button>
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setIsBulkUploadModalOpen(true)}
+              className="w-full sm:w-auto px-3 sm:px-3.5 py-2 sm:py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation"
+            >
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] text-white shrink-0">
+                upload_file
+              </span>
+              <span className="truncate">Bulk Upload</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-2.5 bg-[#1F3864] hover:bg-[#152747] active:scale-[0.98] text-white rounded-xl text-xs font-semibold shadow-xs transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer touch-manipulation"
+            >
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] shrink-0">
+                person_add
+              </span>
+              <span className="truncate">Create User</span>
+            </button>
+          </div>
         </Can>
       </div>
 
@@ -260,9 +274,9 @@ export const AdminUserManagement: React.FC = () => {
             </div>
 
             {/* Custom Dropdown Filters Row */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
               {/* Department SelectDropdown */}
-              <div className="w-48">
+              <div className="w-full sm:w-48">
                 <SelectDropdown
                   value={departmentFilter}
                   onChange={(val) => setDepartmentFilter(val)}
@@ -274,7 +288,7 @@ export const AdminUserManagement: React.FC = () => {
               </div>
 
               {/* Role SelectDropdown */}
-              <div className="w-40">
+              <div className="w-full sm:w-40">
                 <SelectDropdown
                   value={roleFilter}
                   onChange={(val) => setRoleFilter(val)}
@@ -286,11 +300,11 @@ export const AdminUserManagement: React.FC = () => {
               </div>
 
               {/* Status Tabs */}
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-slate-800 p-0.5 rounded-lg">
+              <div className="col-span-2 sm:col-auto w-full sm:w-auto flex items-center gap-1 bg-gray-100 dark:bg-slate-800 p-0.5 rounded-lg">
                 <button
                   type="button"
                   onClick={() => setStatusFilter("ALL")}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  className={`flex-1 sm:flex-initial px-2.5 py-1 text-xs font-semibold rounded-md transition-colors text-center ${
                     statusFilter === "ALL"
                       ? "bg-[#1F3864] text-white shadow-xs"
                       : "text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
@@ -301,7 +315,7 @@ export const AdminUserManagement: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setStatusFilter("ACTIVE")}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  className={`flex-1 sm:flex-initial px-2.5 py-1 text-xs font-semibold rounded-md transition-colors text-center ${
                     statusFilter === "ACTIVE"
                       ? "bg-[#1F3864] text-white shadow-xs"
                       : "text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
@@ -312,7 +326,7 @@ export const AdminUserManagement: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setStatusFilter("INACTIVE")}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  className={`flex-1 sm:flex-initial px-2.5 py-1 text-xs font-semibold rounded-md transition-colors text-center ${
                     statusFilter === "INACTIVE"
                       ? "bg-[#1F3864] text-white shadow-xs"
                       : "text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white"
@@ -675,7 +689,7 @@ export const AdminUserManagement: React.FC = () => {
                       )}
                     </div>
 
-                    <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-200 dark:border-slate-700">
+                    <div className="pt-2 flex flex-wrap items-center justify-end gap-1.5 sm:gap-2 border-t border-gray-200 dark:border-slate-700">
                       <Can permission="USER_UPDATE">
                         <button
                           type="button"
@@ -683,7 +697,7 @@ export const AdminUserManagement: React.FC = () => {
                             e.stopPropagation();
                             setSelectedUserForEdit(u);
                           }}
-                          className="px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 flex items-center gap-1"
+                          className="px-2.5 py-1.5 text-xs text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg hover:bg-gray-50 flex items-center gap-1 active:scale-[0.98] transition-all touch-manipulation cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[14px]">
                             edit
@@ -698,7 +712,7 @@ export const AdminUserManagement: React.FC = () => {
                             e.stopPropagation();
                             setSelectedUserForTeams(u);
                           }}
-                          className="px-2.5 py-1 text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-lg hover:bg-blue-100 flex items-center gap-1"
+                          className="px-2.5 py-1.5 text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-lg hover:bg-blue-100 flex items-center gap-1 active:scale-[0.98] transition-all touch-manipulation cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[14px]">
                             groups
@@ -713,7 +727,7 @@ export const AdminUserManagement: React.FC = () => {
                             e.stopPropagation();
                             setSelectedUserForDeactivate(u);
                           }}
-                          className={`px-2.5 py-1 text-xs rounded-lg border flex items-center gap-1 ${
+                          className={`px-2.5 py-1.5 text-xs rounded-lg border flex items-center gap-1 active:scale-[0.98] transition-all touch-manipulation cursor-pointer ${
                             isActive
                               ? "text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900 hover:bg-amber-100"
                               : "text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-900 hover:bg-emerald-100"
@@ -731,7 +745,7 @@ export const AdminUserManagement: React.FC = () => {
                               e.stopPropagation();
                               setSelectedUserForDelete(u);
                             }}
-                            className="px-2.5 py-1 text-xs rounded-lg border flex items-center gap-1 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 hover:bg-red-100"
+                            className="px-2.5 py-1.5 text-xs rounded-lg border flex items-center gap-1 text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-900 hover:bg-red-100 active:scale-[0.98] transition-all touch-manipulation cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[14px]">
                               delete
@@ -824,6 +838,13 @@ export const AdminUserManagement: React.FC = () => {
       <CreateUserModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={showToast}
+      />
+
+      {/* BULK UPLOAD USERS MODAL */}
+      <BulkUploadUsersModal
+        isOpen={isBulkUploadModalOpen}
+        onClose={() => setIsBulkUploadModalOpen(false)}
         onSuccess={showToast}
       />
 

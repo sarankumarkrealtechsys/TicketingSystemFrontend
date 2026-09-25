@@ -194,3 +194,56 @@ export const useRemoveUserTeamMutation = () => {
     },
   });
 };
+
+// GET /api/users/bulk-upload/template — Download sample Excel workbook
+export const downloadUserUploadTemplate = async (
+  filename = "users_bulk_upload_sample.xlsx"
+) => {
+  const response = await apiClient.get<Blob>("/users/bulk-upload/template", {
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.setAttribute("download", filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
+// POST /api/users/bulk-upload — Upload Excel/CSV spreadsheet
+export const useBulkUploadUsersMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      file,
+      defaultPassword,
+    }: {
+      file: File;
+      defaultPassword?: string;
+    }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      if (defaultPassword?.trim()) {
+        formData.append("defaultPassword", defaultPassword.trim());
+      }
+
+      const { data } = await apiClient.post<any>("/users/bulk-upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      return data?.data as import("./types").BulkUploadResult;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userManagementKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    },
+  });
+};
+

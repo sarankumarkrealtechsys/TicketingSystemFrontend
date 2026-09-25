@@ -13,6 +13,19 @@ interface CreateTeamModalProps {
   onSuccess?: () => void;
 }
 
+const STATUS_OPTIONS: SelectOption<"ACTIVE" | "INACTIVE">[] = [
+  {
+    value: "ACTIVE",
+    label: "Active",
+    dotColor: "bg-emerald-500",
+  },
+  {
+    value: "INACTIVE",
+    label: "Archived / Inactive",
+    dotColor: "bg-gray-400",
+  },
+];
+
 export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
   isOpen,
   onClose,
@@ -21,6 +34,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
   const [name, setName] = useState("");
   const [departmentId, setDepartmentId] = useState<number | "">("");
   const [teamAdminEmail, setTeamAdminEmail] = useState("");
+  const [status, setStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
   const [description, setDescription] = useState("");
   const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
@@ -76,7 +90,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
         departmentId: Number(departmentId),
         teamAdminEmail: teamAdminEmail.trim(),
         description: description.trim() || undefined,
-        status: "ACTIVE",
+        status,
         initialMemberIds: selectedMemberIds,
       });
 
@@ -84,6 +98,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
       setName("");
       setDescription("");
       setTeamAdminEmail("");
+      setStatus("ACTIVE");
       setSelectedMemberIds([]);
       onSuccess?.();
       onClose();
@@ -106,7 +121,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Gradient Header Accent */}
-        <div className="h-1.5 bg-gradient-to-r from-[#1F3864] via-[#2B5EA7] to-[#0e61a1]" />
+        <div className="h-1.5 bg-gradient-to-r from-[#1F3864] via-[#2B5EA7] to-[#1F3864]" />
 
         {/* Header */}
         <div className="px-7 py-5 bg-gradient-to-b from-[#FAFBFD] to-white border-b border-[#EEF1F5] flex items-center justify-between">
@@ -127,7 +142,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
           </div>
           <button
             type="button"
-            className="text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-all duration-150"
+            className="text-gray-400 hover:text-gray-700 p-2 rounded-xl hover:bg-gray-100 transition-all duration-150 cursor-pointer"
             onClick={onClose}
           >
             <span className="material-symbols-outlined text-[22px]">close</span>
@@ -137,7 +152,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
         {/* Body */}
         <form
           onSubmit={handleSubmit}
-          className="px-7 py-6 space-y-5 overflow-y-auto flex-1"
+          className="px-7 py-6 space-y-5 overflow-y-auto flex-1 pb-10"
         >
           {errorMessage && (
             <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium flex items-center gap-3 animate-in fade-in shadow-sm">
@@ -162,7 +177,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
               placeholder="e.g. Platform Ops"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 focus:bg-white transition-all placeholder:text-gray-400"
+              className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 focus:bg-white transition-all placeholder:text-gray-400"
             />
           </div>
 
@@ -177,11 +192,12 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
               options={departments.map((d) => ({
                 value: d.id,
                 label: d.name,
-                icon: "business",
+                icon: "domain",
               }))}
               placeholder="Select Department..."
-              searchable={departments.length > 4}
+              searchable
               searchPlaceholder="Search departments..."
+              size="lg"
             />
           </div>
 
@@ -209,8 +225,9 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
                     })),
                   ]}
                   placeholder="Select Department Operator..."
-                  searchable={deptUsers.length > 4}
+                  searchable
                   searchPlaceholder="Search operators..."
+                  size="lg"
                 />
                 <input
                   type="email"
@@ -218,7 +235,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
                   placeholder="Lead email address..."
                   value={teamAdminEmail}
                   onChange={(e) => setTeamAdminEmail(e.target.value)}
-                  className="w-full h-10 px-4 bg-white border border-[#D1D5DB] rounded-xl text-xs text-[#1A1A1A] focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 transition-all font-mono"
+                  className="w-full h-11 px-4 bg-white border border-[#D1D5DB] rounded-xl text-xs text-[#1A1A1A] focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 transition-all font-mono"
                 />
               </div>
             ) : (
@@ -228,9 +245,23 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
                 placeholder="Lead email address..."
                 value={teamAdminEmail}
                 onChange={(e) => setTeamAdminEmail(e.target.value)}
-                className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 focus:bg-white transition-all"
+                className="w-full h-11 px-4 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 focus:bg-white transition-all"
               />
             )}
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-xs font-bold text-[#374151] uppercase tracking-wider mb-2">
+              Status
+            </label>
+            <SelectDropdown<"ACTIVE" | "INACTIVE">
+              value={status}
+              onChange={setStatus}
+              options={STATUS_OPTIONS}
+              placeholder="Select team status..."
+              size="lg"
+            />
           </div>
 
           {/* Description */}
@@ -243,7 +274,7 @@ export const CreateTeamModal: React.FC<CreateTeamModalProps> = ({
               placeholder="Optional team description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-3.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 focus:bg-white transition-all placeholder:text-gray-400 resize-none"
+              className="w-full p-3.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-xl text-sm text-[#1A1A1A] focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 focus:bg-white transition-all placeholder:text-gray-400 resize-none"
             />
           </div>
 

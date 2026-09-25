@@ -115,3 +115,29 @@ export interface UserPerformanceData {
   createdTickets: ScopedTicketItem[];
 }
 
+export interface BulkUploadErrorItem {
+  row: number;
+  username: string;
+  email: string;
+  error: string;
+}
+
+export interface BulkUploadCreatedUser {
+  id: number;
+  username: string;
+  email: string;
+  name: string;
+  department: string;
+  role: string;
+}
+
+export interface BulkUploadResult {
+  success: boolean;
+  totalRows: number;
+  successfulCount: number;
+  failedCount: number;
+  createdUsers: BulkUploadCreatedUser[];
+  errors: BulkUploadErrorItem[];
+}
+
+

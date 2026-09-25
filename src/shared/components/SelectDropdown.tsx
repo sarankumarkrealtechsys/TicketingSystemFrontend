@@ -26,7 +26,7 @@ export interface SelectDropdownProps<T = string | number> {
   searchPlaceholder?: string;
   icon?: string;
   required?: boolean;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
   id?: string;
   name?: string;
 }
@@ -118,6 +118,7 @@ export function SelectDropdown<T extends string | number = string>({
   };
 
   const isSmall = size === "sm";
+  const isLarge = size === "lg";
 
   return (
     <div
@@ -133,23 +134,25 @@ export function SelectDropdown<T extends string | number = string>({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2 text-left rounded-lg transition-all duration-150 cursor-pointer ${
-          isSmall
-            ? "h-9 px-3 text-xs"
-            : "h-9.5 px-3.5 text-sm"
+        className={`w-full flex items-center justify-between gap-2 text-left transition-all duration-150 cursor-pointer ${
+          isLarge
+            ? "h-11 px-4 text-sm rounded-xl"
+            : isSmall
+            ? "h-8.5 px-3 text-xs rounded-lg"
+            : "h-9.5 px-3.5 text-xs sm:text-sm rounded-lg"
         } ${
           disabled
-            ? "bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed"
+            ? "bg-gray-100 dark:bg-slate-800 text-gray-400 border border-gray-200 dark:border-slate-700 cursor-not-allowed"
             : isOpen
-            ? "bg-white border-[#0e61a1] ring-2 ring-[#0e61a1]/15 text-[#1A1A1A] shadow-xs"
-            : "bg-[#F9FAFB] border border-[#D1D5DB] text-[#1A1A1A] hover:bg-white hover:border-gray-400 shadow-2xs"
+            ? "bg-white dark:bg-[#1A283E] border-[#1F3864] ring-2 ring-[#1F3864]/15 text-[#1A1A1A] dark:text-white shadow-xs"
+            : "bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] text-[#1A1A1A] dark:text-white hover:bg-white hover:border-gray-400 shadow-2xs"
         } ${triggerClassName}`}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1 truncate">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 truncate">
           {icon && (
             <span
               className={`material-symbols-outlined text-gray-500 shrink-0 ${
-                isSmall ? "text-[16px]" : "text-[18px]"
+                isLarge ? "text-[20px]" : isSmall ? "text-[16px]" : "text-[18px]"
               }`}
             >
               {icon}
@@ -158,14 +161,14 @@ export function SelectDropdown<T extends string | number = string>({
 
           {selectedOption?.dotColor && (
             <span
-              className={`w-2 h-2 rounded-full shrink-0 ${selectedOption.dotColor}`}
+              className={`w-2.5 h-2.5 rounded-full shrink-0 ${selectedOption.dotColor}`}
             />
           )}
 
           {selectedOption?.icon && (
             <span
               className={`material-symbols-outlined text-gray-500 shrink-0 ${
-                isSmall ? "text-[16px]" : "text-[18px]"
+                isLarge ? "text-[20px]" : isSmall ? "text-[16px]" : "text-[18px]"
               }`}
             >
               {selectedOption.icon}
@@ -173,7 +176,7 @@ export function SelectDropdown<T extends string | number = string>({
           )}
 
           {selectedOption ? (
-            <span className="truncate font-medium text-[#1A1A1A]">
+            <span className="truncate font-semibold text-[#1A1A1A] dark:text-white">
               {selectedOption.label}
             </span>
           ) : (
@@ -194,8 +197,8 @@ export function SelectDropdown<T extends string | number = string>({
         {/* Chevron icon with animated rotation */}
         <span
           className={`material-symbols-outlined shrink-0 text-gray-400 transition-transform duration-200 ${
-            isSmall ? "text-[16px]" : "text-[18px]"
-          } ${isOpen ? "rotate-180 text-[#0e61a1]" : ""}`}
+            isLarge ? "text-[20px]" : isSmall ? "text-[16px]" : "text-[18px]"
+          } ${isOpen ? "rotate-180 text-[#1F3864]" : ""}`}
         >
           expand_more
         </span>
@@ -205,11 +208,11 @@ export function SelectDropdown<T extends string | number = string>({
       {isOpen && (
         <div
           role="listbox"
-          className={`absolute left-0 right-0 z-50 mt-1 bg-white border border-[#E5E7EB] rounded-xl shadow-xl py-1.5 max-h-64 overflow-y-auto animate-in fade-in-50 zoom-in-95 duration-150 ${menuClassName}`}
+          className={`absolute left-0 right-0 z-[110] mt-1.5 bg-white dark:bg-[#121E30] border border-[#E5E7EB] dark:border-[#1E2D45] rounded-xl shadow-2xl py-1.5 max-h-60 overflow-y-auto animate-in fade-in-50 zoom-in-95 duration-150 ${menuClassName}`}
         >
           {/* Search Input (if searchable) */}
           {searchable && (
-            <div className="p-2 border-b border-gray-100 sticky top-0 bg-white z-10">
+            <div className="p-2 border-b border-gray-100 dark:border-gray-800 sticky top-0 bg-white dark:bg-[#121E30] z-10">
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[16px]">
                   search
@@ -220,7 +223,7 @@ export function SelectDropdown<T extends string | number = string>({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={searchPlaceholder}
-                  className="w-full h-8 pl-8 pr-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] focus:bg-white transition-all"
+                  className="w-full h-8 pl-8 pr-3 bg-gray-50 dark:bg-[#1A283E] border border-gray-200 dark:border-slate-700 rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864]/20 focus:bg-white dark:focus:bg-[#1A283E] transition-all"
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -249,21 +252,21 @@ export function SelectDropdown<T extends string | number = string>({
                       opt.disabled
                         ? "opacity-50 cursor-not-allowed bg-transparent text-gray-400"
                         : isSelected
-                        ? "bg-blue-50/80 text-[#0e61a1] font-semibold"
-                        : "hover:bg-gray-50 text-gray-800"
+                        ? "bg-blue-50/80 dark:bg-blue-900/30 text-[#1F3864] dark:text-blue-300 font-bold"
+                        : "hover:bg-gray-50 dark:hover:bg-slate-800/60 text-gray-800 dark:text-gray-200"
                     }`}
                   >
-                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {opt.dotColor && (
                         <span
-                          className={`w-2 h-2 rounded-full shrink-0 mt-1.5 ${opt.dotColor}`}
+                          className={`w-2.5 h-2.5 rounded-full shrink-0 ${opt.dotColor}`}
                         />
                       )}
 
                       {opt.icon && (
                         <span
                           className={`material-symbols-outlined shrink-0 text-[18px] ${
-                            isSelected ? "text-[#0e61a1]" : "text-gray-400"
+                            isSelected ? "text-[#1F3864] dark:text-blue-300" : "text-gray-400"
                           }`}
                         >
                           {opt.icon}
@@ -272,7 +275,7 @@ export function SelectDropdown<T extends string | number = string>({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs truncate block">
+                          <span className="text-xs truncate block font-medium">
                             {opt.label}
                           </span>
                           {opt.badge && (
@@ -293,7 +296,7 @@ export function SelectDropdown<T extends string | number = string>({
 
                     {/* Selected check indicator */}
                     {isSelected && (
-                      <span className="material-symbols-outlined text-[16px] text-[#0e61a1] shrink-0 font-bold">
+                      <span className="material-symbols-outlined text-[16px] text-[#1F3864] dark:text-blue-300 shrink-0 font-bold">
                         check
                       </span>
                     )}

@@ -13,14 +13,12 @@ interface CreateDepartmentModalProps {
 const STATUS_OPTIONS: SelectOption<DepartmentStatus>[] = [
   {
     value: "ACTIVE",
-    label: "Active Department",
-    sublabel: "Active for team assignment and operational routing",
+    label: "Active",
     dotColor: "bg-emerald-500",
   },
   {
     value: "INACTIVE",
     label: "Archived / Inactive",
-    sublabel: "Hidden from active assignments",
     dotColor: "bg-gray-400",
   },
 ];
@@ -79,7 +77,7 @@ export const CreateDepartmentModal: React.FC<CreateDepartmentModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Gradient Header Accent */}
-        <div className="h-1.5 bg-gradient-to-r from-[#1F3864] via-[#2B5EA7] to-[#0e61a1]" />
+        <div className="h-1.5 bg-gradient-to-r from-[#1F3864] via-[#2B5EA7] to-[#1F3864]" />
 
         {/* Header */}
         <div className="px-7 py-5 bg-gradient-to-b from-[#FAFBFD] to-white dark:from-[#121E30] dark:to-[#121E30] border-b border-[#EEF1F5] dark:border-[#1E2D45] flex items-center justify-between">
@@ -100,7 +98,7 @@ export const CreateDepartmentModal: React.FC<CreateDepartmentModalProps> = ({
           </div>
           <button
             type="button"
-            className="text-gray-400 hover:text-gray-700 dark:hover:text-white p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all duration-150"
+            className="text-gray-400 hover:text-gray-700 dark:hover:text-white p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 transition-all duration-150 cursor-pointer"
             onClick={onClose}
           >
             <span className="material-symbols-outlined text-[22px]">close</span>
@@ -110,7 +108,7 @@ export const CreateDepartmentModal: React.FC<CreateDepartmentModalProps> = ({
         {/* Form Body */}
         <form
           onSubmit={handleSubmit}
-          className="px-7 py-6 space-y-5 overflow-y-auto flex-1"
+          className="px-7 py-6 space-y-5 overflow-y-auto flex-1 pb-10"
         >
           {errorMessage && (
             <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-sm font-medium flex items-center gap-3 animate-in fade-in shadow-sm">
@@ -135,7 +133,7 @@ export const CreateDepartmentModal: React.FC<CreateDepartmentModalProps> = ({
               placeholder="e.g. Infrastructure & Cloud Ops"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full h-11 px-4 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-xl text-sm text-[#1A1A1A] dark:text-white focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 transition-all placeholder:text-gray-400"
+              className="w-full h-11 px-4 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-xl text-sm text-[#1A1A1A] dark:text-white focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 transition-all placeholder:text-gray-400"
             />
           </div>
 
@@ -149,6 +147,7 @@ export const CreateDepartmentModal: React.FC<CreateDepartmentModalProps> = ({
               onChange={(val) => setStatus(val)}
               options={STATUS_OPTIONS}
               placeholder="Select Department Status..."
+              size="lg"
             />
           </div>
 
@@ -162,7 +161,7 @@ export const CreateDepartmentModal: React.FC<CreateDepartmentModalProps> = ({
               placeholder="Operational scope, objectives, or responsibilities..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full p-3.5 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-xl text-sm text-[#1A1A1A] dark:text-white focus:outline-none focus:border-[#0e61a1] focus:ring-2 focus:ring-[#0e61a1]/15 transition-all placeholder:text-gray-400 resize-none"
+              className="w-full p-3.5 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-xl text-sm text-[#1A1A1A] dark:text-white focus:outline-none focus:border-[#1F3864] focus:ring-2 focus:ring-[#1F3864]/15 transition-all placeholder:text-gray-400 resize-none"
             />
           </div>
 

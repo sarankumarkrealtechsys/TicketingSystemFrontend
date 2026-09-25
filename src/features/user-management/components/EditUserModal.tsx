@@ -151,7 +151,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
           <button
             type="button"
             onClick={handleClose}
-            className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
@@ -160,7 +160,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
         {/* Modal Form Content */}
         <form
           onSubmit={handleSubmit}
-          className="p-6 overflow-y-auto space-y-4 flex-1 text-xs"
+          className="p-6 overflow-y-auto space-y-4 flex-1 text-xs pb-10"
         >
           {formError && (
             <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl flex items-start gap-2.5 text-red-600 dark:text-red-400">
@@ -216,7 +216,7 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
           {/* Department & Role */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">
+              <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1 text-xs">
                 Department <span className="text-red-500">*</span>
               </label>
               <SelectDropdown
@@ -225,17 +225,19 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                 options={departments.map((dept) => ({
                   value: dept.id.toString(),
                   label: dept.name,
+                  icon: "domain",
                   dotColor: dept.status === "ACTIVE" ? "bg-blue-500" : "bg-gray-400",
                 }))}
                 placeholder="Select Department..."
                 searchable
                 searchPlaceholder="Search department..."
+                icon="domain"
                 size="md"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">
+              <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1 text-xs">
                 Role <span className="text-red-500">*</span>
               </label>
               <SelectDropdown
@@ -245,11 +247,13 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
                   value: role.id.toString(),
                   label: role.name,
                   sublabel: role.isSystem ? "System" : undefined,
+                  icon: "shield",
                   dotColor: role.name === "ADMIN" ? "bg-purple-500" : "bg-indigo-400",
                 }))}
                 placeholder="Select Role..."
                 searchable
                 searchPlaceholder="Search role..."
+                icon="shield"
                 size="md"
               />
             </div>
@@ -270,37 +274,26 @@ export const EditUserModal: React.FC<EditUserModalProps> = ({
 
           {/* Account Status */}
           <div>
-            <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1">
+            <label className="block font-semibold text-gray-700 dark:text-gray-200 mb-1 text-xs">
               Account Status
             </label>
-            <div className="flex items-center gap-4 pt-1">
-              <label className="flex items-center gap-2 cursor-pointer text-xs">
-                <input
-                  type="radio"
-                  name="status"
-                  value="ACTIVE"
-                  checked={status === "ACTIVE"}
-                  onChange={() => setStatus("ACTIVE")}
-                  className="accent-[#1F3864]"
-                />
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                  Active
-                </span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer text-xs">
-                <input
-                  type="radio"
-                  name="status"
-                  value="INACTIVE"
-                  checked={status === "INACTIVE"}
-                  onChange={() => setStatus("INACTIVE")}
-                  className="accent-[#1F3864]"
-                />
-                <span className="font-medium text-gray-500">
-                  Inactive / Suspended
-                </span>
-              </label>
-            </div>
+            <SelectDropdown<"ACTIVE" | "INACTIVE">
+              value={status}
+              onChange={setStatus}
+              options={[
+                {
+                  value: "ACTIVE",
+                  label: "Active",
+                  dotColor: "bg-emerald-500",
+                },
+                {
+                  value: "INACTIVE",
+                  label: "Inactive / Suspended",
+                  dotColor: "bg-gray-400",
+                },
+              ]}
+              size="md"
+            />
           </div>
 
           {/* Expandable Reset Password Section */}
