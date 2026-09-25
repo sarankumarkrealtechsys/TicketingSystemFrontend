@@ -7,13 +7,18 @@ import {
   getNotificationSocket,
 } from "./socket";
 import { notificationKeys } from "./api";
+import {
+  initColorRegistry,
+  fetchAndSyncColorRegistry,
+} from "@/features/priority-status-management/colorRegistry";
 
 /**
  * Hook to manage Socket.IO lifecycle and real-time notification synchronization.
  * - Automatically connects when Redux auth status is 'authenticated'.
  * - Disconnects on logout / unauthenticated.
- * - On 'connect' event (initial connect + all reconnects), invalidates notification queries to recover missed items.
+ * - On 'connect' event (initial connect + all reconnects), invalidates notification queries to recover missed items and fetches latest color registry.
  * - On 'notification:new' event, invalidates notification queries to instantly update UI state and unread count.
+ * - On 'colors:update' event, synchronizes global status and priority colors across all active sessions.
  */
 export const useNotificationSocket = () => {
   const queryClient = useQueryClient();
@@ -25,11 +30,15 @@ export const useNotificationSocket = () => {
       return;
     }
 
+    // Hydrate color registry for the active user session on app load
+    fetchAndSyncColorRegistry();
+
     const socket = connectNotificationSocket();
 
     const handleConnect = () => {
       // Reconnection catch-up: recover any notifications created while offline/disconnected
       queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+      fetchAndSyncColorRegistry();
     };
 
     const handleNewNotification = (data?: any) => {
@@ -41,12 +50,21 @@ export const useNotificationSocket = () => {
       );
     };
 
+    const handleColorsUpdate = (remoteRegistry: any) => {
+      initColorRegistry(remoteRegistry);
+      queryClient.invalidateQueries({ queryKey: ["admin"] });
+      queryClient.invalidateQueries({ queryKey: ["user-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["tickets"] });
+    };
+
     socket.on("connect", handleConnect);
     socket.on("notification:new", handleNewNotification);
+    socket.on("colors:update", handleColorsUpdate);
 
     return () => {
       socket.off("connect", handleConnect);
       socket.off("notification:new", handleNewNotification);
+      socket.off("colors:update", handleColorsUpdate);
     };
   }, [status, user, queryClient]);
 };

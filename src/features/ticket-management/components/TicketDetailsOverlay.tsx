@@ -27,6 +27,8 @@ import {
   FileSpreadsheet,
   Image,
   File,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { useAppSelector } from "@/features/auth/authSlice";
 import {
@@ -39,9 +41,12 @@ import {
   usePrioritiesQuery,
   useActiveTeamsQuery,
   useSelectedTeamDetailQuery,
+  useTeamAssigneesQuery,
   useChangeStatusMutation,
   useChangePriorityMutation,
   useReassignTicketMutation,
+  useAddTicketAssigneeMutation,
+  useRemoveTicketAssigneeMutation,
   useCloseTicketMutation,
   useAddRemarkMutation,
   useUploadAttachmentMutation,
@@ -214,6 +219,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
     | "status"
     | "priority"
     | "reassign"
+    | "addAssignee"
+    | "removeAssignee"
     | "close"
     | "logTime"
     | "addTeam"
@@ -224,6 +231,12 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
     | "deleteSubTicket"
     | null
   >(null);
+
+  // Form states for Add / Remove Assignee
+  const [addAssigneeTeamId, setAddAssigneeTeamId] = useState<number | null>(null);
+  const [selectedAddAssigneeId, setSelectedAddAssigneeId] = useState<number | null>(null);
+  const [addAssigneeSearch, setAddAssigneeSearch] = useState("");
+  const [assigneeToRemove, setAssigneeToRemove] = useState<{ id: number; name: string } | null>(null);
 
   // Form states for Edit Ticket Modal
   const [editSummary, setEditSummary] = useState("");
@@ -239,6 +252,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [isAddTeamDropdownOpen, setIsAddTeamDropdownOpen] = useState(false);
   const [isSubTicketTeamDropdownOpen, setIsSubTicketTeamDropdownOpen] = useState(false);
   const [isSubTicketPriorityDropdownOpen, setIsSubTicketPriorityDropdownOpen] = useState(false);
+  const [isAddAssigneeUserDropdownOpen, setIsAddAssigneeUserDropdownOpen] = useState(false);
+  const [isAddAssigneeTeamDropdownOpen, setIsAddAssigneeTeamDropdownOpen] = useState(false);
 
   // Search queries in dropdowns
   const [statusSearch, setStatusSearch] = useState("");
@@ -248,6 +263,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [addTeamSearch, setAddTeamSearch] = useState("");
   const [subTicketTeamSearch, setSubTicketTeamSearch] = useState("");
   const [subTicketPrioritySearch, setSubTicketPrioritySearch] = useState("");
+  const [addAssigneeTeamSearch, setAddAssigneeTeamSearch] = useState("");
 
   // Form states for modals
   const [selectedStatusId, setSelectedStatusId] = useState<number | "">("");
@@ -332,6 +348,16 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   } = useTicketDetailQuery(ticketId);
 
   const { data: historyList = [], refetch: refetchHistory } = useTicketHistoryQuery(ticketId);
+
+  // Guarantee reverse chronological order (newest first) for both audit trail and remarks feed
+  const sortedHistory = useMemo(() => {
+    return [...historyList].sort((a, b) => {
+      const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+      const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+      return timeB - timeA;
+    });
+  }, [historyList]);
+
   const { data: timeEntries = [], refetch: refetchTimeEntries } = useTicketTimeEntriesQuery(ticketId);
   const { data: timeSummary, refetch: refetchTimeSummary } = useTicketTimeSummaryQuery(ticketId);
 
@@ -379,6 +405,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const changeStatusMutation = useChangeStatusMutation(ticketId || 0);
   const changePriorityMutation = useChangePriorityMutation(ticketId || 0);
   const reassignMutation = useReassignTicketMutation(ticketId || 0);
+  const addAssigneeMutation = useAddTicketAssigneeMutation(ticketId || 0);
+  const removeAssigneeMutation = useRemoveTicketAssigneeMutation(ticketId || 0);
   const closeMutation = useCloseTicketMutation(ticketId || 0);
   const addRemarkMutation = useAddRemarkMutation(ticketId || 0);
   const uploadAttachmentMutation = useUploadAttachmentMutation(ticketId || 0);
@@ -390,13 +418,71 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const updateTicketMutation = useUpdateTicketMutation(ticketId || 0);
   const deleteTicketMutation = useDeleteTicketMutation();
 
+  // Candidate assignees query for Add Assignee modal
+  const { data: addAssigneeCandidates = [] } = useTeamAssigneesQuery(
+    addAssigneeTeamId || ticket?.teamId || null
+  );
+
+  const availableAddAssignees = useMemo(() => {
+    const assignedSet = new Set((ticket?.assignees || []).map((a) => a.userId));
+    return (addAssigneeCandidates || []).filter((u: any) => !assignedSet.has(u.id));
+  }, [addAssigneeCandidates, ticket?.assignees]);
+
+  const filteredAddAssignees = useMemo(() => {
+    if (!addAssigneeSearch.trim()) return availableAddAssignees;
+    const q = addAssigneeSearch.toLowerCase();
+    return availableAddAssignees.filter(
+      (u: any) =>
+        u.name?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.username?.toLowerCase().includes(q)
+    );
+  }, [availableAddAssignees, addAssigneeSearch]);
+
+  const availableAddAssigneeTeams = useMemo(() => {
+    if (!ticket) return [];
+    const list: { id: number; name: string }[] = [];
+    if (ticket.team) {
+      list.push({ id: ticket.team.id, name: `${ticket.team.name} (Primary)` });
+    }
+    if (ticket.collaboratingTeams && ticket.collaboratingTeams.length > 0) {
+      for (const ct of ticket.collaboratingTeams) {
+        if (ct.team && ct.team.id !== ticket.teamId) {
+          list.push({ id: ct.team.id, name: `${ct.team.name} (Collaborating)` });
+        }
+      }
+    }
+    return list;
+  }, [ticket]);
+
+  const filteredAddAssigneeTeams = useMemo(() => {
+    if (!addAssigneeTeamSearch.trim()) return availableAddAssigneeTeams;
+    const q = addAssigneeTeamSearch.toLowerCase();
+    return availableAddAssigneeTeams.filter((t) => t.name.toLowerCase().includes(q));
+  }, [availableAddAssigneeTeams, addAssigneeTeamSearch]);
+
+  const selectedAddAssigneeTeamObj = useMemo(() => {
+    const tid = addAssigneeTeamId || ticket?.teamId;
+    return availableAddAssigneeTeams.find((t) => t.id === tid) || null;
+  }, [addAssigneeTeamId, ticket?.teamId, availableAddAssigneeTeams]);
+
+  const selectedAddAssigneeObj = useMemo(() => {
+    if (!selectedAddAssigneeId) return null;
+    return addAssigneeCandidates.find((u: any) => u.id === selectedAddAssigneeId) || null;
+  }, [selectedAddAssigneeId, addAssigneeCandidates]);
+
   // Capability flags derived from backend computed ticket.actions + RBAC fallback
   const isGlobalUpdate = Boolean(permissions?.["TICKET_UPDATE"]?.includes("GLOBAL"));
+  const isGlobalAssign = Boolean(permissions?.["TICKET_ASSIGN"]?.includes("GLOBAL"));
   const isCreator = Boolean(
     currentUser?.id &&
       (Number(ticket?.createdById) === Number(currentUser.id) ||
         Number(ticket?.createdBy?.id) === Number(currentUser.id) ||
         (ticket?.parentTicket && Number((ticket.parentTicket as any).createdById) === Number(currentUser.id)))
+  );
+  const hasOwnAssignOrUpdate = Boolean(
+    permissions?.["TICKET_ASSIGN"]?.includes("OWN") ||
+    permissions?.["TICKET_UPDATE"]?.includes("OWN")
   );
   const isClosed = ticket?.status?.behavior === "CLOSED";
   const canUpdateTicket = Boolean(!isClosed && (ticket?.actions?.update || isGlobalUpdate || isCreator));
@@ -404,6 +490,18 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const canChangeStatus = Boolean(ticket?.actions?.changeStatus);
   const canChangePriority = Boolean(ticket?.actions?.changePriority);
   const canReassign = Boolean(ticket?.actions?.reassign);
+  const canAddAssignee = Boolean(
+    !isClosed &&
+      (ticket?.actions?.addAssignee !== undefined
+        ? ticket.actions.addAssignee
+        : isGlobalAssign || (isCreator && hasOwnAssignOrUpdate))
+  );
+  const canRemoveAssignee = Boolean(
+    !isClosed &&
+      (ticket?.actions?.removeAssignee !== undefined
+        ? ticket.actions.removeAssignee
+        : isGlobalAssign || (isCreator && hasOwnAssignOrUpdate))
+  );
   const canClose = Boolean(ticket?.actions?.close);
   const canAddRemark = Boolean(ticket?.actions?.addRemark);
   const canLogTime = Boolean(ticket?.actions?.logTime);
@@ -505,6 +603,28 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
       setActionErrorMsg(null);
       setActiveModal("reassign");
     }
+  };
+
+  const handleOpenAddAssigneeModal = () => {
+    if (ticket) {
+      setAddAssigneeTeamId(ticket.teamId);
+      setSelectedAddAssigneeId(null);
+      setAddAssigneeSearch("");
+      setAddAssigneeTeamSearch("");
+      setIsAddAssigneeUserDropdownOpen(false);
+      setIsAddAssigneeTeamDropdownOpen(false);
+      setActionErrorMsg(null);
+      setActiveModal("addAssignee");
+    }
+  };
+
+  const handleOpenRemoveAssigneeModal = (assignee: any) => {
+    setAssigneeToRemove({
+      id: assignee.userId,
+      name: assignee.user?.name || assignee.user?.username || `User #${assignee.userId}`,
+    });
+    setActionErrorMsg(null);
+    setActiveModal("removeAssignee");
   };
 
   const handleOpenCloseModal = () => {
@@ -653,16 +773,53 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
       setActionErrorMsg("Please select at least one assignee");
       return;
     }
+    const isCurrentlyClosedOrResolved =
+      ticket?.status?.behavior === "CLOSED" || ticket?.status?.behavior === "RESOLVED";
     try {
       await reassignMutation.mutateAsync({
         teamId: reassignTeamId ? Number(reassignTeamId) : undefined,
         assigneeIds: reassignAssigneeIds,
         remarks: modalRemarks.trim() || undefined,
       });
-      setActionSuccessMsg("Ticket reassigned successfully");
+      setActionSuccessMsg(
+        isCurrentlyClosedOrResolved
+          ? "Ticket reassigned and reopened successfully"
+          : "Ticket reassigned successfully"
+      );
       setActiveModal(null);
     } catch (err: any) {
       setActionErrorMsg(err.response?.data?.message || "Failed to reassign ticket");
+    }
+  };
+
+  const handleSubmitAddAssignee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAddAssigneeId) {
+      setActionErrorMsg("Please select an engineer to assign");
+      return;
+    }
+    try {
+      await addAssigneeMutation.mutateAsync({
+        userId: selectedAddAssigneeId,
+        teamId: addAssigneeTeamId || ticket?.teamId || undefined,
+      });
+      setActionSuccessMsg("Assignee added to ticket successfully");
+      setActiveModal(null);
+      setSelectedAddAssigneeId(null);
+    } catch (err: any) {
+      setActionErrorMsg(err.response?.data?.message || "Failed to add assignee");
+    }
+  };
+
+  const handleConfirmRemoveAssignee = async () => {
+    if (!assigneeToRemove) return;
+    try {
+      await removeAssigneeMutation.mutateAsync(assigneeToRemove.id);
+      setActionSuccessMsg(`Removed ${assigneeToRemove.name} from ticket`);
+      setActiveModal(null);
+      setAssigneeToRemove(null);
+    } catch (err: any) {
+      setActionErrorMsg(err.response?.data?.message || "Failed to remove assignee");
     }
   };
 
@@ -1028,8 +1185,10 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   };
 
   // Helper to safely parse JSON strings in history values
-  const parseJsonSafe = (val?: string | null) => {
-    if (!val || typeof val !== "string") return null;
+  const parseJsonSafe = (val?: any) => {
+    if (!val) return null;
+    if (typeof val === "object") return val;
+    if (typeof val !== "string") return null;
     const trimmed = val.trim();
     if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return null;
     try {
@@ -1112,21 +1271,37 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
       case "REASSIGNED":
       case "TICKET_REASSIGNED": {
-        const parsed = parseJsonSafe(h.newValue);
+        const parsedNew = parseJsonSafe(h.newValue);
+        const targetTeamName = h.newTeam?.name || parsedNew?.teamName;
+        const assigneeNames = Array.isArray(parsedNew?.assignees)
+          ? parsedNew.assignees
+              .map((a: any) => {
+                const n = a.name || a.username || (a.userId ? `User #${a.userId}` : "");
+                return a.username && a.name && a.username !== a.name ? `${n} (@${a.username})` : n;
+              })
+              .filter(Boolean)
+              .join(", ")
+          : "";
+
         return (
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-gray-700">Reassigned ticket</span>
-              {h.newTeam?.name && (
+              <span className="text-gray-700 font-medium">Reassigned ticket</span>
+              {targetTeamName && (
                 <>
                   <span className="text-gray-700">to team</span>
                   <span className="font-extrabold text-[#1F3864] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-                    {h.newTeam.name}
+                    {targetTeamName}
                   </span>
                 </>
               )}
-              {h.newValue && !h.newTeam?.name && !parsed && (
-                <span className="font-bold text-gray-900">{h.newValue}</span>
+              {assigneeNames && (
+                <>
+                  <span className="text-gray-700">• Assignee(s):</span>
+                  <span className="font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                    {assigneeNames}
+                  </span>
+                </>
               )}
             </div>
             {h.remarks && (
@@ -1224,24 +1399,107 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
         );
       }
 
+      case "ASSIGNEE_ADDED": {
+        const parsed = parseJsonSafe(h.newValue);
+        const rawStr = typeof h.newValue === "string" ? h.newValue : "";
+        const displayName =
+          parsed?.name ||
+          parsed?.username ||
+          (!parsed && rawStr && !rawStr.startsWith("{") ? rawStr : null) ||
+          "Engineer";
+        const username = parsed?.username;
+        const userTag = username && displayName !== username ? `${displayName} (@${username})` : displayName;
+
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-gray-700 font-medium">Added assignee:</span>
+              <span className="font-extrabold text-[#1F3864] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200 inline-flex items-center gap-1">
+                <User className="w-3 h-3 text-[#1F3864]" />
+                <span>{userTag}</span>
+              </span>
+            </div>
+            {h.remarks && (
+              <div className="mt-1 text-xs text-gray-700 bg-white border border-slate-200 rounded-md px-3 py-1.5 italic font-medium">
+                "{h.remarks}"
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case "ASSIGNEE_REMOVED": {
+        const parsed = parseJsonSafe(h.previousValue) || parseJsonSafe(h.newValue);
+        const rawVal = h.previousValue || h.newValue;
+        const rawStr = typeof rawVal === "string" ? rawVal : "";
+        const displayName =
+          parsed?.name ||
+          parsed?.username ||
+          (!parsed && rawStr && !rawStr.startsWith("{") ? rawStr : null) ||
+          "Engineer";
+        const username = parsed?.username;
+        const userTag = username && displayName !== username ? `${displayName} (@${username})` : displayName;
+
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-gray-700 font-medium">Removed assignee:</span>
+              <span className="font-extrabold text-red-900 bg-red-50 px-2.5 py-0.5 rounded border border-red-200 inline-flex items-center gap-1">
+                <User className="w-3 h-3 text-red-700" />
+                <span>{userTag}</span>
+              </span>
+            </div>
+            {h.remarks && (
+              <div className="mt-1 text-xs text-gray-700 bg-white border border-slate-200 rounded-md px-3 py-1.5 italic font-medium">
+                "{h.remarks}"
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case "TEAM_ADDED":
       case "COLLABORATING_TEAM_ADDED": {
+        const parsed = parseJsonSafe(h.newValue);
+        const rawStr = typeof h.newValue === "string" ? h.newValue : "";
+        const teamName = h.newTeam?.name || parsed?.name || (!parsed && rawStr && !rawStr.startsWith("{") ? rawStr : "Team");
         return (
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-gray-700">Added collaborating team:</span>
-            <span className="font-bold text-[#1F3864] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-              {h.newTeam?.name || h.newValue || "Team"}
+            <span className="text-gray-700 font-medium">Added collaborating team:</span>
+            <span className="font-extrabold text-[#1F3864] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
+              {teamName}
             </span>
           </div>
         );
       }
 
+      case "TEAM_REMOVED":
       case "COLLABORATING_TEAM_REMOVED": {
+        const parsed = parseJsonSafe(h.previousValue);
+        const rawStr = typeof h.previousValue === "string" ? h.previousValue : "";
+        const teamName = h.previousTeam?.name || parsed?.name || (!parsed && rawStr && !rawStr.startsWith("{") ? rawStr : "Team");
         return (
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-gray-700">Removed collaborating team:</span>
+            <span className="text-gray-700 font-medium">Removed collaborating team:</span>
             <span className="font-bold text-gray-800 bg-gray-100 px-2.5 py-0.5 rounded border border-gray-200">
-              {h.previousTeam?.name || h.previousValue || "Team"}
+              {teamName}
             </span>
+          </div>
+        );
+      }
+
+      case "CUSTOM_FIELD_CHANGED":
+      case "CUSTOM_FIELD_VALUE_CHANGED": {
+        return (
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-gray-900">Custom fields updated</span>
+            </div>
+            {h.remarks && h.remarks !== "Ticket updated" && (
+              <div className="mt-1 text-xs text-gray-700 bg-white border border-slate-200 rounded-md px-3 py-1.5 italic font-medium">
+                "{h.remarks}"
+              </div>
+            )}
           </div>
         );
       }
@@ -1644,44 +1902,120 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
               {/* SECTION 2: Assignees & Collaborators */}
               <section className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1F3864] pb-3 border-b border-gray-100 flex items-center gap-2">
-                  <Users className="w-4 h-4 text-[#1F3864]" />
-                  <span>Assignees &amp; Collaborators</span>
-                </h3>
+                <div className="flex items-center justify-between pb-3 border-b border-gray-100 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#1F3864]" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#1F3864]">
+                      Assignees &amp; Collaborators
+                    </h3>
+                  </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  {/* Primary Assignee Card */}
-                  <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[#1F3864] text-white text-xs font-bold flex items-center justify-center ring-2 ring-blue-100 flex-shrink-0">
-                        {getInitials(
-                          ticket.assignees?.[0]?.user?.name ||
-                            ticket.assignees?.[0]?.user?.username
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-[11px] uppercase font-extrabold text-gray-700 block tracking-wider">
-                          Primary Assignee
-                        </span>
-                        <span className="font-bold text-sm text-[#1F3864] block">
-                          {ticket.assignees?.[0]?.user?.name ||
-                            ticket.assignees?.[0]?.user?.username ||
-                            "Unassigned"}
-                        </span>
-                        <span className="text-xs text-gray-600 font-medium block">
-                          {ticket.assignees?.[0]?.user?.email || "No assignee"}
-                        </span>
-                      </div>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    {canAddAssignee && (
+                      <button
+                        type="button"
+                        onClick={handleOpenAddAssigneeModal}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-white bg-[#1F3864] hover:bg-[#162847] rounded-md transition shadow-2xs cursor-pointer"
+                        title="Add an assignee to work on this ticket"
+                      >
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Add Assignee</span>
+                      </button>
+                    )}
                     {canReassign && (
                       <button
                         type="button"
                         onClick={handleOpenReassignModal}
-                        className="text-xs font-bold text-[#2E74B5] hover:underline px-2 py-1 cursor-pointer"
+                        className="text-xs font-bold text-[#2E74B5] hover:underline px-1 py-0.5 cursor-pointer"
+                        title="Reassign entire team or assignee set"
                       >
-                        Reassign
+                        Reassign All
                       </button>
                     )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  {/* Left Column: All Active Assignees List */}
+                  <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] uppercase font-extrabold text-gray-700 tracking-wider">
+                          Assigned Engineers ({ticket.assignees?.length || 0})
+                        </span>
+                        {canAddAssignee && (
+                          <button
+                            type="button"
+                            onClick={handleOpenAddAssigneeModal}
+                            className="text-[11px] font-bold text-[#1F3864] hover:underline flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span>Add</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {ticket.assignees && ticket.assignees.length > 0 ? (
+                        <div className="space-y-2">
+                          {ticket.assignees.map((a: any, idx: number) => {
+                            const displayName =
+                              a.user?.name || a.user?.username || `User #${a.userId}`;
+                            const isLead = idx === 0;
+                            return (
+                              <div
+                                key={a.id || a.userId}
+                                className="flex items-center justify-between p-2 rounded-lg bg-white border border-gray-200 shadow-2xs group hover:border-gray-300 transition"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-8 h-8 rounded-full bg-[#1F3864] text-white text-xs font-bold flex items-center justify-center ring-2 ring-blue-50 flex-shrink-0">
+                                    {getInitials(displayName)}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="font-bold text-xs text-gray-900 truncate">
+                                        {displayName}
+                                      </span>
+                                      {isLead && (
+                                        <span className="text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-[#1F3864] border border-blue-200 px-1.5 py-0.5 rounded leading-none">
+                                          Lead
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="text-[10px] text-gray-500 block truncate">
+                                      {a.user?.email || "No email"}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {ticket.assignees.length > 1 && canRemoveAssignee && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenRemoveAssigneeModal(a)}
+                                    className="p-1 text-gray-400 hover:text-red-600 rounded hover:bg-red-50 transition cursor-pointer flex-shrink-0"
+                                    title={`Remove ${displayName} from ticket`}
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="py-6 text-center text-xs text-gray-500 italic">
+                          <p>No active assignees on this ticket.</p>
+                          {canAddAssignee && (
+                            <button
+                              type="button"
+                              onClick={handleOpenAddAssigneeModal}
+                              className="mt-2 text-xs font-bold text-[#1F3864] hover:underline"
+                            >
+                              + Assign an engineer
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Collaborating Teams Card */}
@@ -2129,8 +2463,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
                 {/* Remarks feed */}
                 <div className="mt-4 space-y-3 pt-3 border-t border-gray-100">
-                  {historyList.filter((h) => h.remarks).length > 0 ? (
-                    historyList
+                  {sortedHistory.filter((h) => h.remarks).length > 0 ? (
+                    sortedHistory
                       .filter((h) => h.remarks)
                       .map((h) => {
                         const userName =
@@ -2172,7 +2506,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                 </h3>
 
                 <ol className="relative border-l-2 border-slate-200 ml-3.5 mt-5 space-y-4 text-xs">
-                  {historyList.map((h, idx) => {
+                  {sortedHistory.map((h, idx) => {
                     const userName =
                       h.updatedBy?.name ||
                       h.updatedBy?.username ||
@@ -2195,7 +2529,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                       </li>
                     );
                   })}
-                  {historyList.length === 0 && (
+                  {sortedHistory.length === 0 && (
                     <li className="pl-6 text-xs text-gray-500 font-medium italic">No history records found.</li>
                   )}
                 </ol>
@@ -2507,6 +2841,20 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
               </div>
 
               <form onSubmit={handleSubmitReassign} className="mt-4 space-y-4">
+                {(ticket?.status?.behavior === "CLOSED" || ticket?.status?.behavior === "RESOLVED") && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2.5 text-xs text-[#1F3864]">
+                    <AlertCircle className="w-4 h-4 text-[#1F3864] shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold block">Reopening Ticket</span>
+                      This ticket is currently{" "}
+                      <span className="font-semibold">
+                        {(ticket.status as any).label || ticket.status.name || ticket.status.behavior}
+                      </span>
+                      . Reassigning will automatically reopen it to <span className="font-semibold">Open</span> status.
+                    </div>
+                  </div>
+                )}
+
                 {/* Custom Team Dropdown */}
                 <div className="relative">
                   <label className="block text-xs font-bold text-gray-700 mb-1.5">
@@ -2690,6 +3038,281 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* 3.1 Add Assignee Modal (Creator or Permission Holder) */}
+        {activeModal === "addAssignee" && (
+          <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <h3 className="font-bold text-sm text-[#1F3864] flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-[#1F3864]" />
+                  <span>Add Assignee to Ticket</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveModal(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSubmitAddAssignee} className="mt-4 space-y-4">
+                {/* Team Context Dropdown if multiple teams available */}
+                {availableAddAssigneeTeams.length > 1 && (
+                  <div className="relative">
+                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                      Assignee Team Context
+                    </label>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddAssigneeTeamDropdownOpen((prev) => !prev);
+                        setIsAddAssigneeUserDropdownOpen(false);
+                      }}
+                      className="w-full min-h-[42px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
+                    >
+                      <span className="font-bold text-gray-900 truncate">
+                        {selectedAddAssigneeTeamObj?.name || "Select team..."}
+                      </span>
+                      <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                    </button>
+
+                    {isAddAssigneeTeamDropdownOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 space-y-2">
+                        <div className="relative">
+                          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={addAssigneeTeamSearch}
+                            onChange={(e) => setAddAssigneeTeamSearch(e.target.value)}
+                            placeholder="Search teams..."
+                            className="w-full h-8 pl-8 pr-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                          />
+                        </div>
+
+                        <div className="max-h-48 overflow-y-auto space-y-1 divide-y divide-gray-50">
+                          {filteredAddAssigneeTeams.length === 0 ? (
+                            <div className="p-3 text-xs text-gray-400 text-center">
+                              No teams found
+                            </div>
+                          ) : (
+                            filteredAddAssigneeTeams.map((t) => {
+                              const isSelected = (addAssigneeTeamId || ticket?.teamId) === t.id;
+                              return (
+                                <div
+                                  key={t.id}
+                                  onClick={() => {
+                                    setAddAssigneeTeamId(t.id);
+                                    setSelectedAddAssigneeId(null);
+                                    setIsAddAssigneeTeamDropdownOpen(false);
+                                  }}
+                                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
+                                    isSelected
+                                      ? "bg-purple-50 text-purple-900 font-bold"
+                                      : "hover:bg-gray-50 text-gray-800"
+                                  }`}
+                                >
+                                  <span className="truncate">{t.name}</span>
+                                  {isSelected && <Check className="w-4 h-4 text-purple-700 shrink-0" />}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Custom Engineer Selection Dropdown */}
+                <div className="relative">
+                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                    Select Engineer to Assign <span className="text-red-500">*</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddAssigneeUserDropdownOpen((prev) => !prev);
+                      setIsAddAssigneeTeamDropdownOpen(false);
+                    }}
+                    className="w-full min-h-[42px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
+                  >
+                    {selectedAddAssigneeObj ? (
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-6 h-6 rounded-full bg-[#1F3864] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {getInitials(
+                            selectedAddAssigneeObj.name ||
+                              selectedAddAssigneeObj.username ||
+                              `User #${selectedAddAssigneeObj.id}`
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-bold text-xs text-gray-900 block truncate">
+                            {selectedAddAssigneeObj.name ||
+                              selectedAddAssigneeObj.username ||
+                              `User #${selectedAddAssigneeObj.id}`}
+                          </span>
+                          <span className="text-[10px] text-gray-500 block truncate">
+                            {selectedAddAssigneeObj.email}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 font-medium">Select engineer to assign...</span>
+                    )}
+                    <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                  </button>
+
+                  {isAddAssigneeUserDropdownOpen && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 space-y-2">
+                      <div className="relative">
+                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          value={addAssigneeSearch}
+                          onChange={(e) => setAddAssigneeSearch(e.target.value)}
+                          placeholder="Search candidate engineers..."
+                          autoFocus
+                          className="w-full h-8 pl-8 pr-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                        />
+                      </div>
+
+                      <div className="max-h-52 overflow-y-auto space-y-1 divide-y divide-gray-50">
+                        {filteredAddAssignees.length === 0 ? (
+                          <div className="p-3 text-xs text-gray-400 text-center">
+                            {addAssigneeCandidates.length === 0
+                              ? "Loading candidates or no members found in this team's department"
+                              : availableAddAssignees.length === 0
+                              ? "All members in this team are already assigned to this ticket"
+                              : `No engineers matching "${addAssigneeSearch}"`}
+                          </div>
+                        ) : (
+                          filteredAddAssignees.map((userObj: any) => {
+                            const isSelected = selectedAddAssigneeId === userObj.id;
+                            const name =
+                              userObj.name || userObj.username || `User #${userObj.id}`;
+                            const roleName = userObj.role?.name || userObj.userRole?.name;
+                            return (
+                              <div
+                                key={userObj.id}
+                                onClick={() => {
+                                  setSelectedAddAssigneeId(userObj.id);
+                                  setIsAddAssigneeUserDropdownOpen(false);
+                                }}
+                                className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
+                                  isSelected
+                                    ? "bg-blue-50/80 border border-blue-200 text-[#1F3864]"
+                                    : "hover:bg-gray-50 text-gray-800"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-7 h-7 rounded-full bg-[#1F3864] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+                                    {getInitials(name)}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-bold text-xs text-gray-900 block truncate">
+                                      {name}
+                                    </span>
+                                    <span className="text-[10px] text-gray-500 block truncate">
+                                      {userObj.email} {roleName ? `• ${roleName}` : ""}
+                                    </span>
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <Check className="w-4 h-4 text-[#1F3864] shrink-0" />
+                                )}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setActiveModal(null)}
+                    className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!selectedAddAssigneeId || addAssigneeMutation.isPending}
+                    className="px-4 py-1.5 bg-[#1F3864] hover:bg-[#162847] text-white text-xs font-bold rounded shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {addAssigneeMutation.isPending && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    )}
+                    <span>Add Assignee</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 3.2 Remove Assignee Confirmation Modal */}
+        {activeModal === "removeAssignee" && assigneeToRemove && (
+          <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-5 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <h3 className="font-bold text-sm text-red-600 flex items-center gap-2">
+                  <UserMinus className="w-4 h-4" />
+                  <span>Remove Assignee</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveModal(null);
+                    setAssigneeToRemove(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="mt-3 space-y-3">
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Are you sure you want to remove <strong className="text-gray-900">{assigneeToRemove.name}</strong> from this ticket?
+                </p>
+                <p className="text-[11px] text-gray-400 italic">
+                  Remaining assignees will continue handling this ticket.
+                </p>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModal(null);
+                      setAssigneeToRemove(null);
+                    }}
+                    className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmRemoveAssignee}
+                    disabled={removeAssigneeMutation.isPending}
+                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {removeAssigneeMutation.isPending && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    )}
+                    <span>Remove Assignee</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

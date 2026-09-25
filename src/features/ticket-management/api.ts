@@ -291,6 +291,49 @@ export const useReassignTicketMutation = (ticketId: number) => {
   });
 };
 
+export interface AddAssigneePayload {
+  userId: number;
+  teamId?: number;
+}
+
+// POST /api/tickets/:id/assignees — Add assignee to ticket
+export const useAddTicketAssigneeMutation = (ticketId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, AxiosError<any>, AddAssigneePayload>({
+    mutationFn: async (payload) => {
+      const { data } = await apiClient.post(`/tickets/${ticketId}/assignees`, payload);
+      return data?.data ?? data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.history(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["user-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    },
+  });
+};
+
+// DELETE /api/tickets/:id/assignees/:userId — Remove assignee from ticket
+export const useRemoveTicketAssigneeMutation = (ticketId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, AxiosError<any>, number>({
+    mutationFn: async (userId: number) => {
+      const { data } = await apiClient.delete(`/tickets/${ticketId}/assignees/${userId}`);
+      return data?.data ?? data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ticketKeys.detail(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.history(ticketId) });
+      queryClient.invalidateQueries({ queryKey: ticketKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ["user-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    },
+  });
+};
+
 // POST /api/tickets/:id/close — Close ticket
 export const useCloseTicketMutation = (ticketId: number) => {
   const queryClient = useQueryClient();

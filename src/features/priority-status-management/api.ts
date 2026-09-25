@@ -196,3 +196,44 @@ export const useDeleteTicketStatusPermanentlyMutation = () => {
     },
   });
 };
+
+// ============================================================================
+// COLOR REGISTRY API HOOKS
+// ============================================================================
+
+export const useColorRegistryQuery = () => {
+  return useQuery({
+    queryKey: ['color-registry'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{
+        status: string;
+        data: { priorityColors: Record<string, string>; statusColors: Record<string, string> };
+      }>('/color-registry');
+      return data.data;
+    },
+    staleTime: 60000,
+  });
+};
+
+export const useUpdateColorRegistryMutation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      priorityColors?: Record<string, string>;
+      statusColors?: Record<string, string>;
+    }) => {
+      const { data } = await apiClient.put<{
+        status: string;
+        data: { priorityColors: Record<string, string>; statusColors: Record<string, string> };
+      }>('/color-registry', payload);
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['color-registry'] });
+      queryClient.invalidateQueries({ queryKey: ['admin'] });
+      queryClient.invalidateQueries({ queryKey: ['user-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['tickets'] });
+    },
+  });
+};
+

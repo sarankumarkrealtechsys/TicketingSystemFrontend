@@ -78,9 +78,14 @@ export const UserDashboard: React.FC = () => {
       refetchTickets();
       refetchStats();
     };
+    const handleColorsUpdate = () => {
+      refetchStats();
+    };
     window.addEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+    window.addEventListener("rts_colors_updated", handleColorsUpdate);
     return () => {
       window.removeEventListener("rts_masterdata_updated", handleMasterDataUpdate);
+      window.removeEventListener("rts_colors_updated", handleColorsUpdate);
     };
   }, [refetchPriorities, refetchStatuses, refetchTickets, refetchStats]);
 

@@ -123,6 +123,8 @@ export interface TicketActions {
   changeStatus?: boolean;
   changePriority?: boolean;
   reassign?: boolean;
+  addAssignee?: boolean;
+  removeAssignee?: boolean;
   close?: boolean;
   addRemark?: boolean;
   logTime?: boolean;

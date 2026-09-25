@@ -1,3 +1,5 @@
+import { apiClient } from '@/shared/api';
+
 export interface ColorPreset {
   name: string;
   hex: string;
@@ -100,6 +102,11 @@ export const PRESET_COLORS: ColorPreset[] = [
   },
 ];
 
+export interface RemoteColorRegistry {
+  priorityColors?: Record<string, string>;
+  statusColors?: Record<string, string>;
+}
+
 const STORAGE_KEY_PRIORITY_COLORS = 'rts_priority_colors_v2';
 const STORAGE_KEY_STATUS_COLORS = 'rts_status_colors_v2';
 
@@ -118,6 +125,92 @@ function setStoredMap(key: string, map: Record<string, string>): void {
     localStorage.setItem(key, JSON.stringify(map));
   } catch {
     // Ignore quota errors
+  }
+}
+
+/**
+ * Initializes and merges the remote color registry overrides into local storage and memory,
+ * firing an update event across the current application window.
+ */
+export function initColorRegistry(remoteRegistry?: RemoteColorRegistry): void {
+  if (!remoteRegistry) return;
+
+  let changed = false;
+
+  if (remoteRegistry.priorityColors && Object.keys(remoteRegistry.priorityColors).length > 0) {
+    const currentP = getStoredMap(STORAGE_KEY_PRIORITY_COLORS);
+    const mergedP = { ...currentP, ...remoteRegistry.priorityColors };
+    setStoredMap(STORAGE_KEY_PRIORITY_COLORS, mergedP);
+    changed = true;
+  }
+
+  if (remoteRegistry.statusColors && Object.keys(remoteRegistry.statusColors).length > 0) {
+    const currentS = getStoredMap(STORAGE_KEY_STATUS_COLORS);
+    const mergedS = { ...currentS, ...remoteRegistry.statusColors };
+    setStoredMap(STORAGE_KEY_STATUS_COLORS, mergedS);
+    changed = true;
+  }
+
+  if (changed && typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('rts_colors_updated'));
+  }
+}
+
+/**
+ * Background helper to sync local color adjustments to PostgreSQL system_settings and broadcast.
+ */
+async function syncColorOverrideToServer(payload: {
+  priorityColors?: Record<string, string>;
+  statusColors?: Record<string, string>;
+}): Promise<void> {
+  try {
+    await apiClient.put('/color-registry', payload);
+  } catch (err) {
+    console.warn('[colorRegistry] Failed to sync color override to server:', err);
+  }
+}
+
+/**
+ * Fetches the global color registry from the server and hydrates local storage.
+ * Also auto-migrates any pre-existing local storage custom colors to the server.
+ */
+export async function fetchAndSyncColorRegistry(): Promise<void> {
+  try {
+    const { data } = await apiClient.get<{
+      status: string;
+      data: RemoteColorRegistry;
+    }>('/color-registry');
+
+    const remote = data?.data || { priorityColors: {}, statusColors: {} };
+    initColorRegistry(remote);
+
+    // If local storage has custom colors that are not yet on the server (e.g. created previously),
+    // automatically sync them up to PostgreSQL so all users receive them.
+    const localP = getStoredMap(STORAGE_KEY_PRIORITY_COLORS);
+    const localS = getStoredMap(STORAGE_KEY_STATUS_COLORS);
+
+    const missingP: Record<string, string> = {};
+    for (const [k, v] of Object.entries(localP)) {
+      if (!remote.priorityColors?.[k]) {
+        missingP[k] = v;
+      }
+    }
+
+    const missingS: Record<string, string> = {};
+    for (const [k, v] of Object.entries(localS)) {
+      if (!remote.statusColors?.[k]) {
+        missingS[k] = v;
+      }
+    }
+
+    if (Object.keys(missingP).length > 0 || Object.keys(missingS).length > 0) {
+      await syncColorOverrideToServer({
+        priorityColors: missingP,
+        statusColors: missingS,
+      });
+    }
+  } catch (err) {
+    console.warn('[colorRegistry] Failed to fetch remote color registry:', err);
   }
 }
 
@@ -158,18 +251,24 @@ export function getPriorityColor(priorityId?: number | null, label?: string): st
 }
 
 /**
- * Saves custom color override for a priority item keyed by both ID and Label.
+ * Saves custom color override for a priority item keyed by both ID and Label,
+ * persists to PostgreSQL, and broadcasts to other users in real time.
  */
 export function setPriorityColor(priorityId: number, hex: string, label?: string): void {
   const map = getStoredMap(STORAGE_KEY_PRIORITY_COLORS);
   map[String(priorityId)] = hex;
+  const updates: Record<string, string> = { [String(priorityId)]: hex };
   if (label) {
-    map[`label_${label.toLowerCase().trim()}`] = hex;
+    const labelKey = `label_${label.toLowerCase().trim()}`;
+    map[labelKey] = hex;
+    updates[labelKey] = hex;
   }
   setStoredMap(STORAGE_KEY_PRIORITY_COLORS, map);
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('rts_colors_updated'));
   }
+  // Synchronize to backend for persistence & broadcast
+  syncColorOverrideToServer({ priorityColors: updates });
 }
 
 /**
@@ -220,18 +319,24 @@ export function getStatusColor(
 }
 
 /**
- * Saves custom color override for a ticket status keyed by both ID and Label.
+ * Saves custom color override for a ticket status keyed by both ID and Label,
+ * persists to PostgreSQL, and broadcasts to other users in real time.
  */
 export function setStatusColor(statusId: number, hex: string, label?: string): void {
   const map = getStoredMap(STORAGE_KEY_STATUS_COLORS);
   map[String(statusId)] = hex;
+  const updates: Record<string, string> = { [String(statusId)]: hex };
   if (label) {
-    map[`label_${label.toLowerCase().trim()}`] = hex;
+    const labelKey = `label_${label.toLowerCase().trim()}`;
+    map[labelKey] = hex;
+    updates[labelKey] = hex;
   }
   setStoredMap(STORAGE_KEY_STATUS_COLORS, map);
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('rts_colors_updated'));
   }
+  // Synchronize to backend for persistence & broadcast
+  syncColorOverrideToServer({ statusColors: updates });
 }
 
 /**

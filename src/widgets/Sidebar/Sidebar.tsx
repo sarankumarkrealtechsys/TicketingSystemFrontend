@@ -124,18 +124,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Effective collapsed mode: only collapsed on desktop if mobile drawer is not open
   const isCollapsedMode = collapsed && !mobileOpen;
 
-  // Tickets accordion toggle state (open only when currently on a ticket route)
+  // ── Route Activity Detection ──
   const isTicketActive = location.pathname.startsWith("/tickets");
-  const [ticketsOpen, setTicketsOpen] = useState(() => isTicketActive);
+  const isManagementActive = [
+    "/projects",
+    "/admin/departments",
+    "/teams",
+    "/admin/priorities",
+    "/users",
+  ].some((p) => location.pathname.startsWith(p));
+  const isWorkspaceActive = [
+    "/my-team",
+    "/my-department",
+    "/my-permissions",
+    "/my-ticket-reports",
+  ].some((p) => location.pathname.startsWith(p));
 
-  // Sync accordion collapse state on route navigation
+  // Accordion toggle states (auto-initialized based on current route)
+  const [ticketsOpen, setTicketsOpen] = useState(() => isTicketActive);
+  const [managementOpen, setManagementOpen] = useState(() => isManagementActive);
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => isWorkspaceActive);
+
+  // Sync accordion expansion states on route navigation
   React.useEffect(() => {
-    if (isTicketActive) {
-      setTicketsOpen(true);
-    } else {
-      setTicketsOpen(false);
-    }
-  }, [location.pathname, isTicketActive]);
+    if (isTicketActive) setTicketsOpen(true);
+    if (isManagementActive) setManagementOpen(true);
+    if (isWorkspaceActive) setWorkspaceOpen(true);
+  }, [location.pathname, isTicketActive, isManagementActive, isWorkspaceActive]);
 
   const handleNavClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -152,6 +167,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setTicketsOpen((prev) => !prev);
     }
   };
+
+  const handleManagementClick = () => {
+    if (isCollapsedMode) {
+      if (canViewProjects) navigate("/projects");
+      else if (hasDeptGlobal) navigate("/admin/departments");
+      else if (hasTeamGlobal) navigate("/teams");
+      else if (hasPriorityOrStatusAccess) navigate("/admin/priorities");
+      else if (hasUserManagementAccess) navigate("/users");
+      onCloseMobile?.();
+    } else {
+      setManagementOpen((prev) => !prev);
+    }
+  };
+
+  const handleWorkspaceClick = () => {
+    if (isCollapsedMode) {
+      if (hasTeamAny && !hasTeamGlobal) navigate("/my-team");
+      else if (hasDeptAny && !hasDeptGlobal) navigate("/my-department");
+      else if (!hasRoleManage) navigate("/my-permissions");
+      else if (hasHistoryAny && !hasHistoryGlobal) navigate("/my-ticket-reports");
+      onCloseMobile?.();
+    } else {
+      setWorkspaceOpen((prev) => !prev);
+    }
+  };
+
+  // Group Visibility Flags
+  const showManagementTab =
+    canViewProjects ||
+    hasDeptGlobal ||
+    hasTeamGlobal ||
+    hasPriorityOrStatusAccess ||
+    hasUserManagementAccess;
+
+  const showMyDepartment = hasDeptAny && !hasDeptGlobal;
+  const showMyTeam = hasTeamAny && !hasTeamGlobal;
+  const showMyPermissions = !hasRoleManage;
+  const showMyTicketReports = hasHistoryAny && !hasHistoryGlobal;
+
+  const showWorkspaceTab =
+    showMyTeam || showMyDepartment || showMyPermissions || showMyTicketReports;
 
   // Sub-link class builder for accordion children
   const subLinkClass = (isActive: boolean) =>
@@ -238,7 +294,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
     );
   };
 
-  // ── Tickets Accordion block (shared between admin + user views) ──
+  // Sub-Link component for clean, accessible accordion children
+  const SubLinkItem: React.FC<{
+    to: string;
+    icon: string;
+    label: string;
+    exact?: boolean;
+  }> = ({ to, icon, label, exact }) => (
+    <NavLink
+      to={to}
+      end={exact}
+      className={({ isActive }) =>
+        `flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all ${
+          isActive
+            ? "bg-white/15 text-white font-semibold border-l-2 border-[#1E88E5] pl-2.5 shadow-xs"
+            : "text-white/70 hover:bg-white/10 hover:text-white"
+        }`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <span
+            className={`material-symbols-outlined text-[16px] transition-colors shrink-0 ${
+              isActive ? "text-[#1E88E5]" : "text-white/60"
+            }`}
+          >
+            {icon}
+          </span>
+          <span className="truncate">{label}</span>
+        </>
+      )}
+    </NavLink>
+  );
+
+  // ── 1. Tickets Accordion block ──
   const TicketsAccordion = () => (
     <div
       className={`pt-0.5 ${
@@ -256,7 +345,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     ? "bg-white/15 text-white ring-1 ring-white/20 shadow-sm"
                     : "text-white/70 hover:bg-white/10 hover:text-white"
                 }`
-              : `w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-[13px] font-medium group ${
+              : `w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-[13px] font-medium group cursor-pointer ${
                   isTicketActive && !ticketsOpen ? "bg-white/10 text-white" : ""
                 }`
           }
@@ -292,23 +381,208 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sub-items (expanded mode only) */}
       {ticketsOpen && !isCollapsedMode && (
-        <div className="pl-9 pr-2 py-1 space-y-1 transition-all duration-200">
+        <div className="pl-6 pr-2 py-1 space-y-1 transition-all duration-200">
           {canCreateTicket && (
-            <NavLink
+            <SubLinkItem
               to="/tickets/create"
-              className={({ isActive }) => subLinkClass(isActive)}
-            >
-              Create Ticket
-            </NavLink>
+              icon="add_circle"
+              label="Create Ticket"
+            />
           )}
           {canViewTickets && (
-            <NavLink
+            <SubLinkItem
               to="/tickets"
-              end
-              className={({ isActive }) => subLinkClass(isActive)}
-            >
-              My Tickets
-            </NavLink>
+              exact
+              icon="inbox"
+              label="My Tickets"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── 2. Management Accordion block (Organization Administration) ──
+  const ManagementAccordion = () => (
+    <div
+      className={`pt-0.5 ${
+        isCollapsedMode ? "w-full flex flex-col items-center" : ""
+      }`}
+    >
+      <TooltipWrap label="Management">
+        <button
+          onClick={handleManagementClick}
+          type="button"
+          className={
+            isCollapsedMode
+              ? `relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                  isManagementActive
+                    ? "bg-white/15 text-white ring-1 ring-white/20 shadow-sm"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                }`
+              : `w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-[13px] font-medium group cursor-pointer ${
+                  isManagementActive && !managementOpen
+                    ? "bg-white/10 text-white"
+                    : ""
+                }`
+          }
+        >
+          {isManagementActive && isCollapsedMode && (
+            <span className="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1E88E5] rounded-r-full shadow-[0_0_8px_rgba(30,136,229,0.6)]" />
+          )}
+
+          <span
+            className={`material-symbols-outlined text-[20px] transition-colors shrink-0 ${
+              isManagementActive
+                ? "text-[#1E88E5]"
+                : "text-white/70 group-hover:text-white"
+            }`}
+          >
+            business_center
+          </span>
+
+          {!isCollapsedMode && (
+            <div className="flex items-center justify-between flex-1 ml-3">
+              <span>Management</span>
+              <span
+                className={`material-symbols-outlined text-[18px] text-white/60 transition-transform duration-200 ${
+                  managementOpen ? "rotate-180" : ""
+                }`}
+              >
+                expand_more
+              </span>
+            </div>
+          )}
+        </button>
+      </TooltipWrap>
+
+      {/* Sub-items (expanded mode only) */}
+      {managementOpen && !isCollapsedMode && (
+        <div className="pl-6 pr-2 py-1 space-y-1 transition-all duration-200">
+          {canViewProjects && (
+            <SubLinkItem
+              to="/projects"
+              icon="folder_managed"
+              label="Projects Management"
+            />
+          )}
+          {hasDeptGlobal && (
+            <SubLinkItem
+              to="/admin/departments"
+              icon="corporate_fare"
+              label="Department Management"
+            />
+          )}
+          {hasTeamGlobal && (
+            <SubLinkItem
+              to="/teams"
+              icon="groups"
+              label="Team Management"
+            />
+          )}
+          {hasPriorityOrStatusAccess && (
+            <SubLinkItem
+              to="/admin/priorities"
+              icon="tune"
+              label="Priorities & Statuses"
+            />
+          )}
+          {hasUserManagementAccess && (
+            <SubLinkItem
+              to="/users"
+              icon="person_search"
+              label="User Management"
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // ── 3. My Workspace Accordion block (Personal/Member Views) ──
+  const WorkspaceAccordion = () => (
+    <div
+      className={`pt-0.5 ${
+        isCollapsedMode ? "w-full flex flex-col items-center" : ""
+      }`}
+    >
+      <TooltipWrap label="My Workspace">
+        <button
+          onClick={handleWorkspaceClick}
+          type="button"
+          className={
+            isCollapsedMode
+              ? `relative w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 ${
+                  isWorkspaceActive
+                    ? "bg-white/15 text-white ring-1 ring-white/20 shadow-sm"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
+                }`
+              : `w-full flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 hover:text-white transition-colors text-[13px] font-medium group cursor-pointer ${
+                  isWorkspaceActive && !workspaceOpen
+                    ? "bg-white/10 text-white"
+                    : ""
+                }`
+          }
+        >
+          {isWorkspaceActive && isCollapsedMode && (
+            <span className="absolute -left-[14px] top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1E88E5] rounded-r-full shadow-[0_0_8px_rgba(30,136,229,0.6)]" />
+          )}
+
+          <span
+            className={`material-symbols-outlined text-[20px] transition-colors shrink-0 ${
+              isWorkspaceActive
+                ? "text-[#1E88E5]"
+                : "text-white/70 group-hover:text-white"
+            }`}
+          >
+            workspaces
+          </span>
+
+          {!isCollapsedMode && (
+            <div className="flex items-center justify-between flex-1 ml-3">
+              <span>My Workspace</span>
+              <span
+                className={`material-symbols-outlined text-[18px] text-white/60 transition-transform duration-200 ${
+                  workspaceOpen ? "rotate-180" : ""
+                }`}
+              >
+                expand_more
+              </span>
+            </div>
+          )}
+        </button>
+      </TooltipWrap>
+
+      {/* Sub-items (expanded mode only) */}
+      {workspaceOpen && !isCollapsedMode && (
+        <div className="pl-6 pr-2 py-1 space-y-1 transition-all duration-200">
+          {showMyTeam && (
+            <SubLinkItem
+              to="/my-team"
+              icon="groups"
+              label="My Team"
+            />
+          )}
+          {showMyDepartment && (
+            <SubLinkItem
+              to="/my-department"
+              icon="domain"
+              label="My Department"
+            />
+          )}
+          {showMyPermissions && (
+            <SubLinkItem
+              to="/my-permissions"
+              icon="verified_user"
+              label="My Permissions"
+            />
+          )}
+          {showMyTicketReports && (
+            <SubLinkItem
+              to="/my-ticket-reports"
+              icon="description"
+              label="My Ticket Reports"
+            />
           )}
         </div>
       )}
@@ -491,7 +765,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ) : (
               /* ──────────────── Unified Permission-Based Navigation ──────────────── */
               <>
-                {/* ── Dashboard ── */}
+                {/* ── 1. Core Top-Level Navigation: Dashboard & Tickets ── */}
                 {hasGlobalDashboard ? (
                   <SidebarLink
                     to="/admin/dashboard"
@@ -510,67 +784,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 )}
 
-                {/* ── Tickets Accordion ── */}
                 {showTicketsAccordion && <TicketsAccordion />}
 
-                {/* ── Projects Management ── */}
-                {canViewProjects && (
-                  <SidebarLink
-                    to="/projects"
-                    icon="folder_managed"
-                    label="Projects Management"
-                  />
-                )}
+                {/* ── 2. Management Tab (Organization Administration) ── */}
+                {showManagementTab && <ManagementAccordion />}
 
-                {/* ── Department: GLOBAL → Management page, non-GLOBAL → My Department ── */}
-                {hasDeptGlobal ? (
-                  <SidebarLink
-                    to="/admin/departments"
-                    icon="corporate_fare"
-                    label="Department Management"
-                  />
-                ) : hasDeptAny ? (
-                  <SidebarLink
-                    to="/my-department"
-                    icon="domain"
-                    label="My Department"
-                  />
-                ) : null}
+                {/* ── 3. My Workspace Tab (Member / Personal Operations) ── */}
+                {showWorkspaceTab && <WorkspaceAccordion />}
 
-                {/* ── Team: GLOBAL → Management page, non-GLOBAL → My Team ── */}
-                {hasTeamGlobal ? (
-                  <SidebarLink
-                    to="/teams"
-                    icon="groups"
-                    label="Team Management"
-                  />
-                ) : hasTeamAny ? (
-                  <SidebarLink
-                    to="/my-team"
-                    icon="groups"
-                    label="My Team"
-                  />
-                ) : null}
-
-                {/* ── Priorities & Statuses ── */}
-                {hasPriorityOrStatusAccess && (
-                  <SidebarLink
-                    to="/admin/priorities"
-                    icon="tune"
-                    label="Priorities & Statuses"
-                  />
-                )}
-
-                {/* ── User Management (GLOBAL only) ── */}
-                {hasUserManagementAccess && (
-                  <SidebarLink
-                    to="/users"
-                    icon="person_search"
-                    label="User Management"
-                  />
-                )}
-
-                {/* ── Roles & Permissions ── */}
+                {/* ── 4. Standalone Enterprise Governance Modules (Outside) ── */}
                 {hasRoleManage && (
                   <SidebarLink
                     to="/roles"
@@ -579,36 +801,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   />
                 )}
 
-                {/* ── Audit / Ticket Reports: GLOBAL → Org-wide audit, non-GLOBAL → My Ticket Reports ── */}
-                {hasHistoryGlobal ? (
+                {hasHistoryGlobal && (
                   <SidebarLink
                     to="/audit"
                     icon="history_edu"
                     label="Audit Reports & History"
                   />
-                ) : hasHistoryAny ? (
-                  <SidebarLink
-                    to="/my-ticket-reports"
-                    icon="description"
-                    label="My Ticket Reports"
-                  />
-                ) : null}
+                )}
 
-                {/* ── Settings (SYSTEM_SETTINGS_MANAGE — GLOBAL only) ── */}
                 {hasSettings && (
                   <SidebarLink
                     to="/settings"
                     icon="settings"
                     label="Settings"
-                  />
-                )}
-
-                {/* ── My Permissions (shown to non-admin users without Roles & Permissions management) ── */}
-                {!hasRoleManage && (
-                  <SidebarLink
-                    to="/my-permissions"
-                    icon="verified_user"
-                    label="My Permissions"
                   />
                 )}
               </>

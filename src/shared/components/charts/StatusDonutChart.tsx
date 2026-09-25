@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getStatusColor } from "@/features/priority-status-management/colorRegistry";
 
@@ -45,6 +45,32 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const [isAnimated, setIsAnimated] = useState(false);
   const [, setColorTick] = useState(0);
+  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = (key: string) => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+      leaveTimeoutRef.current = null;
+    }
+    setHoveredKey(key);
+  };
+
+  const handleMouseLeave = () => {
+    if (leaveTimeoutRef.current) {
+      clearTimeout(leaveTimeoutRef.current);
+    }
+    leaveTimeoutRef.current = setTimeout(() => {
+      setHoveredKey(null);
+    }, 40);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (leaveTimeoutRef.current) {
+        clearTimeout(leaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleColorsUpdated = () => setColorTick((t) => t + 1);
@@ -206,8 +232,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
                     }
                     strokeDashoffset={isAnimated ? slice.offset : 0}
                     strokeWidth={isHovered ? 16 : 12}
-                    onMouseEnter={() => setHoveredKey(slice.key)}
-                    onMouseLeave={() => setHoveredKey(null)}
+                    onMouseEnter={() => handleMouseEnter(slice.key)}
+                    onMouseLeave={handleMouseLeave}
                     style={{
                       transition:
                         "stroke-dasharray 1.4s cubic-bezier(0.16, 1, 0.3, 1), stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1), stroke-width 0.5s ease-out, opacity 0.5s ease-out, filter 0.5s ease-out",
@@ -229,10 +255,10 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
               })}
             </svg>
 
-            {/* Centered Total Display (Always static total count, no status text popup on hover) */}
+            {/* Centered Count Display: shows total tickets by default, or hovered status available count */}
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center select-none pointer-events-none p-2">
               <span className="font-bold text-[22px] text-[#1A1A1A] leading-none font-mono">
-                {total}
+                {activeSlice ? activeSlice.count : total}
               </span>
               <span className="text-[9px] font-bold text-[#5F6368] tracking-wider uppercase mt-1">
                 TICKETS
@@ -248,8 +274,8 @@ export const StatusDonutChart: React.FC<StatusDonutChartProps> = ({
               return (
                 <div
                   key={item.key}
-                  onMouseEnter={() => setHoveredKey(item.key)}
-                  onMouseLeave={() => setHoveredKey(null)}
+                  onMouseEnter={() => handleMouseEnter(item.key)}
+                  onMouseLeave={handleMouseLeave}
                   className={`flex items-center justify-between text-[12px] p-1.5 rounded-md transition-all duration-500 ease-out cursor-pointer ${
                     isHovered
                       ? "bg-gray-100/90 font-bold ring-1 ring-black/10 scale-[1.01]"
