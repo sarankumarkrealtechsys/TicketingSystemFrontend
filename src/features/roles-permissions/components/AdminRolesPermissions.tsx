@@ -430,22 +430,22 @@ export const AdminRolesPermissions: React.FC = () => {
             {/* ========================================================================= */}
             {/* 1. HORIZONTAL ROLES SELECTOR BAR */}
             {/* ========================================================================= */}
-            <div className="bg-white rounded-2xl p-4 shadow-xs border border-[#E2E8F0] flex flex-col gap-3.5">
+            <div className="bg-white rounded-xl sm:rounded-2xl p-2.5 sm:p-4 shadow-xs border border-[#E2E8F0] flex flex-col gap-2.5 sm:gap-3.5">
               {/* Filter Controls Row */}
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-2 border-b border-gray-100">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3 pb-2 border-b border-gray-100">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs uppercase tracking-wider text-[#1F3864]">
+                  <span className="font-bold text-[11px] sm:text-xs uppercase tracking-wider text-[#1F3864]">
                     Select Role:
                   </span>
-                  <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded-full">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-600 bg-gray-100 px-2 sm:px-2.5 py-0.5 rounded-full">
                     {roles.length} Roles Defined
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2.5 flex-wrap">
+                <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
                   {/* Search Input */}
                   <div className="relative w-full sm:w-56">
-                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[16px]">
+                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-[15px] sm:text-[16px]">
                       search
                     </span>
                     <input
@@ -453,16 +453,16 @@ export const AdminRolesPermissions: React.FC = () => {
                       value={roleSearchQuery}
                       onChange={(e) => setRoleSearchQuery(e.target.value)}
                       placeholder="Search roles..."
-                      className="w-full h-8 pl-8 pr-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all"
+                      className="w-full h-7 sm:h-8 pl-8 pr-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-lg text-[11px] sm:text-xs text-[#0F172A] placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all"
                     />
                   </div>
 
                   {/* Status Filter Tabs */}
-                  <div className="flex items-center gap-1 p-1 bg-[#F1F5F9] rounded-lg text-[11px] font-bold">
+                  <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-[#F1F5F9] rounded-lg text-[10px] sm:text-[11px] font-bold">
                     <button
                       type="button"
                       onClick={() => setStatusFilter('ALL')}
-                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition-all cursor-pointer ${
                         statusFilter === 'ALL'
                           ? 'bg-white text-[#1F3864] shadow-xs'
                           : 'text-gray-500 hover:text-gray-900'
@@ -473,7 +473,7 @@ export const AdminRolesPermissions: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setStatusFilter('ACTIVE')}
-                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition-all cursor-pointer ${
                         statusFilter === 'ACTIVE'
                           ? 'bg-white text-emerald-800 shadow-xs'
                           : 'text-gray-500 hover:text-gray-900'
@@ -484,7 +484,7 @@ export const AdminRolesPermissions: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setStatusFilter('INACTIVE')}
-                      className={`px-2.5 py-1 rounded-md transition-all cursor-pointer ${
+                      className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md transition-all cursor-pointer ${
                         statusFilter === 'INACTIVE'
                           ? 'bg-white text-amber-800 shadow-xs'
                           : 'text-gray-500 hover:text-gray-900'
@@ -496,8 +496,8 @@ export const AdminRolesPermissions: React.FC = () => {
                 </div>
               </div>
 
-              {/* Horizontal Scrollable Role Cards Strip */}
-              <div className="flex items-center gap-3 overflow-x-auto pb-1.5 pt-0.5 scrollbar-thin">
+              {/* Role Cards List: Vertical Stack on Mobile, Horizontal Scroll on Desktop */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 max-h-64 sm:max-h-none overflow-y-auto sm:overflow-y-visible sm:overflow-x-auto p-0.5 scrollbar-thin">
                 {rolesLoading ? (
                   <div className="py-4 px-6 flex items-center gap-2 text-gray-400 text-xs">
                     <div className="w-4 h-4 border-2 border-[#1F3864]/20 border-t-[#1F3864] rounded-full animate-spin" />
@@ -516,7 +516,7 @@ export const AdminRolesPermissions: React.FC = () => {
                         key={role.id}
                         type="button"
                         onClick={() => setSelectedRoleId(role.id)}
-                        className={`group shrink-0 px-4 py-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center gap-3 ${
+                        className={`group w-full sm:w-auto sm:shrink-0 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl border text-left transition-all cursor-pointer flex items-center justify-between sm:justify-start gap-2.5 sm:gap-3 ${
                           isSelected
                             ? 'bg-[#1F3864] text-white border-[#1F3864] shadow-sm ring-2 ring-[#1F3864]/20'
                             : isArchived
@@ -524,50 +524,61 @@ export const AdminRolesPermissions: React.FC = () => {
                             : 'bg-white border-[#E2E8F0] hover:bg-[#F8FAFC] hover:border-gray-300 text-gray-800'
                         }`}
                       >
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                            isSelected
-                              ? 'bg-white/15 text-white'
-                              : isArchived
-                              ? 'bg-amber-100 text-amber-700'
-                              : 'bg-blue-50 text-[#1F3864]'
-                          }`}
-                        >
-                          <span className="material-symbols-outlined text-[18px]">
-                            {getRoleIcon(role.name)}
-                          </span>
-                        </div>
-
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`text-xs font-bold tracking-tight ${
-                                isSelected ? 'text-white' : 'text-[#0F172A]'
-                              }`}
-                            >
-                              {role.name}
-                            </span>
-                            <span
-                              className={`px-1.5 py-0.2 text-[9px] font-extrabold uppercase rounded ${
-                                isSelected
-                                  ? 'bg-white/20 text-white'
-                                  : isSystem
-                                  ? 'bg-blue-100 text-blue-800'
-                                  : isArchived
-                                  ? 'bg-amber-100 text-amber-800'
-                                  : 'bg-emerald-100 text-emerald-800'
-                              }`}
-                            >
-                              {isSystem ? 'System' : isArchived ? 'Archived' : 'Active'}
-                            </span>
-                          </div>
-                          <span
-                            className={`text-[11px] font-medium mt-0.5 ${
-                              isSelected ? 'text-white/80' : 'text-gray-500'
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                          <div
+                            className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                              isSelected
+                                ? 'bg-white/15 text-white'
+                                : isArchived
+                                ? 'bg-amber-100 text-amber-700'
+                                : 'bg-blue-50 text-[#1F3864]'
                             }`}
                           >
-                            {role.userCount} {role.userCount === 1 ? 'User' : 'Users'}
-                          </span>
+                            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">
+                              {getRoleIcon(role.name)}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col min-w-0">
+                            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                              <span
+                                className={`text-xs font-bold tracking-tight truncate ${
+                                  isSelected ? 'text-white' : 'text-[#0F172A]'
+                                }`}
+                              >
+                                {role.name}
+                              </span>
+                              <span
+                                className={`px-1.5 py-0.2 text-[8px] sm:text-[9px] font-extrabold uppercase rounded ${
+                                  isSelected
+                                    ? 'bg-white/20 text-white'
+                                    : isSystem
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : isArchived
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-emerald-100 text-emerald-800'
+                                }`}
+                              >
+                                {isSystem ? 'System' : isArchived ? 'Archived' : 'Active'}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] sm:text-[11px] font-medium mt-0.5 ${
+                                isSelected ? 'text-white/80' : 'text-gray-500'
+                              }`}
+                            >
+                              {role.userCount} {role.userCount === 1 ? 'User' : 'Users'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Mobile right-side checkmark indicator */}
+                        <div className="flex items-center gap-2 sm:hidden shrink-0">
+                          {isSelected && (
+                            <span className="material-symbols-outlined text-white text-[18px]">
+                              check_circle
+                            </span>
+                          )}
                         </div>
                       </button>
                     );
