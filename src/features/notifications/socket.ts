@@ -2,9 +2,10 @@ import { io, Socket } from "socket.io-client";
 
 // Normalize base URL identically to shared/api/axios.ts to ensure single source of truth
 const rawBaseUrl = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
-const socketServerUrl = rawBaseUrl
-  ? rawBaseUrl.replace(/\/api\/?$/, "")
-  : undefined;
+const socketServerUrl =
+  rawBaseUrl && !rawBaseUrl.startsWith("/")
+    ? rawBaseUrl.replace(/\/api\/?$/, "")
+    : undefined;
 
 let socketInstance: Socket | null = null;
 
