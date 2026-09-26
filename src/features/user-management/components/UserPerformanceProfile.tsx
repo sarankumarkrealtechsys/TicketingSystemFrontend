@@ -276,23 +276,23 @@ export const UserPerformanceProfile: React.FC = () => {
 
         {/* Date Filter & Refresh */}
         <div className="flex items-center gap-2.5 self-stretch lg:self-auto">
-          <div className="w-48">
+          <div className="w-52">
             <SelectDropdown
               value={dateRange}
               onChange={(val) => setDateRange(val)}
               options={DATE_RANGE_OPTIONS}
-              size="sm"
+              size="md"
             />
           </div>
 
           <button
             type="button"
             onClick={() => refetch()}
-            className="h-9 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
+            className="h-10 px-4 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-sm font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 active:scale-[0.98] cursor-pointer"
             title="Refresh Performance Data"
           >
             <span
-              className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}
+              className={`material-symbols-outlined text-[18px] ${isFetching ? "animate-spin" : ""}`}
             >
               refresh
             </span>
@@ -419,27 +419,27 @@ export const UserPerformanceProfile: React.FC = () => {
                 value={ticketSearch}
                 onChange={(e) => setTicketSearch(e.target.value)}
                 placeholder="Search ticket # or title..."
-                className="w-full h-9 pl-8 pr-3 text-xs bg-[#F9FAFB] dark:bg-[#1A283E] border border-gray-200 dark:border-[#283A55] rounded-lg focus:outline-none focus:border-[#1F3864]"
+                className="w-full h-10 pl-8 pr-3 text-sm bg-[#F9FAFB] dark:bg-[#1A283E] border border-gray-200 dark:border-[#283A55] rounded-lg focus:outline-none focus:border-[#1F3864]"
               />
             </div>
 
             {/* Status Filter */}
-            <div className="w-40">
+            <div className="w-44">
               <SelectDropdown
                 value={ticketStatusFilter}
                 onChange={(val) => setTicketStatusFilter(val)}
                 options={STATUS_FILTER_OPTIONS}
-                size="sm"
+                size="md"
               />
             </div>
 
             {/* Priority Filter */}
-            <div className="w-40">
+            <div className="w-44">
               <SelectDropdown
                 value={ticketPriorityFilter}
                 onChange={(val) => setTicketPriorityFilter(val)}
                 options={PRIORITY_FILTER_OPTIONS}
-                size="sm"
+                size="md"
               />
             </div>
           </div>

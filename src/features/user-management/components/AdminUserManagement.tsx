@@ -285,31 +285,31 @@ export const AdminUserManagement: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search name, username, email..."
-                className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all"
+                className="w-full h-10 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#1F3864] transition-all shadow-2xs"
               />
             </div>
 
             {/* Custom Dropdown Filters Row */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap items-center gap-2 sm:gap-2.5 w-full lg:w-auto">
               {/* Department SelectDropdown */}
               <div className="w-full sm:w-48">
                 <SelectDropdown
                   value={departmentFilter}
                   onChange={(val) => setDepartmentFilter(val)}
                   options={departmentOptions}
-                  size="sm"
+                  size="md"
                   searchable
                   searchPlaceholder="Filter department..."
                 />
               </div>
 
               {/* Role SelectDropdown */}
-              <div className="w-full sm:w-40">
+              <div className="w-full sm:w-44">
                 <SelectDropdown
                   value={roleFilter}
                   onChange={(val) => setRoleFilter(val)}
                   options={roleOptions}
-                  size="sm"
+                  size="md"
                   searchable
                   searchPlaceholder="Filter role..."
                 />

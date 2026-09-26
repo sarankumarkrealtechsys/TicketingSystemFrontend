@@ -15,8 +15,11 @@ export { useProjectsQuery, usePrioritiesQuery, useStatusesQuery };
 
 export const userDashboardKeys = {
   all: (userId?: number | string) => ["user-dashboard", userId ?? "anon"] as const,
-  stats: (userId: number | string | undefined, scope: string = "personal") =>
-    [...userDashboardKeys.all(userId), "stats", scope] as const,
+  stats: (
+    userId: number | string | undefined,
+    scope: string = "personal",
+    dateFilters?: { date?: string; startDate?: string; endDate?: string },
+  ) => [...userDashboardKeys.all(userId), "stats", scope, dateFilters] as const,
   tickets: (userId: number | string | undefined, params: UserTicketQueryParams) =>
     [...userDashboardKeys.all(userId), "tickets", params] as const,
 };
@@ -25,15 +28,21 @@ export const userDashboardKeys = {
 export const useUserTicketStatsQuery = (
   userId?: number | string,
   scope: string = "personal",
+  dateFilters?: { date?: string; startDate?: string; endDate?: string },
 ) => {
   return useQuery<TicketStatsData>({
-    queryKey: userDashboardKeys.stats(userId, scope),
+    queryKey: userDashboardKeys.stats(userId, scope, dateFilters),
     queryFn: async () => {
+      const cleanParams: Record<string, any> = { scope };
+      if (dateFilters?.date) cleanParams.date = dateFilters.date;
+      if (dateFilters?.startDate) cleanParams.startDate = dateFilters.startDate;
+      if (dateFilters?.endDate) cleanParams.endDate = dateFilters.endDate;
+
       const { data } = await apiClient.get<{
         status: string;
         data: TicketStatsData;
       }>("/tickets/stats", {
-        params: { scope },
+        params: cleanParams,
       });
       return data.data;
     },
@@ -60,7 +69,11 @@ export const useUserTicketsTableQuery = (
           value !== null &&
           value !== "all"
         ) {
-          cleanParams[key] = value;
+          if (Array.isArray(value)) {
+            if (value.length > 0) cleanParams[key] = value.join(",");
+          } else {
+            cleanParams[key] = value;
+          }
         }
       });
 

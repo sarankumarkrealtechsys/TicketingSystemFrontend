@@ -314,7 +314,7 @@ export const AdminTeamManagement: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search teams by name, department, or lead..."
-                className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] focus:bg-white transition-all"
+                className="w-full h-10 pl-9 pr-3 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-sm text-[#1A1A1A] placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] focus:bg-white transition-all shadow-2xs"
               />
             </div>
 
@@ -326,7 +326,7 @@ export const AdminTeamManagement: React.FC = () => {
                   onChange={(val) => setDepartmentFilter(val)}
                   options={departmentOptions}
                   placeholder="Filter by Department..."
-                  size="sm"
+                  size="md"
                 />
               </div>
 
@@ -336,7 +336,7 @@ export const AdminTeamManagement: React.FC = () => {
                   value={statusFilter}
                   onChange={(val) => setStatusFilter(val)}
                   options={STATUS_FILTER_OPTIONS}
-                  size="sm"
+                  size="md"
                 />
               </div>
 

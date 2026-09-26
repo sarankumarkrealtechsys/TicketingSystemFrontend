@@ -52,19 +52,24 @@ export const AdminDashboard: React.FC = () => {
     search: "",
     projectId: undefined,
     teamId: undefined,
+    teamIds: undefined,
     assigneeId: undefined,
     priorityId: undefined,
+    priorityIds: undefined,
     statusId: undefined,
+    statusIds: undefined,
     ticketType: undefined,
+    date: undefined,
     startDate: undefined,
     endDate: undefined,
   });
 
-  const [isDateActive, setIsDateActive] = useState(false);
+  const isDateActive = Boolean(filters.date || (filters.startDate && filters.endDate));
 
-  // Queries
+  // Queries - pass date filters so KPI cards and charts reflect the selected date
   const { data: statsData, refetch: refetchStats } = useTicketStatsQuery(
     currentUser?.id,
+    { date: filters.date, startDate: filters.startDate, endDate: filters.endDate },
   );
   const {
     data: ticketsData,
@@ -96,7 +101,7 @@ export const AdminDashboard: React.FC = () => {
   }, [refetchPriorities, refetchStatuses, refetchTickets, refetchStats]);
 
   const handleFilterChange = (newFilters: Partial<TicketQueryParams>) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setFilters((prev) => ({ ...prev, ...newFilters, page: newFilters.page ?? 1 }));
   };
 
   const handleClearFilters = () => {
@@ -106,35 +111,38 @@ export const AdminDashboard: React.FC = () => {
       search: "",
       projectId: undefined,
       teamId: undefined,
+      teamIds: undefined,
       assigneeId: undefined,
       priorityId: undefined,
+      priorityIds: undefined,
       statusId: undefined,
+      statusIds: undefined,
       ticketType: undefined,
+      date: undefined,
       startDate: undefined,
       endDate: undefined,
     });
-    setIsDateActive(false);
   };
 
   const handleToggleDateFilter = () => {
     if (isDateActive) {
       setFilters((prev) => ({
         ...prev,
+        date: undefined,
         startDate: undefined,
         endDate: undefined,
         page: 1,
       }));
-      setIsDateActive(false);
     } else {
       const now = new Date();
       const past30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       setFilters((prev) => ({
         ...prev,
+        date: undefined,
         startDate: past30Days.toISOString(),
         endDate: now.toISOString(),
         page: 1,
       }));
-      setIsDateActive(true);
     }
   };
 

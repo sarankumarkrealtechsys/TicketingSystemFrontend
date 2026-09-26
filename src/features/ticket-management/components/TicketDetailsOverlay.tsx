@@ -41,6 +41,7 @@ import {
   usePrioritiesQuery,
   useActiveTeamsQuery,
   useSelectedTeamDetailQuery,
+  useSelectedTeamsDetailsQuery,
   useTeamAssigneesQuery,
   useChangeStatusMutation,
   useChangePriorityMutation,
@@ -294,7 +295,9 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   }, []);
 
   // Form states for Sub-Ticket Modal (Create)
-  const [subTicketTeamId, setSubTicketTeamId] = useState<number | "">("");
+  const [subTicketTeamIds, setSubTicketTeamIds] = useState<number[]>([]);
+  const subTicketPrimaryTeamId = subTicketTeamIds[0] ?? null;
+  const subTicketCollabTeamIds = useMemo(() => subTicketTeamIds.slice(1), [subTicketTeamIds]);
   const [subTicketSummary, setSubTicketSummary] = useState("");
   const [subTicketDescription, setSubTicketDescription] = useState("");
   const [subTicketPriorityId, setSubTicketPriorityId] = useState<number | "">("");
@@ -303,9 +306,30 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [subTicketCustomFieldErrors, setSubTicketCustomFieldErrors] = useState<Record<number, string>>({});
   const [isSubTicketAddFieldOpen, setIsSubTicketAddFieldOpen] = useState(false);
 
-  // Dynamic custom fields for selected sub-ticket team
+  const handleToggleSubTicketTeam = (teamId: number, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setSubTicketTeamIds((prev) => {
+      if (prev.includes(teamId)) {
+        return prev.filter((id) => id !== teamId);
+      } else {
+        return [...prev, teamId];
+      }
+    });
+  };
+
+  const handleSetSubTicketPrimaryTeam = (teamId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSubTicketTeamIds((prev) => {
+      const without = prev.filter((id) => id !== teamId);
+      return [teamId, ...without];
+    });
+  };
+
+  // Dynamic custom fields for selected sub-ticket primary team
   const { data: subTicketAvailableFields = [] } = useTicketFieldsQuery({
-    teamId: subTicketTeamId ? Number(subTicketTeamId) : undefined,
+    teamId: subTicketPrimaryTeamId ? Number(subTicketPrimaryTeamId) : undefined,
     includeInactive: false,
   });
 
@@ -337,6 +361,42 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [deletingSubTicket, setDeletingSubTicket] = useState<SubTicketItem | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const subTicketTeamDropdownRef = useRef<HTMLDivElement>(null);
+  const subTicketPriorityDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close sub-ticket dropdowns on outside click or Escape key
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        isSubTicketTeamDropdownOpen &&
+        subTicketTeamDropdownRef.current &&
+        !subTicketTeamDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsSubTicketTeamDropdownOpen(false);
+      }
+      if (
+        isSubTicketPriorityDropdownOpen &&
+        subTicketPriorityDropdownRef.current &&
+        !subTicketPriorityDropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsSubTicketPriorityDropdownOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isSubTicketTeamDropdownOpen) setIsSubTicketTeamDropdownOpen(false);
+        if (isSubTicketPriorityDropdownOpen) setIsSubTicketPriorityDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSubTicketTeamDropdownOpen, isSubTicketPriorityDropdownOpen]);
 
   // Queries
   const {
@@ -374,12 +434,57 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const { data: globalStatuses = [] } = useGlobalStatusesQuery();
   const { data: priorities = [], refetch: refetchPriorities } = usePrioritiesQuery();
   const { data: allTeams = [] } = useActiveTeamsQuery();
+  const subTicketPrimaryTeam = useMemo(
+    () => allTeams.find((t) => t.id === subTicketPrimaryTeamId),
+    [allTeams, subTicketPrimaryTeamId]
+  );
   const { data: selectedTeamDetail } = useSelectedTeamDetailQuery(
     typeof reassignTeamId === "number" ? reassignTeamId : null
   );
-  const { data: subTicketTeamDetail } = useSelectedTeamDetailQuery(
-    typeof subTicketTeamId === "number" ? subTicketTeamId : null
-  );
+  const subTicketSelectedTeamsQueries = useSelectedTeamsDetailsQuery(subTicketTeamIds);
+
+  const availableSubTicketMembers = useMemo(() => {
+    const map = new Map<number, { id: number; name: string; email?: string; teamNames: string[] }>();
+    for (const q of subTicketSelectedTeamsQueries) {
+      const teamDetail = q.data;
+      if (!teamDetail || !Array.isArray(teamDetail.members)) continue;
+      if (!subTicketTeamIds.includes(teamDetail.id)) continue;
+      const teamName = teamDetail.name || `Team #${teamDetail.id}`;
+      for (const m of teamDetail.members) {
+        if (m.removedAt) continue;
+        const u = m.user || (m as any);
+        if (!u || !u.id || u.status === "INACTIVE") continue;
+        if (map.has(u.id)) {
+          const existing = map.get(u.id)!;
+          if (!existing.teamNames.includes(teamName)) {
+            existing.teamNames.push(teamName);
+          }
+        } else {
+          map.set(u.id, {
+            id: u.id,
+            name: u.name || (u as any).username || u.email || "Member",
+            email: u.email,
+            teamNames: [teamName],
+          });
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [subTicketSelectedTeamsQueries, subTicketTeamIds]);
+
+  // Prune assignees that no longer belong to any selected team
+  useEffect(() => {
+    setSubTicketAssigneeIds((prev) => {
+      if (prev.length === 0) return prev;
+      const valid = prev.filter((id) =>
+        availableSubTicketMembers.some((m) => m.id === id)
+      );
+      if (valid.length === prev.length && valid.every((id, idx) => id === prev[idx])) {
+        return prev;
+      }
+      return valid;
+    });
+  }, [availableSubTicketMembers]);
 
   // Resolved list of available statuses for ticket, sorted by sortOrder
   const availableStatuses = useMemo(() => {
@@ -652,7 +757,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
   const handleOpenCreateSubTicketModal = () => {
     if (ticket) {
-      setSubTicketTeamId(ticket.teamId || (allTeams[0]?.id ?? ""));
+      const initialTeamId = ticket.teamId || allTeams[0]?.id;
+      setSubTicketTeamIds(initialTeamId ? [initialTeamId] : []);
       setSubTicketSummary("");
       setSubTicketDescription("");
       setSubTicketPriorityId(ticket.priorityId || (priorities[0]?.id ?? ""));
@@ -674,8 +780,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
       setActionErrorMsg("Sub-ticket summary is required.");
       return;
     }
-    if (!subTicketTeamId) {
-      setActionErrorMsg("Target team is required.");
+    if (!subTicketPrimaryTeamId) {
+      setActionErrorMsg("At least one target team is required.");
       return;
     }
     if (!subTicketPriorityId) {
@@ -719,7 +825,9 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
     try {
       await createSubTicketMutation.mutateAsync({
         projectId: ticket.projectId,
-        teamId: Number(subTicketTeamId),
+        teamId: Number(subTicketPrimaryTeamId),
+        collaboratingTeamIds:
+          subTicketCollabTeamIds.length > 0 ? subTicketCollabTeamIds : undefined,
         summary: subTicketSummary.trim(),
         description: subTicketDescription.trim(),
         priorityId: Number(subTicketPriorityId),
@@ -3630,21 +3738,78 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                   />
                 </div>
 
-                {/* Target Team Dropdown */}
-                <div className="relative">
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Assign to Team <span className="text-red-500">*</span>
-                  </label>
+                {/* Target Team Dropdown (Multi-select with checkboxes) */}
+                <div className="relative" ref={subTicketTeamDropdownRef}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-gray-700 flex items-center gap-1">
+                      Assign to Team(s) <span className="text-red-500">*</span>
+                    </label>
+                    {subTicketTeamIds.length > 0 && (
+                      <span className="text-[11px] text-[#1F3864] font-semibold">
+                        {subTicketTeamIds.length} {subTicketTeamIds.length === 1 ? "team" : "teams"} selected
+                      </span>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => setIsSubTicketTeamDropdownOpen((prev) => !prev)}
-                    className="w-full min-h-[38px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] cursor-pointer"
+                    className="w-full min-h-[40px] px-3.5 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] cursor-pointer hover:bg-gray-50 transition-colors"
                   >
-                    <span className="font-bold text-gray-900">
-                      {allTeams.find((t) => t.id === subTicketTeamId)?.name || "Select team..."}
-                    </span>
-                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                    <div className="flex items-center gap-2 truncate">
+                      <Users className="w-4 h-4 text-[#1F3864] shrink-0" />
+                      <span className="font-semibold text-gray-900 truncate">
+                        {subTicketTeamIds.length === 0
+                          ? "Select team(s)..."
+                          : subTicketTeamIds.length === 1
+                          ? subTicketPrimaryTeam?.name || "1 Team Selected"
+                          : `${subTicketPrimaryTeam?.name || "Team"} (+${subTicketTeamIds.length - 1} collab)`}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${
+                        isSubTicketTeamDropdownOpen ? "rotate-180" : ""
+                      }`}
+                    />
                   </button>
+
+                  {/* Selected Teams Summary Chips */}
+                  {subTicketTeamIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {subTicketTeamIds.map((id, index) => {
+                        const teamObj = allTeams.find((t) => t.id === id);
+                        if (!teamObj) return null;
+                        const isPrimary = index === 0;
+                        return (
+                          <span
+                            key={id}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                              isPrimary
+                                ? "bg-[#1F3864] text-white"
+                                : "bg-blue-50 text-[#1F3864] border border-blue-200"
+                            }`}
+                          >
+                            <span>{teamObj.name}</span>
+                            <span
+                              className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
+                                isPrimary ? "bg-white/20 text-white" : "bg-blue-200/60 text-[#1F3864]"
+                              }`}
+                            >
+                              {isPrimary ? "Primary" : "Collab"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleSubTicketTeam(id, e)}
+                              className="hover:opacity-75 cursor-pointer ml-0.5 rounded-full p-0.5"
+                              title="Remove team"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {isSubTicketTeamDropdownOpen && (
                     <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 space-y-2">
@@ -3656,42 +3821,88 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                           onChange={(e) => setSubTicketTeamSearch(e.target.value)}
                           placeholder="Search teams..."
                           className="w-full h-8 pl-8 pr-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </div>
-                      <div className="max-h-48 overflow-y-auto space-y-1 divide-y divide-gray-50">
+                      <div className="max-h-52 overflow-y-auto space-y-1 divide-y divide-gray-50">
                         {allTeams
                           .filter((t) => t.name.toLowerCase().includes(subTicketTeamSearch.toLowerCase()))
                           .map((t) => {
-                            const isSelected = subTicketTeamId === t.id;
+                            const isChecked = subTicketTeamIds.includes(t.id);
+                            const isPrimary = subTicketPrimaryTeamId === t.id;
                             return (
                               <div
                                 key={t.id}
-                                onClick={() => {
-                                  setSubTicketTeamId(t.id);
-                                  setSubTicketAssigneeIds([]);
-                                  setIsSubTicketTeamDropdownOpen(false);
-                                }}
+                                onClick={(e) => handleToggleSubTicketTeam(t.id, e)}
                                 className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
-                                  isSelected ? "bg-blue-50 text-[#1F3864] font-bold" : "hover:bg-gray-50 text-gray-800"
+                                  isPrimary
+                                    ? "bg-blue-50/90 text-[#1F3864] font-bold"
+                                    : isChecked
+                                    ? "bg-gray-50 text-gray-900 font-semibold"
+                                    : "hover:bg-gray-50 text-gray-700"
                                 }`}
                               >
-                                <div>
-                                  <span className="font-bold text-xs">{t.name}</span>
-                                  {t.department?.name && (
-                                    <span className="text-[10px] text-gray-500 block">{t.department.name}</span>
-                                  )}
+                                <div className="flex items-center gap-2.5 truncate min-w-0">
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {}}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="w-4 h-4 rounded text-[#1F3864] focus:ring-[#1F3864] cursor-pointer shrink-0"
+                                  />
+                                  <div className="truncate">
+                                    <span className="text-xs">{t.name}</span>
+                                    {t.department?.name && (
+                                      <span className="text-[10px] text-gray-500 block truncate">{t.department.name}</span>
+                                    )}
+                                  </div>
                                 </div>
-                                {isSelected && <Check className="w-4 h-4 text-[#1F3864]" />}
+
+                                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                                  {isPrimary ? (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#1F3864] text-white font-bold flex items-center gap-1">
+                                      Primary
+                                    </span>
+                                  ) : isChecked ? (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-700 font-medium">
+                                        Collab
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => handleSetSubTicketPrimaryTeam(t.id, e)}
+                                        className="text-[10px] px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-[#1F3864] font-semibold transition-colors cursor-pointer"
+                                        title="Set as Primary Team"
+                                      >
+                                        Set Primary
+                                      </button>
+                                    </div>
+                                  ) : null}
+                                </div>
                               </div>
                             );
                           })}
+                      </div>
+
+                      {/* Dropdown footer with selected count and Done button */}
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between mt-1">
+                        <span className="text-[11px] text-gray-500 font-medium">
+                          {subTicketTeamIds.length} {subTicketTeamIds.length === 1 ? "team" : "teams"} selected
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsSubTicketTeamDropdownOpen(false)}
+                          className="px-3.5 py-1.5 bg-[#1F3864] hover:bg-[#162847] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+                        >
+                          Done
+                        </button>
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Priority Dropdown */}
-                <div className="relative">
+                <div className="relative" ref={subTicketPriorityDropdownRef}>
                   <label className="block text-xs font-bold text-gray-700 mb-1">
                     Priority <span className="text-red-500">*</span>
                   </label>
@@ -3742,38 +3953,54 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
                 {/* Assignees Selection */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">
-                    Assignees (Team Members)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-gray-700">
+                      Assignees (Team Members)
+                    </label>
+                    <span className="text-[10px] text-gray-500 font-medium">
+                      {availableSubTicketMembers.length} {availableSubTicketMembers.length === 1 ? "member" : "members"} available
+                    </span>
+                  </div>
                   <div className="border border-gray-200 rounded-lg p-2.5 max-h-36 overflow-y-auto space-y-1.5 bg-[#F9FAFB]">
-                    {(subTicketTeamDetail?.members || []).length > 0 ? (
-                      (subTicketTeamDetail?.members || []).map((m: any) => {
-                        const userId = m.user?.id || m.userId;
+                    {availableSubTicketMembers.length > 0 ? (
+                      availableSubTicketMembers.map((m) => {
+                        const userId = m.id;
                         const isChecked = subTicketAssigneeIds.includes(userId);
                         return (
                           <label
                             key={userId}
-                            className="flex items-center gap-2 p-1.5 hover:bg-white rounded cursor-pointer transition text-xs"
+                            className="flex items-center justify-between p-1.5 hover:bg-white rounded cursor-pointer transition text-xs"
                           >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() =>
-                                setSubTicketAssigneeIds((prev) =>
-                                  prev.includes(userId)
-                                    ? prev.filter((id) => id !== userId)
-                                    : [...prev, userId]
-                                )
-                              }
-                              className="w-3.5 h-3.5 rounded text-[#1F3864] focus:ring-[#1F3864]"
-                            />
-                            <span className="font-bold text-gray-900">{m.user?.name || m.user?.username}</span>
-                            <span className="text-gray-500 font-medium">({m.user?.email})</span>
+                            <div className="flex items-center gap-2 truncate">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() =>
+                                  setSubTicketAssigneeIds((prev) =>
+                                    prev.includes(userId)
+                                      ? prev.filter((id) => id !== userId)
+                                      : [...prev, userId]
+                                  )
+                                }
+                                className="w-3.5 h-3.5 rounded text-[#1F3864] focus:ring-[#1F3864]"
+                              />
+                              <span className="font-bold text-gray-900 truncate">{m.name}</span>
+                              {m.email && <span className="text-gray-500 font-medium text-[11px] truncate">({m.email})</span>}
+                            </div>
+                            {m.teamNames && m.teamNames.length > 0 && (
+                              <span className="text-[10px] text-gray-500 font-medium bg-gray-100 px-1.5 py-0.5 rounded shrink-0 ml-1">
+                                {m.teamNames.join(", ")}
+                              </span>
+                            )}
                           </label>
                         );
                       })
                     ) : (
-                      <div className="text-xs text-gray-500 italic p-1">No active members found in this team.</div>
+                      <div className="text-xs text-gray-500 italic p-1">
+                        {subTicketTeamIds.length === 0
+                          ? "Select team(s) above to view members."
+                          : "No active members found in the selected team(s)."}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -3793,14 +4020,14 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                 </div>
 
                 {/* Dynamic Custom Fields for Sub-Ticket */}
-                {subTicketTeamId && (
+                {subTicketPrimaryTeamId && (
                   <div className="pt-1">
                     <DynamicCustomFieldsRenderer
                       fields={subTicketAvailableFields}
                       values={subTicketCustomFields}
                       onChange={handleSubTicketCustomFieldChange}
                       onOpenAddFieldModal={() => setIsSubTicketAddFieldOpen(true)}
-                      teamName={allTeams.find((t) => t.id === subTicketTeamId)?.name}
+                      teamName={subTicketPrimaryTeam?.name}
                       errors={subTicketCustomFieldErrors}
                       compact={true}
                       sectionNumber=""
@@ -3819,7 +4046,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
                   </button>
                   <button
                     type="submit"
-                    disabled={!subTicketSummary.trim() || !subTicketTeamId || !subTicketPriorityId || createSubTicketMutation.isPending}
+                    disabled={!subTicketSummary.trim() || !subTicketPrimaryTeamId || !subTicketPriorityId || createSubTicketMutation.isPending}
                     className="px-4 py-1.5 bg-[#1F3864] hover:bg-[#162847] text-white text-xs font-bold rounded-md shadow-xs transition disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                   >
                     {createSubTicketMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
@@ -3836,8 +4063,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
           isOpen={isSubTicketAddFieldOpen}
           onClose={() => setIsSubTicketAddFieldOpen(false)}
           onFieldCreated={handleSubTicketCustomFieldCreated}
-          currentTeamId={subTicketTeamId ? Number(subTicketTeamId) : null}
-          currentTeamName={allTeams.find((t) => t.id === subTicketTeamId)?.name}
+          currentTeamId={subTicketPrimaryTeamId ? Number(subTicketPrimaryTeamId) : null}
+          currentTeamName={subTicketPrimaryTeam?.name}
         />
 
         {/* ================= MODAL: EDIT TICKET ================= */}

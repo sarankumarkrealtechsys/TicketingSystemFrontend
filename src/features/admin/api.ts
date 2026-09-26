@@ -9,7 +9,10 @@ import {
 
 export const adminKeys = {
   all: (userId?: number | string) => ["admin", userId ?? "anon"] as const,
-  stats: (userId?: number | string) => [...adminKeys.all(userId), "ticket-stats"] as const,
+  stats: (
+    userId?: number | string,
+    dateFilters?: { date?: string; startDate?: string; endDate?: string },
+  ) => [...adminKeys.all(userId), "ticket-stats", dateFilters] as const,
   tickets: (userId: number | string | undefined, params: TicketQueryParams) =>
     [...adminKeys.all(userId), "tickets", params] as const,
   projects: () => ["admin", "projects"] as const,
@@ -20,13 +23,24 @@ export const adminKeys = {
 };
 
 // GET /api/tickets/stats
-export const useTicketStatsQuery = (userId?: number | string) => {
+export const useTicketStatsQuery = (
+  userId?: number | string,
+  dateFilters?: { date?: string; startDate?: string; endDate?: string },
+) => {
   return useQuery<TicketStatsData>({
-    queryKey: adminKeys.stats(userId),
+    queryKey: adminKeys.stats(userId, dateFilters),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ status: string; data: TicketStatsData }>(
-        "/tickets/stats",
-      );
+      const cleanParams = dateFilters
+        ? Object.fromEntries(
+            Object.entries(dateFilters).filter(
+              ([, v]) => v !== undefined && v !== "",
+            ),
+          )
+        : {};
+      const { data } = await apiClient.get<{
+        status: string;
+        data: TicketStatsData;
+      }>("/tickets/stats", { params: cleanParams });
       return data.data;
     },
     refetchInterval: 30000, // refresh stats every 30s
@@ -41,11 +55,15 @@ export const useTicketsTableQuery = (
   return useQuery<TicketsTableResponse>({
     queryKey: adminKeys.tickets(userId, params),
     queryFn: async () => {
-      const cleanParams = Object.fromEntries(
-        Object.entries(params).filter(
-          ([, v]) => v !== undefined && v !== "" && v !== null && v !== "all",
-        ),
-      );
+      const cleanParams: Record<string, any> = {};
+      Object.entries(params).forEach(([k, v]) => {
+        if (v === undefined || v === "" || v === null || v === "all") return;
+        if (Array.isArray(v)) {
+          if (v.length > 0) cleanParams[k] = v.join(",");
+        } else {
+          cleanParams[k] = v;
+        }
+      });
       const { data } = await apiClient.get<{ status: string; data: TicketsTableResponse }>(
         "/tickets",
         { params: cleanParams },

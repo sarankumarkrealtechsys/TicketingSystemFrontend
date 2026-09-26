@@ -124,15 +124,19 @@ export const AuditReportsView: React.FC<AuditReportsViewProps> = ({
     scope: isGlobal ? "all" : "personal",
     projectId: undefined,
     teamId: undefined,
+    teamIds: undefined,
     assigneeId: undefined,
     priorityId: undefined,
+    priorityIds: undefined,
     statusId: undefined,
+    statusIds: undefined,
     ticketType: undefined,
+    date: undefined,
     startDate: undefined,
     endDate: undefined,
   });
 
-  const [isDateActive, setIsDateActive] = useState(false);
+  const isDateActive = Boolean(filters.date || (filters.startDate && filters.endDate));
 
   // Queries
   const {
@@ -193,35 +197,38 @@ export const AuditReportsView: React.FC<AuditReportsViewProps> = ({
       scope: activeScope,
       projectId: undefined,
       teamId: undefined,
+      teamIds: undefined,
       assigneeId: undefined,
       priorityId: undefined,
+      priorityIds: undefined,
       statusId: undefined,
+      statusIds: undefined,
       ticketType: undefined,
+      date: undefined,
       startDate: undefined,
       endDate: undefined,
     });
-    setIsDateActive(false);
   };
 
   const handleToggleDateFilter = () => {
     if (isDateActive) {
       setFilters((prev) => ({
         ...prev,
+        date: undefined,
         startDate: undefined,
         endDate: undefined,
         page: 1,
       }));
-      setIsDateActive(false);
     } else {
       const now = new Date();
       const past30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       setFilters((prev) => ({
         ...prev,
+        date: undefined,
         startDate: past30Days.toISOString(),
         endDate: now.toISOString(),
         page: 1,
       }));
-      setIsDateActive(true);
     }
   };
 
@@ -278,10 +285,23 @@ export const AuditReportsView: React.FC<AuditReportsViewProps> = ({
         totalCount: rawTickets.length,
         activeFilters: {
           project: projectName,
-          team: teamName,
-          priority: priorityName,
-          status: statusName,
-          dateRange: isDateActive ? "Past 30 Days" : undefined,
+          team:
+            filters.teamIds && filters.teamIds.length > 0
+              ? `${filters.teamIds.length} Teams Selected`
+              : teamName,
+          priority:
+            filters.priorityIds && filters.priorityIds.length > 0
+              ? `${filters.priorityIds.length} Priorities Selected`
+              : priorityName,
+          status:
+            filters.statusIds && filters.statusIds.length > 0
+              ? `${filters.statusIds.length} Statuses Selected`
+              : statusName,
+          dateRange: isDateActive
+            ? filters.date
+              ? `Date: ${filters.date}`
+              : "Past 30 Days"
+            : undefined,
           search: filters.search ? filters.search : undefined,
         },
       };

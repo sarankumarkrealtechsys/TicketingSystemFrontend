@@ -126,7 +126,7 @@ export function SelectDropdown<T extends string | number = string>({
       className={`relative inline-block w-full text-left ${className}`}
       onKeyDown={handleKeyDown}
     >
-      {/* Trigger Button */}
+      {/* Trigger Button - Medium Rounded Button Style */}
       <button
         id={selectId}
         type="button"
@@ -134,18 +134,20 @@ export function SelectDropdown<T extends string | number = string>({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between gap-2 text-left transition-all duration-150 cursor-pointer ${
+        className={`w-full flex items-center justify-between gap-2 text-left font-medium transition-all duration-150 cursor-pointer select-none active:scale-[0.99] ${
           isLarge
             ? "h-11 px-4 text-sm rounded-xl"
             : isSmall
-            ? "h-8.5 px-3 text-xs rounded-lg"
-            : "h-9.5 px-3.5 text-xs sm:text-sm rounded-lg"
+            ? "h-9 px-3 text-xs rounded-lg"
+            : "h-10 px-3.5 text-sm rounded-lg"
         } ${
           disabled
             ? "bg-gray-100 dark:bg-slate-800 text-gray-400 border border-gray-200 dark:border-slate-700 cursor-not-allowed"
             : isOpen
-            ? "bg-white dark:bg-[#1A283E] border-[#1F3864] ring-2 ring-[#1F3864]/15 text-[#1A1A1A] dark:text-white shadow-xs"
-            : "bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] text-[#1A1A1A] dark:text-white hover:bg-white hover:border-gray-400 shadow-2xs"
+            ? "bg-white dark:bg-[#1A283E] border-[#1F3864] ring-2 ring-[#1F3864]/20 text-[#1A1A1A] dark:text-white shadow-xs"
+            : selectedOption && selectedOption.value !== ""
+            ? "bg-blue-50/60 dark:bg-blue-900/25 border-[#1E88E5]/70 text-[#1F3864] dark:text-blue-200 shadow-2xs hover:bg-white dark:hover:bg-[#1A283E]"
+            : "bg-white dark:bg-[#1A283E] border border-gray-300 dark:border-[#283A55] text-gray-800 dark:text-gray-100 hover:bg-gray-50/80 dark:hover:bg-[#1F304A] hover:border-gray-400 shadow-2xs"
         } ${triggerClassName}`}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1 truncate">
@@ -180,7 +182,7 @@ export function SelectDropdown<T extends string | number = string>({
               {selectedOption.label}
             </span>
           ) : (
-            <span className="truncate text-gray-400 font-normal">
+            <span className="truncate text-gray-500 dark:text-gray-400 font-normal">
               {placeholder}
             </span>
           )}
@@ -208,7 +210,7 @@ export function SelectDropdown<T extends string | number = string>({
       {isOpen && (
         <div
           role="listbox"
-          className={`absolute left-0 right-0 z-[110] mt-1.5 bg-white dark:bg-[#121E30] border border-[#E5E7EB] dark:border-[#1E2D45] rounded-xl shadow-2xl py-1.5 max-h-60 overflow-y-auto animate-in fade-in-50 zoom-in-95 duration-150 ${menuClassName}`}
+          className={`absolute left-0 min-w-full sm:min-w-[200px] w-full z-[120] mt-1.5 bg-white dark:bg-[#121E30] border border-[#E5E7EB] dark:border-[#1E2D45] rounded-xl shadow-2xl py-1.5 max-h-60 overflow-y-auto animate-in fade-in-50 zoom-in-95 duration-150 ${menuClassName}`}
         >
           {/* Search Input (if searchable) */}
           {searchable && (

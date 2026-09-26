@@ -16,6 +16,7 @@ import {
   usePrioritiesQuery,
   useStatusesQuery,
 } from "@/features/user-dashboard/api";
+import { useTeamsQuery } from "@/features/admin/api";
 import { UserTicketQueryParams } from "@/features/user-dashboard/types";
 import { TicketDetailsOverlay } from "@/features/ticket-management";
 import {
@@ -86,17 +87,26 @@ export const AdminMyTickets: React.FC = () => {
     search: "",
     scope: "personal",
     projectId: undefined,
+    teamId: undefined,
+    teamIds: undefined,
     priorityId: undefined,
+    priorityIds: undefined,
     statusId: undefined,
+    statusIds: undefined,
     ticketType: undefined,
+    date: undefined,
     startDate: undefined,
     endDate: undefined,
   });
 
-  const [isDateActive, setIsDateActive] = useState(false);
+  const isDateActive = Boolean(filters.date || (filters.startDate && filters.endDate));
 
-  // Queries strictly scoped to active admin's personal tickets
-  const { data: statsData, refetch: refetchStats } = useUserTicketStatsQuery(currentUser?.id, "personal");
+  // Queries strictly scoped to active admin's personal tickets, synced with date filter
+  const { data: statsData, refetch: refetchStats } = useUserTicketStatsQuery(
+    currentUser?.id,
+    "personal",
+    { date: filters.date, startDate: filters.startDate, endDate: filters.endDate },
+  );
   const {
     data: ticketsData,
     isLoading: isTicketsLoading,
@@ -104,6 +114,7 @@ export const AdminMyTickets: React.FC = () => {
     refetch: refetchTickets,
   } = useUserTicketsTableQuery(currentUser?.id, filters);
   const { data: projects = [] } = useProjectsQuery();
+  const { data: teams = [] } = useTeamsQuery();
   const { data: priorities = [], refetch: refetchPriorities } = usePrioritiesQuery();
   const { data: statuses = [], refetch: refetchStatuses } = useStatusesQuery();
 
@@ -121,7 +132,7 @@ export const AdminMyTickets: React.FC = () => {
   }, [refetchPriorities, refetchStatuses, refetchTickets, refetchStats]);
 
   const handleFilterChange = (newFilters: Partial<UserTicketQueryParams>) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }));
+    setFilters((prev) => ({ ...prev, ...newFilters, page: newFilters.page ?? 1 }));
   };
 
   const handleClearFilters = () => {
@@ -131,34 +142,38 @@ export const AdminMyTickets: React.FC = () => {
       search: "",
       scope: "personal",
       projectId: undefined,
+      teamId: undefined,
+      teamIds: undefined,
       priorityId: undefined,
+      priorityIds: undefined,
       statusId: undefined,
+      statusIds: undefined,
       ticketType: undefined,
+      date: undefined,
       startDate: undefined,
       endDate: undefined,
     });
-    setIsDateActive(false);
   };
 
   const handleToggleDateFilter = () => {
     if (isDateActive) {
       setFilters((prev) => ({
         ...prev,
+        date: undefined,
         startDate: undefined,
         endDate: undefined,
         page: 1,
       }));
-      setIsDateActive(false);
     } else {
       const now = new Date();
       const past30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       setFilters((prev) => ({
         ...prev,
+        date: undefined,
         startDate: past30Days.toISOString(),
         endDate: now.toISOString(),
         page: 1,
       }));
-      setIsDateActive(true);
     }
   };
 
@@ -357,6 +372,7 @@ export const AdminMyTickets: React.FC = () => {
           onRefresh={refetchTickets}
           isRefreshing={isTicketsFetching}
           projects={projects}
+          teams={teams}
           priorities={priorities}
           statuses={statuses}
           isDateActive={isDateActive}

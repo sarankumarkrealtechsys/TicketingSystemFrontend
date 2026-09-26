@@ -18,11 +18,15 @@ export const useReportTicketsQuery = (params: ReportQueryParams) => {
   return useQuery<TicketsTableResponse>({
     queryKey: reportsKeys.tickets(params),
     queryFn: async () => {
-      const cleanParams = Object.fromEntries(
-        Object.entries(params).filter(
-          ([, v]) => v !== undefined && v !== "" && v !== null && v !== "all"
-        )
-      );
+      const cleanParams: Record<string, any> = {};
+      Object.entries(params).forEach(([k, v]) => {
+        if (v === undefined || v === "" || v === null || v === "all") return;
+        if (Array.isArray(v)) {
+          if (v.length > 0) cleanParams[k] = v.join(",");
+        } else {
+          cleanParams[k] = v;
+        }
+      });
       const { data } = await apiClient.get<{ status: string; data: TicketsTableResponse }>(
         "/tickets",
         { params: cleanParams }
@@ -37,17 +41,15 @@ export const useReportTicketsQuery = (params: ReportQueryParams) => {
 export const fetchAllTicketsForExport = async (
   params: ReportQueryParams
 ): Promise<ExportTicketItem[]> => {
-  const cleanParams = Object.fromEntries(
-    Object.entries(params).filter(
-      ([k, v]) =>
-        k !== "page" &&
-        k !== "pageSize" &&
-        v !== undefined &&
-        v !== "" &&
-        v !== null &&
-        v !== "all"
-    )
-  );
+  const cleanParams: Record<string, any> = {};
+  Object.entries(params).forEach(([k, v]) => {
+    if (k === "page" || k === "pageSize" || v === undefined || v === "" || v === null || v === "all") return;
+    if (Array.isArray(v)) {
+      if (v.length > 0) cleanParams[k] = v.join(",");
+    } else {
+      cleanParams[k] = v;
+    }
+  });
 
   cleanParams.format = "json";
   cleanParams.limit = 5000;

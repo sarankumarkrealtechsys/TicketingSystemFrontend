@@ -278,7 +278,7 @@ export const AdminDepartmentManagement: React.FC = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search departments by name or scope..."
-                  className="w-full h-9 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-xs text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] transition-all"
+                  className="w-full h-10 pl-9 pr-3 bg-[#F9FAFB] dark:bg-[#1A283E] border border-[#D1D5DB] dark:border-[#283A55] rounded-lg text-sm text-[#1A1A1A] dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-[#0e61a1] transition-all shadow-2xs"
                 />
               </div>
 
@@ -287,7 +287,7 @@ export const AdminDepartmentManagement: React.FC = () => {
                   value={statusFilter}
                   onChange={(val) => setStatusFilter(val)}
                   options={STATUS_FILTER_OPTIONS}
-                  size="sm"
+                  size="md"
                 />
               </div>
             </div>
@@ -300,11 +300,11 @@ export const AdminDepartmentManagement: React.FC = () => {
                   refetch();
                   showToast("Refreshed departments list!");
                 }}
-                className="h-8 px-3.5 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-[0.98] cursor-pointer"
+                className="h-10 px-4 bg-[#2B4C7E] hover:bg-[#1F3864] text-white rounded-lg text-sm font-semibold shadow-xs transition-all flex items-center gap-2 shrink-0 active:scale-[0.98] cursor-pointer"
                 title="Refresh Departments List"
               >
                 <span
-                  className={`material-symbols-outlined text-[16px] ${isFetching ? "animate-spin" : ""}`}
+                  className={`material-symbols-outlined text-[18px] ${isFetching ? "animate-spin" : ""}`}
                 >
                   refresh
                 </span>

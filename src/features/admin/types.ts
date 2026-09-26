@@ -83,13 +83,17 @@ export interface TicketQueryParams {
   search?: string;
   projectId?: string | number;
   teamId?: string | number;
+  teamIds?: number[];
   assigneeId?: string | number;
   priorityId?: string | number;
+  priorityIds?: number[];
   statusId?: string | number;
+  statusIds?: number[];
   ticketType?: "all" | "main" | "sub";
   parentTicketId?: number;
   startDate?: string;
   endDate?: string;
+  date?: string;
 }
 
 export interface MasterDataItem {
