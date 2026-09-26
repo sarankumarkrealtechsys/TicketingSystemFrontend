@@ -292,7 +292,8 @@ export const useReassignTicketMutation = (ticketId: number) => {
 };
 
 export interface AddAssigneePayload {
-  userId: number;
+  userId?: number;
+  userIds?: number[];
   teamId?: number;
 }
 

@@ -235,7 +235,7 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
   // Form states for Add / Remove Assignee
   const [addAssigneeTeamId, setAddAssigneeTeamId] = useState<number | null>(null);
-  const [selectedAddAssigneeId, setSelectedAddAssigneeId] = useState<number | null>(null);
+  const [selectedAddAssigneeIds, setSelectedAddAssigneeIds] = useState<number[]>([]);
   const [addAssigneeSearch, setAddAssigneeSearch] = useState("");
   const [assigneeToRemove, setAssigneeToRemove] = useState<{ id: number; name: string } | null>(null);
 
@@ -253,8 +253,8 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const [isAddTeamDropdownOpen, setIsAddTeamDropdownOpen] = useState(false);
   const [isSubTicketTeamDropdownOpen, setIsSubTicketTeamDropdownOpen] = useState(false);
   const [isSubTicketPriorityDropdownOpen, setIsSubTicketPriorityDropdownOpen] = useState(false);
-  const [isAddAssigneeUserDropdownOpen, setIsAddAssigneeUserDropdownOpen] = useState(false);
   const [isAddAssigneeTeamDropdownOpen, setIsAddAssigneeTeamDropdownOpen] = useState(false);
+  const [isAddAssigneeUserDropdownOpen, setIsAddAssigneeUserDropdownOpen] = useState(false);
 
   // Search queries in dropdowns
   const [statusSearch, setStatusSearch] = useState("");
@@ -571,10 +571,10 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
     return availableAddAssigneeTeams.find((t) => t.id === tid) || null;
   }, [addAssigneeTeamId, ticket?.teamId, availableAddAssigneeTeams]);
 
-  const selectedAddAssigneeObj = useMemo(() => {
-    if (!selectedAddAssigneeId) return null;
-    return addAssigneeCandidates.find((u: any) => u.id === selectedAddAssigneeId) || null;
-  }, [selectedAddAssigneeId, addAssigneeCandidates]);
+  const selectedAddAssigneeObjects = useMemo(() => {
+    const idSet = new Set(selectedAddAssigneeIds);
+    return addAssigneeCandidates.filter((u: any) => idSet.has(u.id));
+  }, [selectedAddAssigneeIds, addAssigneeCandidates]);
 
   // Capability flags derived from backend computed ticket.actions + RBAC fallback
   const isGlobalUpdate = Boolean(permissions?.["TICKET_UPDATE"]?.includes("GLOBAL"));
@@ -713,14 +713,32 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
   const handleOpenAddAssigneeModal = () => {
     if (ticket) {
       setAddAssigneeTeamId(ticket.teamId);
-      setSelectedAddAssigneeId(null);
+      setSelectedAddAssigneeIds([]);
       setAddAssigneeSearch("");
       setAddAssigneeTeamSearch("");
-      setIsAddAssigneeUserDropdownOpen(false);
       setIsAddAssigneeTeamDropdownOpen(false);
+      setIsAddAssigneeUserDropdownOpen(false);
       setActionErrorMsg(null);
       setActiveModal("addAssignee");
     }
+  };
+
+  const handleToggleAddAssignee = (userId: number) => {
+    setSelectedAddAssigneeIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleSelectAllFilteredAddAssignees = () => {
+    const candidateIds = filteredAddAssignees.map((u: any) => u.id);
+    setSelectedAddAssigneeIds((prev) => {
+      const merged = new Set([...prev, ...candidateIds]);
+      return Array.from(merged);
+    });
+  };
+
+  const handleDeselectAllAddAssignees = () => {
+    setSelectedAddAssigneeIds([]);
   };
 
   const handleOpenRemoveAssigneeModal = (assignee: any) => {
@@ -902,20 +920,24 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
 
   const handleSubmitAddAssignee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAddAssigneeId) {
-      setActionErrorMsg("Please select an engineer to assign");
+    if (selectedAddAssigneeIds.length === 0) {
+      setActionErrorMsg("Please select at least one engineer to assign");
       return;
     }
     try {
       await addAssigneeMutation.mutateAsync({
-        userId: selectedAddAssigneeId,
+        userIds: selectedAddAssigneeIds,
         teamId: addAssigneeTeamId || ticket?.teamId || undefined,
       });
-      setActionSuccessMsg("Assignee added to ticket successfully");
+      setActionSuccessMsg(
+        selectedAddAssigneeIds.length === 1
+          ? "Assignee added to ticket successfully"
+          : `${selectedAddAssigneeIds.length} assignees added to ticket successfully`
+      );
       setActiveModal(null);
-      setSelectedAddAssigneeId(null);
+      setSelectedAddAssigneeIds([]);
     } catch (err: any) {
-      setActionErrorMsg(err.response?.data?.message || "Failed to add assignee");
+      setActionErrorMsg(err.response?.data?.message || "Failed to add assignees");
     }
   };
 
@@ -3151,217 +3173,351 @@ export const TicketDetailsOverlay: React.FC<TicketDetailsOverlayProps> = ({
         )}
 
         {/* 3.1 Add Assignee Modal (Creator or Permission Holder) */}
-        {activeModal === "addAssignee" && (
-          <div className="fixed inset-0 z-60 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <h3 className="font-bold text-sm text-[#1F3864] flex items-center gap-2">
-                  <UserPlus className="w-4 h-4 text-[#1F3864]" />
-                  <span>Add Assignee to Ticket</span>
-                </h3>
+        {activeModal === "addAssignee" && ticket && (
+          <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-xl md:max-w-2xl flex flex-col h-[520px] min-h-[520px] max-h-[90vh] animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-[#1F3864]/10 flex items-center justify-center text-[#1F3864] shrink-0">
+                    <UserPlus className="w-4 h-4 text-[#1F3864]" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-sm text-[#1F3864]">Add Assignees</h3>
+                      <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-semibold">
+                        {ticket.ticketNumber}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-1 max-w-md">
+                      {ticket.summary}
+                    </p>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <form onSubmit={handleSubmitAddAssignee} className="mt-4 space-y-4">
-                {/* Team Context Dropdown if multiple teams available */}
-                {availableAddAssigneeTeams.length > 1 && (
+              {/* Form Body */}
+              <form onSubmit={handleSubmitAddAssignee} className="flex flex-col flex-1 min-h-0 justify-between">
+                <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+                  {/* Team Context Dropdown if multiple teams available */}
+                  {availableAddAssigneeTeams.length > 1 && (
+                    <div className="relative">
+                      <label className="block text-xs font-bold text-gray-700 mb-1">
+                        Team Context
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddAssigneeTeamDropdownOpen((prev) => !prev);
+                          setIsAddAssigneeUserDropdownOpen(false);
+                        }}
+                        className="w-full h-8 px-2.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
+                      >
+                        <span className="font-semibold text-gray-900 truncate">
+                          {selectedAddAssigneeTeamObj?.name || "Select team..."}
+                        </span>
+                        <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      </button>
+
+                      {isAddAssigneeTeamDropdownOpen && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-20"
+                            onClick={() => setIsAddAssigneeTeamDropdownOpen(false)}
+                          />
+                          <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-xl p-1.5 space-y-1">
+                            <div className="max-h-36 overflow-y-auto space-y-0.5 divide-y divide-gray-50">
+                              {availableAddAssigneeTeams.map((t) => {
+                                const isSelected = (addAssigneeTeamId || ticket?.teamId) === t.id;
+                                return (
+                                  <div
+                                    key={t.id}
+                                    onClick={() => {
+                                      setAddAssigneeTeamId(t.id);
+                                      setSelectedAddAssigneeIds([]);
+                                      setIsAddAssigneeTeamDropdownOpen(false);
+                                    }}
+                                    className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition text-xs ${
+                                      isSelected
+                                        ? "bg-blue-50 text-[#1F3864] font-bold"
+                                        : "hover:bg-gray-50 text-gray-800"
+                                    }`}
+                                  >
+                                    <span className="truncate">{t.name}</span>
+                                    {isSelected && <Check className="w-3.5 h-3.5 text-[#1F3864] shrink-0" />}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Custom Compact Multi-Select Assignee Dropdown */}
                   <div className="relative">
-                    <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      Assignee Team Context
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-gray-700">
+                        Assignees <span className="text-red-500">*</span>
+                      </label>
+                      <span className="text-[11px] font-medium text-gray-500">
+                        {selectedAddAssigneeIds.length} selected
+                      </span>
+                    </div>
 
                     <button
                       type="button"
                       onClick={() => {
-                        setIsAddAssigneeTeamDropdownOpen((prev) => !prev);
-                        setIsAddAssigneeUserDropdownOpen(false);
+                        setIsAddAssigneeUserDropdownOpen((prev) => !prev);
+                        setIsAddAssigneeTeamDropdownOpen(false);
                       }}
-                      className="w-full min-h-[42px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
+                      className="w-full min-h-[36px] px-2.5 py-1.5 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
                     >
-                      <span className="font-bold text-gray-900 truncate">
-                        {selectedAddAssigneeTeamObj?.name || "Select team..."}
-                      </span>
-                      <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div className="flex flex-wrap gap-1 items-center flex-1 min-w-0">
+                        {selectedAddAssigneeIds.length === 0 ? (
+                          <span className="text-gray-400 font-medium">Select engineer(s) to assign...</span>
+                        ) : (
+                          selectedAddAssigneeObjects.map((u: any) => (
+                            <span
+                              key={u.id}
+                              className="inline-flex items-center gap-1 pl-1.5 pr-1 py-0.5 rounded text-[11px] font-semibold bg-blue-50 border border-blue-200 text-[#1F3864]"
+                            >
+                              <span className="truncate max-w-[120px]">{u.name || u.username}</span>
+                              <span
+                                role="button"
+                                tabIndex={0}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleAddAssignee(u.id);
+                                }}
+                                className="text-gray-400 hover:text-red-600 rounded p-0.5 cursor-pointer"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </span>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${
+                          isAddAssigneeUserDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
                     </button>
 
-                    {isAddAssigneeTeamDropdownOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 space-y-2">
-                        <div className="relative">
-                          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                          <input
-                            type="text"
-                            value={addAssigneeTeamSearch}
-                            onChange={(e) => setAddAssigneeTeamSearch(e.target.value)}
-                            placeholder="Search teams..."
-                            className="w-full h-8 pl-8 pr-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
-                          />
-                        </div>
-
-                        <div className="max-h-48 overflow-y-auto space-y-1 divide-y divide-gray-50">
-                          {filteredAddAssigneeTeams.length === 0 ? (
-                            <div className="p-3 text-xs text-gray-400 text-center">
-                              No teams found
-                            </div>
-                          ) : (
-                            filteredAddAssigneeTeams.map((t) => {
-                              const isSelected = (addAssigneeTeamId || ticket?.teamId) === t.id;
-                              return (
-                                <div
-                                  key={t.id}
-                                  onClick={() => {
-                                    setAddAssigneeTeamId(t.id);
-                                    setSelectedAddAssigneeId(null);
-                                    setIsAddAssigneeTeamDropdownOpen(false);
-                                  }}
-                                  className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
-                                    isSelected
-                                      ? "bg-purple-50 text-purple-900 font-bold"
-                                      : "hover:bg-gray-50 text-gray-800"
-                                  }`}
+                    {isAddAssigneeUserDropdownOpen && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-20"
+                          onClick={() => setIsAddAssigneeUserDropdownOpen(false)}
+                        />
+                        <div className="absolute left-0 right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-xl shadow-2xl p-2 space-y-2 animate-in fade-in zoom-in-95 duration-100">
+                          {/* Search Bar + Quick Actions */}
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                              <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                              <input
+                                type="text"
+                                value={addAssigneeSearch}
+                                onChange={(e) => setAddAssigneeSearch(e.target.value)}
+                                placeholder="Search candidate engineers..."
+                                autoFocus
+                                className="w-full h-7 pl-7 pr-6 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
+                              />
+                              {addAssigneeSearch && (
+                                <button
+                                  type="button"
+                                  onClick={() => setAddAssigneeSearch("")}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
                                 >
-                                  <span className="truncate">{t.name}</span>
-                                  {isSelected && <Check className="w-4 h-4 text-purple-700 shrink-0" />}
-                                </div>
-                              );
-                            })
-                          )}
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+
+                            {filteredAddAssignees.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleSelectAllFilteredAddAssignees}
+                                className="text-[11px] font-semibold text-[#1F3864] hover:underline shrink-0 cursor-pointer px-1"
+                              >
+                                Select All
+                              </button>
+                            )}
+                            {selectedAddAssigneeIds.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleDeselectAllAddAssignees}
+                                className="text-[11px] font-semibold text-red-600 hover:underline shrink-0 cursor-pointer px-1"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Candidate List */}
+                          <div className="max-h-52 overflow-y-auto space-y-0.5 divide-y divide-gray-50 pr-0.5">
+                            {filteredAddAssignees.length === 0 ? (
+                              <div className="p-3 text-xs text-gray-400 text-center">
+                                {addAssigneeCandidates.length === 0
+                                  ? "No eligible engineers in this team's department"
+                                  : availableAddAssignees.length === 0
+                                  ? "All members in this team are already assigned"
+                                  : `No engineers matching "${addAssigneeSearch}"`}
+                              </div>
+                            ) : (
+                              filteredAddAssignees.map((userObj: any) => {
+                                const isSelected = selectedAddAssigneeIds.includes(userObj.id);
+                                const name = userObj.name || userObj.username || `User #${userObj.id}`;
+                                const roleName = userObj.role?.name || userObj.userRole?.name;
+
+                                return (
+                                  <div
+                                    key={userObj.id}
+                                    onClick={() => handleToggleAddAssignee(userObj.id)}
+                                    className={`flex items-center justify-between p-1.5 rounded-lg cursor-pointer transition select-none ${
+                                      isSelected
+                                        ? "bg-blue-50/80 text-[#1F3864]"
+                                        : "hover:bg-gray-50 text-gray-800"
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <div
+                                        className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition ${
+                                          isSelected
+                                            ? "bg-[#1F3864] border-[#1F3864] text-white"
+                                            : "border-gray-300 bg-white"
+                                        }`}
+                                      >
+                                        {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                      </div>
+
+                                      <div className="w-5 h-5 rounded-full bg-[#1F3864] text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                                        {getInitials(name)}
+                                      </div>
+
+                                      <div className="min-w-0">
+                                        <span className="font-semibold text-xs text-gray-900 block truncate leading-tight">
+                                          {name}
+                                        </span>
+                                        <span className="text-[10px] text-gray-400 block truncate">
+                                          {userObj.email} {roleName ? `• ${roleName}` : ""}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {isSelected && (
+                                      <span className="text-[10px] font-bold text-[#1F3864] px-1.5 py-0.5 rounded bg-blue-100 shrink-0">
+                                        Selected
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {/* Done button to close dropdown popup */}
+                          <div className="pt-1.5 border-t border-gray-100 flex items-center justify-between">
+                            <span className="text-[11px] text-gray-500 font-medium">
+                              {selectedAddAssigneeIds.length} selected
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setIsAddAssigneeUserDropdownOpen(false)}
+                              className="px-2.5 py-1 text-xs font-bold text-white bg-[#1F3864] hover:bg-[#162847] rounded-md transition cursor-pointer"
+                            >
+                              Done
+                            </button>
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
-                )}
 
-                {/* Custom Engineer Selection Dropdown */}
-                <div className="relative">
-                  <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                    Select Engineer to Assign <span className="text-red-500">*</span>
-                  </label>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsAddAssigneeUserDropdownOpen((prev) => !prev);
-                      setIsAddAssigneeTeamDropdownOpen(false);
-                    }}
-                    className="w-full min-h-[42px] px-3 py-2 bg-[#F9FAFB] border border-[#D1D5DB] rounded-lg text-xs text-left flex items-center justify-between gap-2 focus:outline-none focus:border-[#1F3864] focus:ring-1 focus:ring-[#1F3864] transition cursor-pointer"
-                  >
-                    {selectedAddAssigneeObj ? (
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-6 h-6 rounded-full bg-[#1F3864] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                          {getInitials(
-                            selectedAddAssigneeObj.name ||
-                              selectedAddAssigneeObj.username ||
-                              `User #${selectedAddAssigneeObj.id}`
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <span className="font-bold text-xs text-gray-900 block truncate">
-                            {selectedAddAssigneeObj.name ||
-                              selectedAddAssigneeObj.username ||
-                              `User #${selectedAddAssigneeObj.id}`}
-                          </span>
-                          <span className="text-[10px] text-gray-500 block truncate">
-                            {selectedAddAssigneeObj.email}
+                  {/* Selected Assignees Chips Tray (Visible summary below dropdown) */}
+                  {selectedAddAssigneeIds.length > 0 && (
+                    <div className="p-3 bg-blue-50/60 rounded-xl border border-blue-200/80">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-[#1F3864]">Selected Assignees</span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#1F3864] text-white">
+                            {selectedAddAssigneeIds.length}
                           </span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={handleDeselectAllAddAssignees}
+                          className="text-xs text-red-600 hover:text-red-700 font-semibold transition cursor-pointer"
+                        >
+                          Clear all
+                        </button>
                       </div>
-                    ) : (
-                      <span className="text-gray-400 font-medium">Select engineer to assign...</span>
-                    )}
-                    <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
-                  </button>
-
-                  {isAddAssigneeUserDropdownOpen && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white border border-gray-200 rounded-xl shadow-2xl p-2.5 space-y-2">
-                      <div className="relative">
-                        <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                          type="text"
-                          value={addAssigneeSearch}
-                          onChange={(e) => setAddAssigneeSearch(e.target.value)}
-                          placeholder="Search candidate engineers..."
-                          autoFocus
-                          className="w-full h-8 pl-8 pr-3 bg-gray-50 border border-gray-200 rounded-md text-xs text-gray-900 focus:outline-none focus:border-[#1F3864]"
-                        />
-                      </div>
-
-                      <div className="max-h-52 overflow-y-auto space-y-1 divide-y divide-gray-50">
-                        {filteredAddAssignees.length === 0 ? (
-                          <div className="p-3 text-xs text-gray-400 text-center">
-                            {addAssigneeCandidates.length === 0
-                              ? "Loading candidates or no members found in this team's department"
-                              : availableAddAssignees.length === 0
-                              ? "All members in this team are already assigned to this ticket"
-                              : `No engineers matching "${addAssigneeSearch}"`}
-                          </div>
-                        ) : (
-                          filteredAddAssignees.map((userObj: any) => {
-                            const isSelected = selectedAddAssigneeId === userObj.id;
-                            const name =
-                              userObj.name || userObj.username || `User #${userObj.id}`;
-                            const roleName = userObj.role?.name || userObj.userRole?.name;
-                            return (
-                              <div
-                                key={userObj.id}
-                                onClick={() => {
-                                  setSelectedAddAssigneeId(userObj.id);
-                                  setIsAddAssigneeUserDropdownOpen(false);
-                                }}
-                                className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition ${
-                                  isSelected
-                                    ? "bg-blue-50/80 border border-blue-200 text-[#1F3864]"
-                                    : "hover:bg-gray-50 text-gray-800"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <div className="w-7 h-7 rounded-full bg-[#1F3864] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
-                                    {getInitials(name)}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <span className="font-bold text-xs text-gray-900 block truncate">
-                                      {name}
-                                    </span>
-                                    <span className="text-[10px] text-gray-500 block truncate">
-                                      {userObj.email} {roleName ? `• ${roleName}` : ""}
-                                    </span>
-                                  </div>
-                                </div>
-                                {isSelected && (
-                                  <Check className="w-4 h-4 text-[#1F3864] shrink-0" />
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                        {selectedAddAssigneeObjects.map((u: any) => (
+                          <span
+                            key={u.id}
+                            className="inline-flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-lg text-xs font-semibold bg-white border border-blue-200 text-gray-800 shadow-2xs"
+                          >
+                            <span className="w-5 h-5 rounded-full bg-[#1F3864] text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                              {getInitials(u.name || u.username || `User #${u.id}`)}
+                            </span>
+                            <span className="truncate max-w-[130px]">{u.name || u.username}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAddAssignee(u.id)}
+                              className="text-gray-400 hover:text-red-600 ml-0.5 rounded-full p-0.5 cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setActiveModal(null)}
-                    className="px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!selectedAddAssigneeId || addAssigneeMutation.isPending}
-                    className="px-4 py-1.5 bg-[#1F3864] hover:bg-[#162847] text-white text-xs font-bold rounded shadow-xs disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    {addAssigneeMutation.isPending && (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                {/* Modal Footer */}
+                <div className="flex items-center justify-between px-6 py-4 bg-gray-50/90 border-t border-gray-100 shrink-0">
+                  <div className="text-xs text-gray-600">
+                    {selectedAddAssigneeIds.length === 0 ? (
+                      <span className="text-gray-400">Select engineers above</span>
+                    ) : (
+                      <span className="font-semibold text-gray-800">
+                        <strong className="text-[#1F3864]">{selectedAddAssigneeIds.length}</strong> engineer{selectedAddAssigneeIds.length > 1 ? "s" : ""} selected
+                      </span>
                     )}
-                    <span>Add Assignee</span>
-                  </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveModal(null)}
+                      className="px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-200/80 rounded-lg cursor-pointer transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={selectedAddAssigneeIds.length === 0 || addAssigneeMutation.isPending}
+                      className="px-5 py-2 bg-[#1F3864] hover:bg-[#162847] text-white text-xs font-bold rounded-lg shadow-sm disabled:opacity-50 flex items-center gap-2 cursor-pointer transition"
+                    >
+                      {addAssigneeMutation.isPending && (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      )}
+                      <span>
+                        Add {selectedAddAssigneeIds.length > 0 ? `${selectedAddAssigneeIds.length} ` : ""}Assignee{selectedAddAssigneeIds.length > 1 ? "s" : ""}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

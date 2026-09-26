@@ -170,48 +170,69 @@ async function syncColorOverrideToServer(payload: {
   }
 }
 
+let inFlightPromise: Promise<void> | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL_MS = 60000; // 60 seconds throttle cache
+
 /**
  * Fetches the global color registry from the server and hydrates local storage.
  * Also auto-migrates any pre-existing local storage custom colors to the server.
+ * Uses promise deduplication and a 60-second in-memory throttle to avoid duplicate HTTP calls.
  */
-export async function fetchAndSyncColorRegistry(): Promise<void> {
-  try {
-    const { data } = await apiClient.get<{
-      status: string;
-      data: RemoteColorRegistry;
-    }>('/color-registry');
-
-    const remote = data?.data || { priorityColors: {}, statusColors: {} };
-    initColorRegistry(remote);
-
-    // If local storage has custom colors that are not yet on the server (e.g. created previously),
-    // automatically sync them up to PostgreSQL so all users receive them.
-    const localP = getStoredMap(STORAGE_KEY_PRIORITY_COLORS);
-    const localS = getStoredMap(STORAGE_KEY_STATUS_COLORS);
-
-    const missingP: Record<string, string> = {};
-    for (const [k, v] of Object.entries(localP)) {
-      if (!remote.priorityColors?.[k]) {
-        missingP[k] = v;
-      }
-    }
-
-    const missingS: Record<string, string> = {};
-    for (const [k, v] of Object.entries(localS)) {
-      if (!remote.statusColors?.[k]) {
-        missingS[k] = v;
-      }
-    }
-
-    if (Object.keys(missingP).length > 0 || Object.keys(missingS).length > 0) {
-      await syncColorOverrideToServer({
-        priorityColors: missingP,
-        statusColors: missingS,
-      });
-    }
-  } catch (err) {
-    console.warn('[colorRegistry] Failed to fetch remote color registry:', err);
+export async function fetchAndSyncColorRegistry(force = false): Promise<void> {
+  const now = Date.now();
+  if (!force && now - lastFetchTime < CACHE_TTL_MS) {
+    return;
   }
+
+  if (inFlightPromise) {
+    return inFlightPromise;
+  }
+
+  inFlightPromise = (async () => {
+    try {
+      const { data } = await apiClient.get<{
+        status: string;
+        data: RemoteColorRegistry;
+      }>('/color-registry');
+
+      lastFetchTime = Date.now();
+      const remote = data?.data || { priorityColors: {}, statusColors: {} };
+      initColorRegistry(remote);
+
+      // If local storage has custom colors that are not yet on the server (e.g. created previously),
+      // automatically sync them up to PostgreSQL so all users receive them.
+      const localP = getStoredMap(STORAGE_KEY_PRIORITY_COLORS);
+      const localS = getStoredMap(STORAGE_KEY_STATUS_COLORS);
+
+      const missingP: Record<string, string> = {};
+      for (const [k, v] of Object.entries(localP)) {
+        if (!remote.priorityColors?.[k]) {
+          missingP[k] = v;
+        }
+      }
+
+      const missingS: Record<string, string> = {};
+      for (const [k, v] of Object.entries(localS)) {
+        if (!remote.statusColors?.[k]) {
+          missingS[k] = v;
+        }
+      }
+
+      if (Object.keys(missingP).length > 0 || Object.keys(missingS).length > 0) {
+        await syncColorOverrideToServer({
+          priorityColors: missingP,
+          statusColors: missingS,
+        });
+      }
+    } catch (err) {
+      console.warn('[colorRegistry] Failed to fetch remote color registry:', err);
+    } finally {
+      inFlightPromise = null;
+    }
+  })();
+
+  return inFlightPromise;
 }
 
 /**
